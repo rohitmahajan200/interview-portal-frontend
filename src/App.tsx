@@ -1,30 +1,36 @@
-import * as React from "react";
-import * as ReactDOM from "react-dom";
 import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import { LoginForm } from "@/components/login-form"
+
+import { LoginForm } from "@/components/login-form";
 import Header from "./components/header";
 import { RegisterForm } from "./components/Register-form";
-function App() {
+import Dashboard from "./components/Dashboard";
 
-  const router=createBrowserRouter([
+function App() {
+  // Define all application routes
+  const router = createBrowserRouter([
     {
-      path:"/",
-      element:<LoginForm />
+      path: "/",                  // Login route
+      element: <LoginForm />,
     },
     {
-      path:"/register/candidate",
-      element:<RegisterForm />
-    }
-  ])
+      path: "/dashboard",         // Dashboard route
+      element: <Dashboard />,
+    },
+    {
+      path: "/register/candidate", // Registration form route
+      element: <RegisterForm />,
+    },
+  ]);
+
   return (
     <>
-        <Header />
-        <RouterProvider router={router}></RouterProvider>
+      <Header />                    {/* Common header for all pages */}
+      <RouterProvider router={router} /> {/* Provide router to the app */}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
