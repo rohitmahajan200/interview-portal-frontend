@@ -31,6 +31,9 @@ const authSlice = createSlice({
       state.success = false;
       state.error = null;
     },
+    clearMessage: (state) => {
+      state.message = null;
+}
   },
 
   // Handle async actions (thunks)
@@ -77,14 +80,15 @@ const authSlice = createSlice({
         state.user = null;
         state.success = false;
         state.isLoading = false;
-        state.error = action.payload;
-        state.message = null;
+        state.error = action.error.message;
+        state.message = action.payload;
       });
   },
 });
 
-// Export the logout action
-export const { logout } = authSlice.actions;
+// Export the logout and clear message action
+export const { logout,clearMessage } = authSlice.actions;
+
 
 // Export the reducer to be used in the store
 export default authSlice.reducer;

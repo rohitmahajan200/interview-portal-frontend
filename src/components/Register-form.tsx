@@ -12,11 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { registerThunk } from "@/features/auth/authThunks.js";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
 import { uploadToCloudinary } from "@/lib/clodinary";
 import toast, { Toaster } from "react-hot-toast";
+import { clearMessage } from "@/features/auth/authSlice";
+import Spinner from "./ui/spinner";
 
 type FormValues = {
   first_name: string;
@@ -47,10 +49,38 @@ export function RegisterForm({
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const notify = (text: any) => toast(text);
+ const notify = (msg: any) => {
+  if (msg === 1) {
+    toast.success("Account created successfully");
+  } else if (typeof msg === "string") {
+    toast.error(msg);
+  } else if (typeof msg === "object" && msg !== null) {
+    Object.values(msg).forEach((err) => {
+      if (Array.isArray(err)) {
+        err.forEach((e) => toast.error(e));
+      } else {
+        toast.error(err as string);
+      }
+    });
+  } else {
+    toast.error("Something went wrong");
+  }
+};
+
+
+
+  useEffect(() => {
+    console.log("in effect ",state.message);
+  if(state.success){
+    notify(1);
+  }
+
   if (state.message) {
     notify(state.message);
   }
+  
+  dispatch(clearMessage());
+  }, [state.message,state.success]);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -68,6 +98,8 @@ export function RegisterForm({
 
       await dispatch(registerThunk(payload)).unwrap();
     } catch (err: any) {
+      console.log("inregister form ",err);
+      
       const errorFields = [
         "email",
         "password",
@@ -92,6 +124,7 @@ export function RegisterForm({
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-5xl">
         <div className={cn("flex flex-col gap-6", className)} {...props}>
           <Card className="shadow-xl rounded-2xl border border-gray-200">
@@ -219,7 +252,8 @@ export function RegisterForm({
                     Register
                   </Button>
 
-                  <Toaster position="top-center" reverseOrder={false} />
+                   {/* Show loading spinner during API call */}
+                    <div>{state.isLoading ? <Spinner /> : null}</div>
 
                   <div className="text-center text-sm text-gray-600">
                     Already have an account?{" "}

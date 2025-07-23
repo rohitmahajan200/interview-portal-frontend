@@ -44,7 +44,7 @@ export const registerThunk = createAsyncThunk(
       return data; // Fulfill with response data
     } catch (error: any) {
       // Reject with validation errors or generic message
-      return rejectWithValue(error.response?.data?.errors || 'Registration failed');
+      return rejectWithValue(error.response?.data?.errors || error.response?.data?.message ||'Registration failed');
     }
   }
 );
