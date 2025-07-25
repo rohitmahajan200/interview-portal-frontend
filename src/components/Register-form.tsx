@@ -49,38 +49,39 @@ export function RegisterForm({
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
- const notify = (msg: any) => {
-  if (msg === 1) {
-    toast.success("Account created successfully");
-  } else if (typeof msg === "string") {
-    toast.error(msg);
-  } else if (typeof msg === "object" && msg !== null) {
-    Object.values(msg).forEach((err) => {
-      if (Array.isArray(err)) {
-        err.forEach((e) => toast.error(e));
-      } else {
-        toast.error(err as string);
-      }
-    });
-  } else {
-    toast.error("Something went wrong");
-  }
-};
-
-
+  const notify = (msg: any) => {
+    if (msg === 1) {
+      toast.success("Account created successfully");
+    } else if (typeof msg === "string") {
+      toast.error(msg);
+    } else if (typeof msg === "object" && msg !== null) {
+      Object.values(msg).forEach((err) => {
+        if (Array.isArray(err)) {
+          err.forEach((e) => toast.error(e));
+        } else {
+          toast.error(err as string);
+        }
+      });
+    } else {
+      toast.error("Something went wrong");
+    }
+  };
 
   useEffect(() => {
-    console.log("in effect ",state.message);
-  if(state.success){
-    notify(1);
-  }
+    console.log("in effect ", state.message);
+    if (state.success) {
+      notify(1);
+      setTimeout(() => {
+        navigate("/email-verification");
+      }, 2000);
+    }
 
-  if (state.message) {
-    notify(state.message);
-  }
-  
-  dispatch(clearMessage());
-  }, [state.message,state.success]);
+    if (state.message) {
+      notify(state.message);
+    }
+
+    dispatch(clearMessage());
+  }, [state.message, state.success]);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -98,8 +99,8 @@ export function RegisterForm({
 
       await dispatch(registerThunk(payload)).unwrap();
     } catch (err: any) {
-      console.log("inregister form ",err);
-      
+      console.log("inregister form ", err);
+
       const errorFields = [
         "email",
         "password",
@@ -141,13 +142,27 @@ export function RegisterForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="first_name">First Name</Label>
-                    <Input {...register("first_name", { required: true })} id="first_name" />
-                    {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>}
+                    <Input
+                      {...register("first_name", { required: true })}
+                      id="first_name"
+                    />
+                    {errors.first_name && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.first_name.message}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="last_name">Last Name</Label>
-                    <Input {...register("last_name", { required: true })} id="last_name" />
-                    {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>}
+                    <Input
+                      {...register("last_name", { required: true })}
+                      id="last_name"
+                    />
+                    {errors.last_name && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.last_name.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -158,19 +173,38 @@ export function RegisterForm({
                       type="email"
                       placeholder="you@example.com"
                     />
-                    {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+                    {errors.email && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.email.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <Label htmlFor="phone">Phone</Label>
-                    <Input {...register("phone", { required: true })} id="phone" />
-                    {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>}
+                    <Input
+                      {...register("phone", { required: true })}
+                      id="phone"
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.phone.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <Label htmlFor="date_of_birth">Date Of Birth</Label>
-                    <Input {...register("date_of_birth")} id="date_of_birth" type="date" />
-                    {errors.date_of_birth && <p className="text-red-500 text-sm mt-1">{errors.date_of_birth.message}</p>}
+                    <Input
+                      {...register("date_of_birth")}
+                      id="date_of_birth"
+                      type="date"
+                    />
+                    {errors.date_of_birth && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.date_of_birth.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -185,13 +219,24 @@ export function RegisterForm({
                       <option value="female">Female</option>
                       <option value="other">Other</option>
                     </select>
-                    {errors.gender && <p className="text-red-500 text-sm mt-1">Selection is required</p>}
+                    {errors.gender && (
+                      <p className="text-red-500 text-sm mt-1">
+                        Selection is required
+                      </p>
+                    )}
                   </div>
 
                   <div className="md:col-span-2">
                     <Label htmlFor="address">Address</Label>
-                    <Input {...register("address", { required: true })} id="address" />
-                    {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>}
+                    <Input
+                      {...register("address", { required: true })}
+                      id="address"
+                    />
+                    {errors.address && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.address.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -203,7 +248,9 @@ export function RegisterForm({
                       accept="image/*"
                     />
                     {errors.profile_photo_url && (
-                      <p className="text-red-500 text-sm mt-1">Profile Photo is required</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        Profile Photo is required
+                      </p>
                     )}
                   </div>
 
@@ -215,7 +262,11 @@ export function RegisterForm({
                       type="file"
                       accept=".pdf"
                     />
-                    {errors.resume_url && <p className="text-red-500 text-sm mt-1">Resume is required</p>}
+                    {errors.resume_url && (
+                      <p className="text-red-500 text-sm mt-1">
+                        Resume is required
+                      </p>
+                    )}
                   </div>
 
                   <div className="md:col-span-2">
@@ -242,7 +293,9 @@ export function RegisterForm({
                       </button>
                     </div>
                     {errors.password && (
-                      <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.password.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -252,8 +305,8 @@ export function RegisterForm({
                     Register
                   </Button>
 
-                   {/* Show loading spinner during API call */}
-                    <div>{state.isLoading ? <Spinner /> : null}</div>
+                  {/* Show loading spinner during API call */}
+                  <div>{state.isLoading ? <Spinner /> : null}</div>
 
                   <div className="text-center text-sm text-gray-600">
                     Already have an account?{" "}

@@ -4,9 +4,11 @@ import {
 } from "react-router-dom";
 
 import { LoginForm } from "@/components/login-form";
+import { EmailVerification } from "./components/emailVerification";
 import Header from "./components/header";
 import { RegisterForm } from "./components/Register-form";
 import Dashboard from "./components/Dashboard";
+
 
 function App() {
   // Define all application routes
@@ -23,11 +25,16 @@ function App() {
       path: "/register/candidate", // Registration form route
       element: <RegisterForm />,
     },
+    {
+      path:"/email-verification",
+      element:<EmailVerification /> //Email verification informative form
+    }
   ]);
 
   return (
     <>
       <Header />                    {/* Common header for all pages */}
+      
       <RouterProvider router={router} /> {/* Provide router to the app */}
     </>
   );
