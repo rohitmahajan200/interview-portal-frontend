@@ -8,6 +8,7 @@ import { EmailVerification } from "./components/emailVerification";
 import Header from "./components/header";
 import { RegisterForm } from "./components/Register-form";
 import Dashboard from "./components/Dashboard";
+import OTPLoginForm from "./components/OTPLoginForm";
 
 
 function App() {
@@ -24,6 +25,10 @@ function App() {
     {
       path: "/register/candidate", // Registration form route
       element: <RegisterForm />,
+    },
+    {
+      path: "/login/otp",
+      element: <OTPLoginForm />,
     },
     {
       path:"/email-verification",
