@@ -1,25 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { loginUser, registerUser } from './authAPI.js';
-
-// Type for login payload
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-// Type for registration payload
-interface RegisterData {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  gender: string;
-  address: string;
-  profile_photo_url: string; // Cloudinary URL
-  resume_url: string;        // Cloudinary URL
-  password: string;
-}
+import type { AxiosError } from 'axios';
+import type { LoginData, RegisterData} from '@/types/types'; 
 
 // Thunk for handling user login
 export const loginThunk = createAsyncThunk(
@@ -28,9 +10,9 @@ export const loginThunk = createAsyncThunk(
     try {
       const data = await loginUser(loginData); // Call API function
       return data; // Fulfill with response data
-    } catch (error: any) {
-      // Reject with custom error message (e.g., invalid credentials)
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message?: string; errors?: unknown }>;
+      return rejectWithValue(err?.response?.data?.message || 'Login failed');
     }
   }
 );
@@ -42,9 +24,13 @@ export const registerThunk = createAsyncThunk(
     try {
       const data = await registerUser(registerData); // Call API function
       return data; // Fulfill with response data
-    } catch (error: any) {
-      // Reject with validation errors or generic message
-      return rejectWithValue(error.response?.data?.errors || error.response?.data?.message ||'Registration failed');
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message?: string; errors?: unknown }>;
+      return rejectWithValue(
+        err.response?.data?.errors ||
+        err.response?.data?.message ||
+        'Registration failed'
+      );
     }
   }
 );

@@ -6,7 +6,7 @@ import {
 import { LoginForm } from "@/pages/login-form";
 import { EmailVerification } from "./pages/emailVerification";
 import Header from "./components/header";
-import { RegisterForm } from "./pages/Register-form";
+import RegisterForm from "./pages/Register-form";
 import Dashboard from "./pages/Dashboard";
 import OTPLoginForm from "./pages/OTPLoginForm";
 import OTPForgetPasswordForm from "./pages/OTPForgetPasswordForm";
