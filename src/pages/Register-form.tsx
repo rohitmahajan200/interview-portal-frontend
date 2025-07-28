@@ -18,7 +18,7 @@ import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
 import { uploadToCloudinary } from "@/lib/clodinary";
 import toast, { Toaster } from "react-hot-toast";
 import { clearMessage } from "@/features/auth/authSlice";
-import Spinner from "./ui/spinner";
+import Spinner from "../components/ui/spinner";
 
 type FormValues = {
   first_name: string;
