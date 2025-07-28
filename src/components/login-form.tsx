@@ -91,12 +91,12 @@ export function LoginForm({
                     <Label htmlFor="password" className="text-sm font-medium">
                       Password
                     </Label>
-                    <a
-                      href="#"
-                      className="text-xs text-blue-600 hover:underline"
+                    <span
+                      onClick={()=>navigate("/forget-password")}
+                      className="text-xs text-blue-600 hover:underline cursor-pointer"
                     >
                       Forgot password?
-                    </a>
+                    </span>
                   </div>
 
                   {/* Toggle show/hide password */}
