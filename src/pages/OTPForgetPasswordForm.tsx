@@ -3,47 +3,95 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import Spinner from "@/components/ui/spinner"; // Use your spinner
+import Spinner from "@/components/ui/spinner";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "@/features/auth/authSlice";
+import api from "@/lib/api";
 
-type Step = "enteremail" | "verifyOtp";
+type Step = "enteremail" | "verifyOtp" | "resetPassword";
 
 const OTPForgetPasswordForm: React.FC = () => {
   const [step, setStep] = useState<Step>("enteremail");
-  const [email, setemail] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Simulate API call for sending OTP
+  // Send OTP
   const sendOtp = async () => {
     setLoading(true);
     setError("");
     try {
-      // TODO: Replace with your backend call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await api.post("/candidates/forget-password", { email });
       setStep("verifyOtp");
-    } catch (e: unknown) {
-      setError("Failed to send OTP. Please try again.");
-      console.error(e);
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to send OTP. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Simulate API call for verifying OTP
+  // Verify OTP
   const verifyOtp = async () => {
     setLoading(true);
     setError("");
     try {
-      // TODO: Replace with your backend call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      alert("OTP verified! Logged in successfully.");
-      // You might want to navigate("/dashboard") here
-    } catch (e: unknown) {
-      setError("Invalid OTP. Please try again.");
-      console.error(e);
+      const res = await api.post("/candidates/verify-otp", { email, otp });
+      // If backend logs in the user and returns user info:
+      if (res.data && res.data.success && res.data.user) {
+        dispatch(setUser(res.data.user)); // <--- Set user in redux
+        setStep("resetPassword");
+      } else if (res.data && res.data.success) {
+        // If backend just returns success, move to reset password
+        setStep("resetPassword");
+      } else {
+        setError("Verification failed.");
+      }
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Invalid OTP. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // Set new password
+  const handleNewPassword = async () => {
+    setLoading(true);
+    setError("");
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+    try {
+      // You may need to send { email, password: newPassword } or just password, depending on backend
+      const res = await api.put("/candidates/new-password", { newPassword: newPassword, confirmPassword: confirmPassword });
+      if (res.data.success == true) {
+        alert("Password reset successfully! Logged in.");
+        navigate("/dashboard");
+      } else {
+        setError("Password reset failed.");
+      }
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to reset password."
+      );
     } finally {
       setLoading(false);
     }
@@ -55,33 +103,33 @@ const OTPForgetPasswordForm: React.FC = () => {
         <Card className="shadow-lg rounded-2xl border border-gray-200">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-center">
-              Verify You Email To Rest-Password
+              Reset Your Password
             </CardTitle>
             <CardDescription className="text-center text-gray-500 text-sm">
-              {step === "enteremail"
-                ? "Enter your email to receive an OTP."
-                : `Enter the OTP sent to ${email}.`}
+              {step === "enteremail" && "Enter your email to receive an OTP."}
+              {step === "verifyOtp" && `Enter the OTP sent to ${email}.`}
+              {step === "resetPassword" && "Set your new password."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {step === "enteremail" && (
               <form
                 className="space-y-6"
-                onSubmit={(e) => {
+                onSubmit={e => {
                   e.preventDefault();
                   sendOtp();
                 }}
               >
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-medium">
-                    email
+                    Email
                   </Label>
                   <Input
                     id="email"
-                    type="text"
+                    type="email"
                     placeholder="Enter your email"
                     value={email}
-                    onChange={(e) => setemail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -104,7 +152,7 @@ const OTPForgetPasswordForm: React.FC = () => {
             {step === "verifyOtp" && (
               <form
                 className="space-y-6"
-                onSubmit={(e) => {
+                onSubmit={e => {
                   e.preventDefault();
                   verifyOtp();
                 }}
@@ -118,7 +166,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                     type="text"
                     placeholder="Enter OTP"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={e => setOtp(e.target.value)}
                     required
                     maxLength={6}
                     inputMode="numeric"
@@ -149,6 +197,56 @@ const OTPForgetPasswordForm: React.FC = () => {
                   onClick={sendOtp}
                 >
                   Resend OTP
+                </Button>
+                <div className="text-center text-sm text-gray-600">
+                  <span
+                    onClick={() => navigate("/")}
+                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                  >
+                    Back to login
+                  </span>
+                </div>
+              </form>
+            )}
+
+            {step === "resetPassword" && (
+              <form
+                className="space-y-6"
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleNewPassword();
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="new-password" className="font-medium">
+                    New Password
+                  </Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password" className="font-medium">
+                    Confirm Password
+                  </Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {loading && <Spinner />}
+                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                  {loading ? "Setting password..." : "Set New Password"}
                 </Button>
                 <div className="text-center text-sm text-gray-600">
                   <span

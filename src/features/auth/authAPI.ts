@@ -1,27 +1,11 @@
 import axios from 'axios';
+import type { LoginData, LoginResponse, RegisterData, RegisterResponse } from '@/types/types'; 
 
-// Payload structure for login
-interface LoginData {
-  email: string;
-  password: string;
-}
 
-// Payload structure for registration
-interface RegisterData {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  gender: string;
-  address: string;
-  profile_photo_url: string; // Cloudinary URL
-  resume_url: string;        // Cloudinary URL
-  password: string;
-}
+
 
 // Function to send login request
-export const loginUser = async (loginData: LoginData): Promise<any> => {
+export const loginUser = async (loginData: LoginData): Promise<LoginResponse> => {
   const response = await axios.post(
     `http://localhost:8080/api/candidates/login`,
     loginData,
@@ -37,7 +21,7 @@ export const loginUser = async (loginData: LoginData): Promise<any> => {
 };
 
 // Function to send registration request
-export const registerUser = async (registerData: RegisterData): Promise<any> => {
+export const registerUser = async (registerData: RegisterData): Promise<RegisterResponse> => {
   const response = await axios.post(
     `http://localhost:8080/api/candidates/register`,
     registerData,
