@@ -3,13 +3,13 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import { LoginForm } from "@/components/login-form";
-import { EmailVerification } from "./components/emailVerification";
+import { LoginForm } from "@/pages/login-form";
+import { EmailVerification } from "./pages/emailVerification";
 import Header from "./components/header";
-import { RegisterForm } from "./components/Register-form";
-import Dashboard from "./components/Dashboard";
-import OTPLoginForm from "./components/OTPLoginForm";
-import OTPForgetPasswordForm from "./components/OTPForgetPasswordForm";
+import { RegisterForm } from "./pages/Register-form";
+import Dashboard from "./pages/Dashboard";
+import OTPLoginForm from "./pages/OTPLoginForm";
+import OTPForgetPasswordForm from "./pages/OTPForgetPasswordForm";
 
 
 function App() {

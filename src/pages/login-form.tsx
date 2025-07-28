@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { loginThunk } from "@/features/auth/authThunks";
 import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
-import Spinner from "./ui/spinner";
+import Spinner from "../components/ui/spinner";
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 
