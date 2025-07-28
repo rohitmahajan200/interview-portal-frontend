@@ -5,7 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import Spinner from "@/components/ui/spinner"; // Use your spinner
 import { useNavigate } from "react-router-dom";
-//import axios from "axios";
+import api from "@/lib/api";
+import { useDispatch } from "react-redux";
+import { setUser } from "@/features/auth/authSlice";
+import toast, { Toaster } from "react-hot-toast";
 
 type Step = "enteremail" | "verifyOtp";
 
@@ -16,19 +19,20 @@ const OTPLoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const dispatch=useDispatch();
 
   // Simulate API call for sending OTP
   const sendOtp = async () => {
     setLoading(true);
     setError("");
     try {
-      // TODO: Replace with your backend call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      //const response=await axios.post()
+      await api.post("/candidates/otp-login", { email });
       setStep("verifyOtp");
-    } catch (e: unknown) {
-      setError("Failed to send OTP. Please try again.");
-      console.error(e);
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.message ||
+        e?.message || 
+        "Failed to send OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -39,10 +43,20 @@ const OTPLoginForm: React.FC = () => {
     setLoading(true);
     setError("");
     try {
-      // TODO: Replace with your backend call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      alert("OTP verified! Logged in successfully.");
-      // You might want to navigate("/dashboard") here
+      const res = await api.post("/candidates/verify-otp", { email, otp });                          
+      // If backend logs in the user and returns user info:
+            if (res.data && res.data.success && res.data.user) {
+              dispatch(setUser(res.data.user)); // <--- Set user in redux
+              toast.success("User Login Successfully!")
+              setTimeout(()=>{
+                navigate("/dashboard")
+              },1000)
+            } else if (res.data && res.data.success) {
+              // If backend just returns success, move to reset password
+              setStep("enteremail");
+            } else {
+              setError("Verification failed.");
+            }
     } catch (e: unknown) {
       setError("Invalid OTP. Please try again.");
       console.error(e);
@@ -53,6 +67,7 @@ const OTPLoginForm: React.FC = () => {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-sm">
         <Card className="shadow-lg rounded-2xl border border-gray-200">
           <CardHeader>
