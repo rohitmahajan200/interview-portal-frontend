@@ -6,9 +6,10 @@ import {
 import { LoginForm } from "@/pages/login-form";
 import { EmailVerification } from "./pages/emailVerification";
 import Header from "./components/header";
-import { RegisterForm } from "./pages/Register-form";
-import Dashboard from "./pages/Dashboard";
-import OTPLoginForm from "./pages/OTPLoginForm";
+import { RegisterForm } from "./components/Register-form";
+import Dashboard from "./components/Dashboard";
+import OTPLoginForm from "./components/OTPLoginForm";
+import OTPForgetPasswordForm from "./components/OTPForgetPasswordForm";
 
 
 function App() {
@@ -31,6 +32,10 @@ function App() {
       element: <OTPLoginForm />,
     },
     {
+      path: "/forget-password",
+      element: <OTPForgetPasswordForm />,
+    },
+    {
       path:"/email-verification",
       element:<EmailVerification /> //Email verification informative form
     }
@@ -38,9 +43,9 @@ function App() {
 
   return (
     <>
-      <Header />                    {/* Common header for all pages */}
-      
-      <RouterProvider router={router} /> {/* Provide router to the app */}
+      <Header />                              {/* Common header for all pages */}
+
+      <RouterProvider router={router} />      {/* Provide router to the app */}
     </>
   );
 }

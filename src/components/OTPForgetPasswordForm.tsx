@@ -5,11 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import Spinner from "@/components/ui/spinner"; // Use your spinner
 import { useNavigate } from "react-router-dom";
-//import axios from "axios";
 
 type Step = "enteremail" | "verifyOtp";
 
-const OTPLoginForm: React.FC = () => {
+const OTPForgetPasswordForm: React.FC = () => {
   const [step, setStep] = useState<Step>("enteremail");
   const [email, setemail] = useState("");
   const [otp, setOtp] = useState("");
@@ -24,7 +23,6 @@ const OTPLoginForm: React.FC = () => {
     try {
       // TODO: Replace with your backend call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      //const response=await axios.post()
       setStep("verifyOtp");
     } catch (e: unknown) {
       setError("Failed to send OTP. Please try again.");
@@ -57,7 +55,7 @@ const OTPLoginForm: React.FC = () => {
         <Card className="shadow-lg rounded-2xl border border-gray-200">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-center">
-              Login with OTP
+              Verify You Email To Rest-Password
             </CardTitle>
             <CardDescription className="text-center text-gray-500 text-sm">
               {step === "enteremail"
@@ -169,4 +167,4 @@ const OTPLoginForm: React.FC = () => {
   );
 };
 
-export default OTPLoginForm;
+export default OTPForgetPasswordForm;
