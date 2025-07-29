@@ -1,6 +1,12 @@
 import { useForm } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+import { loginSchema } from "@/lib/zod";
+import toast, { Toaster } from "react-hot-toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDispatch } from "react-redux";
+import { setUser } from "@/features/auth/authSlice";
 import {
   Card,
   CardContent,
@@ -11,8 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
-import { loginThunk } from "@/features/auth/authThunks";
-import { useAppDispatch, useAppSelector } from "@/hooks/useAuth";
 import Spinner from "../components/ui/spinner";
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
@@ -32,25 +36,36 @@ export function LoginForm({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormInputs>();
+  } = useForm<LoginFormInputs>({resolver: zodResolver(loginSchema)});
 
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const state = useAppSelector((state) => state.auth);
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const dispatch = useDispatch();
 
   // Handle login form submission
   const onSubmit = async (data: LoginFormInputs) => {
+    setLoading(true);
     try {
-      await dispatch(loginThunk(data)).unwrap();
-      navigate('/dashboard');
-    } catch (err) {
-      console.error("Login failed:", err);
+      const res = await api.post("/candidates/login", data);
+      if (res.data && res.data.success && res.data.user) {
+        dispatch(setUser(res.data.user)); // Redux state update
+        toast.success("Login successful!");
+        setTimeout(() => navigate("/dashboard"), 1000);
+      } else {
+        toast.error("Login failed, please try again.");
+      }
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Login failed, please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   };
-
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 sm:px-6 md:px-10 py-12">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-sm">
         <div className={cn("flex flex-col gap-6", className)} {...props}>
           <Card className="shadow-lg rounded-2xl border border-gray-200">
@@ -83,7 +98,7 @@ export function LoginForm({
                 </div>
 
                 {/* Show loading spinner during API call */}
-                <div>{state.isLoading ? <Spinner /> : null}</div>
+                {loading && <Spinner />}
 
                 {/* Password field */}
                 <div className="space-y-2">
@@ -129,23 +144,20 @@ export function LoginForm({
                       {errors.password.message}
                     </p>
                   )}
-                  {state.message && (
-                    <p className="text-xs text-red-500">{state.message}</p>
-                  )}
                 </div>
 
                 {/* Submit and Google login buttons */}
                 <div className="space-y-3 pt-2">
-                  <Button type="submit" className="w-full text-sm py-2">
+                  <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
                     Login
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="outline"
                     className="w-full text-sm py-2 hover:bg-gray-100"
                     type="button"
                   >
                     Login with Google
-                  </Button>
+                  </Button> */}
                 </div>
 
                 {/* Login with OTP link */}
