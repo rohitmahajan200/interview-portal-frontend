@@ -2,9 +2,25 @@ import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
+type JobDescription = {
+  time: string;
+  country: string;
+  location: string;
+  expInYears: string;
+  salary: string;
+  jobId: string;
+};
+
+type Job = {
+  _id: string;
+  name: string;
+  description: JobDescription;
+};
+
 const JobList = () => {
-  const [allJob, setAllJob] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [allJob, setAllJob] = useState<Job[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+
 
   useEffect(() => {
     async function fetchList() {
@@ -30,7 +46,7 @@ const JobList = () => {
     }
   };
 
-  const handleApply = (job) => {
+  const handleApply = (job: Job) => {
     alert(`Applying to: ${job.name}`);
   };
 

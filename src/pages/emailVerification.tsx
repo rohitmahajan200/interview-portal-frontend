@@ -29,7 +29,7 @@ export const EmailVerification=()=> {
           <Button
             type="button"
             className="w-full text-sm py-2"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
           >
             Back to Login
           </Button>

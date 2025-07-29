@@ -1,10 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../features/auth/authSlice.js';
+import viewReducer from "../features/view/viewSlice";
 
 // Create and configure the Redux store
 export const store = configureStore({
   reducer: {
     auth: authReducer, // Register the auth reducer under 'auth' state slice
+    view: viewReducer,
   },
 });
 
