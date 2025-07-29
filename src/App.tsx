@@ -43,7 +43,7 @@ function App() {
 
   return (
     <>
-      <Header />                              {/* Common header for all pages */}
+      {/*   <Header />                              Common header for all pages */}
 
       <RouterProvider router={router} />      {/* Provide router to the app */}
     </>

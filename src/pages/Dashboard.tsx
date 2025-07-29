@@ -1,4 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import JobList from "@/components/JobList";
+import { ProgressBar } from "@/components/ProgressBar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -7,14 +9,26 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import EventNotificationCard from "@/components/ui/EventNotificationCard";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useAppSelector } from "@/hooks/useAuth";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Home from "./Home";
 
 export default function Page() {
+  const state = useAppSelector((state) => state.auth);
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (state.user == null) {
+      navigate("/");
+    }
+  },[]);
 
   return (
     <SidebarProvider>
@@ -29,27 +43,26 @@ export default function Page() {
             />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
+                <header className=" px-1 rounded-xl">
+                  <div className="flex items-center space-x-2">
+                    {/* Company logo */}
+                    {/* <img
+                        src="https://www.change-networks.com/logo.png"
+                        alt="Company Logo"
+                        className="w-10 h-10 object-contain"
+                      /> */}
+
+                    {/* Welcome text */}
+                    <span className="text-lg font-semibold text-gray-800">
+                      Welcome To Change Networks!
+                    </span>
+                  </div>
+                </header>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="bg-muted/50 aspect-video rounded-xl" />
-            <div className="bg-muted/50 aspect-video rounded-xl" />
-            <div className="bg-muted/50 aspect-video rounded-xl" />
-          </div>
-          <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" />
-        </div>
+        <Home />
       </SidebarInset>
     </SidebarProvider>
   );
