@@ -82,7 +82,7 @@ const OTPForgetPasswordForm: React.FC = () => {
       const res = await api.put("/candidates/new-password", { newPassword: newPassword, confirmPassword: confirmPassword });
       if (res.data.success == true) {
         alert("Password reset successfully! Logged in.");
-        navigate("/dashboard");
+        navigate("/");
       } else {
         setError("Password reset failed.");
       }
@@ -140,7 +140,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                 </Button>
                 <div className="text-center text-sm text-gray-600">
                   <span
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/login")}
                     className="text-blue-600 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
@@ -200,7 +200,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                 </Button>
                 <div className="text-center text-sm text-gray-600">
                   <span
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/login")}
                     className="text-blue-600 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
@@ -250,7 +250,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                 </Button>
                 <div className="text-center text-sm text-gray-600">
                   <span
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/login")}
                     className="text-blue-600 hover:underline font-medium cursor-pointer"
                   >
                     Back to login

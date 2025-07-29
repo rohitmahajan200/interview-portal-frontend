@@ -51,7 +51,7 @@ export function LoginForm({
       if (res.data && res.data.success && res.data.user) {
         dispatch(setUser(res.data.user)); // Redux state update
         toast.success("Login successful!");
-        setTimeout(() => navigate("/dashboard"), 1000);
+        setTimeout(() => navigate("/"), 1000);
       } else {
         toast.error("Login failed, please try again.");
       }
@@ -163,7 +163,7 @@ export function LoginForm({
                 {/* Login with OTP link */}
                 <div className="text-center text-sm mt-4 text-gray-600">
                   <span
-                    onClick={() => navigate("/login/otp")}
+                    onClick={() => navigate("/login-otp")}
                     className="text-blue-600 hover:underline font-medium hover:cursor-pointer"
                   >
                     Login with OTP
@@ -174,7 +174,7 @@ export function LoginForm({
                 <div className="text-center text-sm mt-4 text-gray-600">
                   Don&apos;t have an account?{" "}
                   <span
-                    onClick={() => navigate("/register/candidate")}
+                    onClick={() => navigate("/register-candidate")}
                     className="text-blue-600 hover:underline font-medium hover:cursor-pointer"
                   >
                     Sign up

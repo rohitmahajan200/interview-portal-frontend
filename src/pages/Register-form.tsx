@@ -377,7 +377,7 @@ const onSubmit = async (data: FormValues) => {
                   <div className="text-center text-sm text-gray-600">
                     Already have an account?{" "}
                     <span
-                      onClick={() => navigate("/")}
+                      onClick={() => navigate("/login")}
                       className="text-blue-600 hover:underline font-medium cursor-pointer"
                     >
                       Login

@@ -49,7 +49,7 @@ const OTPLoginForm: React.FC = () => {
               dispatch(setUser(res.data.user)); // <--- Set user in redux
               toast.success("User Login Successfully!")
               setTimeout(()=>{
-                navigate("/dashboard")
+                navigate("/")
               },1000)
             } else if (res.data && res.data.success) {
               // If backend just returns success, move to reset password
@@ -109,7 +109,7 @@ const OTPLoginForm: React.FC = () => {
                 </Button>
                 <div className="text-center text-sm text-gray-600">
                   <span
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/login")}
                     className="text-blue-600 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
@@ -169,7 +169,7 @@ const OTPLoginForm: React.FC = () => {
                 </Button>
                 <div className="text-center text-sm text-gray-600">
                   <span
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/login")}
                     className="text-blue-600 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
