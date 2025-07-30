@@ -32,3 +32,25 @@ export const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
+
+
+export const candidateUpdateSchema = z.object({
+  first_name: z.string().trim().min(1, "First name is required").max(50).optional(),
+  last_name: z.string().trim().min(1, "Last name is required").max(50).optional(),
+  phone: z
+    .string()
+    .regex(/^\+?[1-9]\d{7,14}$/, "Invalid international phone number")
+    .optional(),
+  date_of_birth: z
+    .string()
+    .optional()
+    .refine(
+      (date) => !date || /^\d{4}-\d{2}-\d{2}$/.test(date),
+      { message: "Date of birth must be in YYYY-MM-DD format" }
+    ),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  address: z.string().max(250).optional(),
+  profile_photo_url: z.string().url("Invalid profile photo URL").optional(),
+  portfolio_url: z.string().url("Invalid portfolio URL").optional(),
+}).strict();
+ 

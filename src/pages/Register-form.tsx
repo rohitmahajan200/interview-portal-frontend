@@ -37,6 +37,7 @@ type FormValues = {
   date_of_birth: string;
   gender: "male" | "female" | "other";
   address: string;
+  portfolio_url:string,
   profile_photo_url: FileList;
   applied_role: string;
   resume: FileList; // set this after upload
@@ -247,6 +248,19 @@ const onSubmit = async (data: FormValues) => {
                     {errors.address && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.address.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="portfolio_url">PortFolio URL</Label>
+                    <Input
+                      {...register("portfolio_url", { required: true })}
+                      id="portfolio_url"
+                    />
+                    {errors.portfolio_url && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.portfolio_url.message}
                       </p>
                     )}
                   </div>

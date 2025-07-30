@@ -7,6 +7,7 @@ export interface User {
   date_of_birth: string; // ISO date string
   gender: "male" | "female" | "other";
   address: string;
+  portfolio_url:string,
   profile_photo_url: string;
   applied_role: string;
   documents: string[];
