@@ -1,49 +1,58 @@
-import JobList from '@/components/JobList';
-import { ProgressBar } from '@/components/ProgressBar';
-import EventNotificationCard from '@/components/ui/EventNotificationCard';
-import api from '@/lib/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+import JobList from "@/components/JobList";
+import { ProgressBar } from "@/components/ProgressBar";
+import EventNotificationCard from "@/components/ui/EventNotificationCard";
+import api from "@/lib/api";
+
+type EventType = "Assessment" | "Interview";
 
 interface Event {
   id: string;
-  type: 'Assessment' | 'Interview';
+  type: EventType;
   title: string;
   date: string;
+}
+
+interface Stage {
+  stage: string;
+  date: string;
+  status: "completed" | "current" | "pending";
+  comment: string;
 }
 
 const Home = () => {
   const [events, setEvents] = useState<Event[]>([]);
 
-  const applicationStatus = [
+  const applicationStatus: Stage[] = [
     {
-      stage: 'registered',
-      date: '2025-06-01',
-      status: 'completed',
-      comment: 'User registered',
+      stage: "registered",
+      date: "2025-06-01",
+      status: "completed",
+      comment: "User registered",
     },
     {
-      stage: 'hr',
-      date: '2025-06-03',
-      status: 'completed',
-      comment: 'HR screening done',
+      stage: "hr",
+      date: "2025-06-03",
+      status: "completed",
+      comment: "HR screening done",
     },
     {
-      stage: 'assessment',
-      date: '2025-07-09',
-      status: 'completed',
-      comment: 'Passed',
+      stage: "assessment",
+      date: "2025-07-09",
+      status: "completed",
+      comment: "Passed",
     },
     {
-      stage: 'technical',
-      date: '2025-08-01',
-      status: 'completed',
-      comment: 'Passed',
+      stage: "technical",
+      date: "2025-08-01",
+      status: "completed",
+      comment: "Passed",
     },
     {
-      stage: 'feedback',
-      date: '2025-08-01',
-      status: 'current',
-      comment: '-',
+      stage: "feedback",
+      date: "2025-08-01",
+      status: "current",
+      comment: "-",
     },
   ];
 
@@ -51,27 +60,31 @@ const Home = () => {
     const fetchEvents = async () => {
       try {
         const [assessmentRes, interviewRes] = await Promise.all([
-          api.get('/candidates/assessments'),
-          api.get('/candidates/interviews'),
+          api.get("/candidates/assessments"),
+          api.get("/candidates/interviews"),
         ]);
 
-        const assessments = assessmentRes.data.assessments.map((a: any) => ({
-          id: a._id,
-          type: 'Assessment',
-          title: a.assessment_type,
-          date: a.assigned_at,
-        }));
+        const assessments: Event[] = assessmentRes.data.assessments.map(
+          (a: any): Event => ({
+            id: a._id,
+            type: "Assessment",
+            title: a.assessment_type,
+            date: a.assigned_at,
+          })
+        );
 
-        const interviews = interviewRes.data.data.map((i: any) => ({
-          id: i._id,
-          type: 'Interview',
-          title: `${i.interview_type} Round ${i.round}`,
-          date: i.scheduled_at,
-        }));
+        const interviews: Event[] = interviewRes.data.data.map(
+          (i: any): Event => ({
+            id: i._id,
+            type: "Interview",
+            title: `${i.interview_type} Round ${i.round}`,
+            date: i.scheduled_at,
+          })
+        );
 
         setEvents([...assessments, ...interviews]);
       } catch (error) {
-        console.error('Failed to fetch candidate events:', error);
+        console.error("Failed to fetch candidate events:", error);
       }
     };
 
