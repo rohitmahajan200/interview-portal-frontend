@@ -35,8 +35,8 @@ export const loginSchema = z.object({
 
 
 export const candidateUpdateSchema = z.object({
-  first_name: z.string().trim().min(1, "First name is required").max(50).optional(),
-  last_name: z.string().trim().min(1, "Last name is required").max(50).optional(),
+  first_name: z.string().trim().min(1, "First name is required").max(50),
+  last_name: z.string().trim().min(1, "Last name is required").max(50),
   phone: z
     .string()
     .regex(/^\+?[1-9]\d{7,14}$/, "Invalid international phone number")
@@ -50,7 +50,7 @@ export const candidateUpdateSchema = z.object({
     ),
   gender: z.enum(["male", "female", "other"]).optional(),
   address: z.string().max(250).optional(),
-  profile_photo_url: z.string().url("Invalid profile photo URL").optional(),
-  portfolio_url: z.string().url("Invalid portfolio URL").optional(),
+  profile_photo_url: z.object({ url: z.url("Invalid profile photo URL"), publicId: z.string() }).optional(),
+  portfolio_url: z.url("Invalid portfolio URL").optional().or(z.literal("")),
 }).strict();
  

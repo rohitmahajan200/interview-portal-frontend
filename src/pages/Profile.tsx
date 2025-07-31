@@ -1,325 +1,139 @@
+import React, { useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/app/store";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import type { User, StageHistory } from "@/types/types";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { useAppSelector } from "@/hooks/useAuth";
-import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import PhoneInput from "react-phone-number-input";
-import "react-phone-number-input/style.css";
+import UpdateProfile from "@/components/UpdateProfile";
 
+const Profile = () => {
+  const user: User = useSelector((state: RootState) => state.auth.user!);
+  const [isEditing, setIsEditing] = useState(false);
+  if (!user) return <div>Loading...</div>;
 
-export default function Profile() {
-  const state = useAppSelector((state) => state.auth);
-  console.log("State in profile ", state);
-  const candidate = state.user!;
-  const [editable, setEditable] = useState(true);
-  
-  const [formData, setFormData] = useState({
-    first_name: candidate.first_name,
-    last_name: candidate.last_name,
-    email: candidate.email,
-    phone: candidate.phone,
-    date_of_birth: candidate.date_of_birth,
-    gender: candidate.gender,
-    address: candidate.address,
-    profile_photo_url: candidate.profile_photo_url,
-    portfolio_url: candidate.portfolio_url,
-    profile_photo_file: null as File | null,
-    resume_url: candidate.resume_url,
-    resume_file: null as File | null,
-  });
-
-  const {
-  control,
-  } = useForm()
-
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value, files } = e.target as HTMLInputElement;
-
-    // Handle file fields
-    if (files && files.length > 0) {
-      if (name === "profile_photo") {
-        setFormData((prev) => ({
-          ...prev,
-          profile_photo_file: files[0],
-          profile_photo_url: URL.createObjectURL(files[0]), // for preview
-        }));
-      } else if (name === "resume") {
-        setFormData((prev) => ({
-          ...prev,
-          resume_file: files[0],
-        }));
-      }
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const payload = new FormData();
-    payload.append("first_name", formData.first_name);
-    payload.append("last_name", formData.last_name);
-    payload.append("email", formData.email);
-    payload.append("phone", formData.phone);
-    payload.append("date_of_birth", formData.date_of_birth);
-    payload.append("gender", formData.gender);
-    payload.append("address", formData.address);
-
-    if (formData.profile_photo_file) {
-      payload.append("profile_photo", formData.profile_photo_file);
-    }
-
-    if (formData.resume_file) {
-      payload.append("resume", formData.resume_file);
-    }
-
-    // 👇 Replace this with your actual API call
-    try {
-      // await axios.post("/api/profile/update", payload);
-      console.log("Form submitted successfully");
-      setEditable(false);
-    } catch (err) {
-      console.error("Error submitting form", err);
-    }
-  };
-
-  return (
-    <>
-      {editable ? (
-        <form
-          onSubmit={handleSubmit}
-          className="relative max-w-3xl w-full mx-auto p-6 bg-white rounded-xl shadow-md space-y-6"
-        >
-          {/* Top Right Edit Button */}
-          <div className="absolute top-6 right-6">
-            <Button
-              type="submit"
-              className="bg-gray-900 hover:bg-black text-white px-4 py-2 rounded"
-            >
-              Save Changes
-            </Button>
-            <Button
-              onClick={() => setEditable(false)}
-              type="submit"
-              className="bg-gray-900 hover:bg-black ml-4 text-white px-4 py-2 rounded"
-            >
-              Cancel
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <img
-              src={formData.profile_photo_url}
-              alt="Profile"
-              className="w-48 h-48 rounded-full object-cover border"
-            />
-            <div>
-              <h2 className="text-2xl font-bold">
-                {formData.first_name} {formData.last_name}
-              </h2>
-              <p className="text-gray-500 text-sm">
-                Joined on{" "}
-                {new Date(candidate.registration_date).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <label className="text-gray-500">First Name</label>
-              <input
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
+  return isEditing ? <UpdateProfile defaultValues={user} setIsEditing={setIsEditing}/> :  (
+    <div className="grid gap-6 max-w-5xl px-4 sm:px-6 py-8">
+      {/* Profile Card */}
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-col lg:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+            <Avatar className="w-32 h-32 rounded-full ring-2 ring-primary shrink-0">
+              <AvatarImage
+                src={user.profile_photo_url?.url}
+                className="object-cover rounded-full"
               />
+              <AvatarFallback className="text-2xl">
+                {user.first_name[0]}
+                {user.last_name[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+              <CardTitle className="text-3xl font-bold text-foreground">
+                {user.first_name} {user.last_name}
+              </CardTitle>
+              <p className="text-muted-foreground text-sm">{user.email}</p>
             </div>
-
+            </div>
             <div>
-              <label className="text-gray-500">Last Name</label>
-              <input
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              />
-            </div>
-
-            <div>
-              <label className="text-gray-500">Email</label>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              />
-            </div>
-
-            <div>
-              <label className="text-gray-500">Phone</label>
-              <Controller
-                control={control}
-                name="phone"
-                render={({ field }) => (
-                  <PhoneInput
-                    {...field}
-                    defaultCountry="IN"
-                    international
-                    countryCallingCodeEditable={false}
-                    className="w-full border p-2 rounded"
-                  />
-                )}
-              />
-              {/* {errors.phone && (
-                <p className="text-red-500 text-xs">{errors.phone.message}</p>
-              )} */}
-            </div>
-
-            <div>
-              <label className="text-gray-500">Date of Birth</label>
-              <input
-                name="date_of_birth"
-                type="date"
-                value={formData.date_of_birth.slice(0, 10)}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              />
-            </div>
-
-            <div>
-              <label className="text-gray-500">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-gray-500">Address</label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              ></textarea>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-gray-500">Port-Folio URL</label>
-              <textarea
-                name="portfolio-url"
-                value={formData.portfolio_url}
-                onChange={handleChange}
-                className="w-full border p-2 rounded"
-              ></textarea>
-            </div>
-          </div>
-
-          {/* Resume Section */}
-          <div className="mt-6 border-t pt-4">
-            <h3 className="text-lg font-semibold mb-2">Documents</h3>
-            <label className="text-gray-500">Resume Link</label>
-            <input
-              name="resume_url"
-              type="url"
-              value={formData.resume_url}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-            />
-          </div>
-        </form>
-      ) : (
-        <div className="relative max-w-3xl w-full mx-auto p-6 bg-white rounded-xl shadow-md space-y-6">
-          <div className="flex items-center gap-4">
-            <img
-              src={candidate.profile_photo_url}
-              alt="Profile"
-              className="w-48 h-48 rounded-full object-cover border"
-            />
-            <div>
-              <h2 className="text-2xl font-bold">
-                {candidate.first_name} {candidate.last_name}
-              </h2>
-              <p className="text-gray-500 text-sm">
-                Joined on{" "}
-                {new Date(candidate.registration_date).toLocaleDateString()}
-              </p>
-              <Button
-                onClick={() => setEditable(true)}
-                className="absolute top-6 right-6 min-w1.5 m-7 sm:w-auto bg-gray-900 hover:bg-black cursor-pointer text-white"
-              >
-                Edit Profile
+              <Button variant="outline" size="lg" onClick={() => setIsEditing(true)}>
+                <span className="text-md">Edit Profile</span>
               </Button>
             </div>
           </div>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:gap-3 text-sm text-foreground">
+          <p><strong>Phone:</strong> {user.phone ?? "N/A"}</p>
+          <p>
+            <strong>DOB:</strong>{" "}
+            {user.date_of_birth
+              ? format(new Date(user.date_of_birth), "dd/MM/yyyy")
+              : "N/A"}
+          </p>
+          <p><strong>Gender:</strong> {user.gender}</p>
+          <p><strong>Address:</strong> {user.address ?? "N/A"}</p>
+          {user.portfolio_url !== "" && user.portfolio_url !== undefined && <p><strong>Portfolio:</strong> {user.portfolio_url ?? "N/A"}</p>}
+          <p><strong>Role:</strong> {user.applied_role?.name ?? "N/A"}</p>
+          <p><strong>Stage:</strong> {user.current_stage ?? "N/A"}</p>
+          <p><strong>Email Verified:</strong> {user.email_verified ? "Yes" : "No"}</p>
+          <p>
+            <strong>Registered On:</strong>{" "}
+            {user.registration_date
+              ? format(new Date(user.registration_date), "dd MMM yyyy")
+              : "N/A"}
+          </p>
+        </CardContent>
+      </Card>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-500">Email</p>
-              <p className="font-medium">{candidate.email}</p>
-            </div>
-
-            <div>
-              <p className="text-gray-500">Phone</p>
-              <p className="font-medium">{candidate.phone}</p>
-            </div>
-
-            <div>
-              <p className="text-gray-500">Date of Birth</p>
-              <p className="font-medium">
-                {new Date(candidate.date_of_birth).toLocaleDateString()}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-gray-500">Gender</p>
-              <p className="font-medium capitalize">{candidate.gender}</p>
-            </div>
-
-            <div className="sm:col-span-2">
-              <p className="text-gray-500">Address</p>
-              <p className="font-medium">{candidate.address}</p>
-            </div>
-          </div>
-
-          <div className="sm:col-span-2">
-            <p className="text-gray-500">Port-Folio URL</p>
-            <p className="font-medium">{candidate.portfolio_url}</p>
-          </div>
-
-          {/* Document Section */}
-          <div className="mt-6 border-t pt-4">
-            <h3 className="text-lg font-semibold mb-2">Documents</h3>
-            {candidate.resume_url ? (
-              <div>
-                <p className="text-gray-500">Resume</p>
+      {/* Documents Card */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-foreground">Documents</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-foreground">
+          {user.documents?.length ? (
+            user.documents.map((doc, i) => (
+              <div key={i} className="flex justify-between items-center border-b border-border pb-2">
+                <span>{doc.document_type}</span>
                 <a
-                  href={candidate.resume_url}
+                  href={doc.document_url}
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 underline"
+                  rel="noreferrer"
+                  className="text-blue-600 dark:text-blue-400 underline"
                 >
-                  View Resume
+                  View
                 </a>
               </div>
-            ) : (
-              <p className="text-gray-500 italic">No resume uploaded.</p>
-            )}
-          </div>
-        </div>
-      )}
-    </>
+            ))
+          ) : (
+            <p className="text-muted-foreground">No documents uploaded.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Stage History Card */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-foreground">Stage History</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 text-foreground">
+          {user.stage_history?.length ? (
+            user.stage_history.map((item: StageHistory, i) => (
+              <div key={i} className="p-3 border border-border rounded">
+                <div className="flex justify-between items-center">
+                  <Badge variant="outline">{item.to_stage}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {item.changed_at
+                      ? format(new Date(item.changed_at), "dd MMM yyyy HH:mm")
+                      : ""}
+                  </span>
+                </div>
+                {item.remarks && (
+                  <p className="text-sm mt-2 text-muted-foreground">
+                    {item.remarks}
+                  </p>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-muted-foreground text-sm">No stage history available.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+};
+
+export default Profile;

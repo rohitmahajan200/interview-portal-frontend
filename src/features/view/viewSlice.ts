@@ -6,8 +6,9 @@ interface ViewState {
 }
 
 const initialState: ViewState = {
-  currentView: "home", // default view
+  currentView: localStorage.getItem("currentView") || "home",
 };
+
 
 const viewSlice = createSlice({
   name: "view",

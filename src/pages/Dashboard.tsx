@@ -27,10 +27,8 @@ import { Settings } from "lucide-react";
 
 export default function Page() {
   const dispatch = useDispatch();
-  const currentView = useSelector((state: RootState) => state.view.currentView) as string;
   const navigate = useNavigate();
-
-  // Fetch candidate profile when component mounts
+  const currentView = useSelector((state: RootState) => state.view.currentView);
   useEffect(() => {
     const fetchCandidate = async () => {
       try {
@@ -45,9 +43,12 @@ export default function Page() {
     };
 
     fetchCandidate();
-  }, []);
+  }, [dispatch, navigate]);
 
-  // Dynamically render the selected view based on Redux state
+  useEffect(() => {
+    localStorage.setItem("currentView", currentView);
+  }, [currentView]);
+
   const renderView = (currentView: string) => {
     switch (currentView) {
       case "home":
@@ -96,9 +97,7 @@ export default function Page() {
             </Breadcrumb>
           </div>
         </header>
-
-        {/* Render view based on current route/view state */}
-        {renderView(currentView)}
+        {currentView ? renderView(currentView) : null}
       </SidebarInset>
     </SidebarProvider>
   );

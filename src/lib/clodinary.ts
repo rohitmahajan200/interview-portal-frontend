@@ -1,7 +1,11 @@
+interface CloudinaryUploadResult {
+  url: string;
+  publicId: string;
+}
 export const uploadToCloudinary = async (
   file: File,
   folder?: string
-): Promise<string> => {
+): Promise<CloudinaryUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", "unsigned_upload");
@@ -20,5 +24,8 @@ export const uploadToCloudinary = async (
   );
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message || "Upload failed");
-  return json.secure_url as string;
+  return {
+    url: json.secure_url,
+    publicId: json.public_id,
+  };
 };
