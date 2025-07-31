@@ -3,18 +3,23 @@ export interface User {
   first_name: string;
   last_name: string;
   email: string;
-  phone: string;
-  date_of_birth: string; // ISO date string
+  phone?: string;
+  date_of_birth?: string; // ISO date string
   gender: "male" | "female" | "other";
-  address: string;
-  portfolio_url:string,
-  profile_photo_url: string;
-  applied_role: string;
-  documents: string[];
-  current_stage: string;
+  address?: string;
+  portfolio_url?: string;
+  profile_photo_url: {
+    url: string;
+    publicId: string;
+  };
+  applied_role?: RoleItem | null;
+  documents?: DocumentItem[];
+  current_stage?: string;
   email_verified: boolean;
-  registration_date: string; // ISO date string
-}
+  registration_date?: string; // ISO date string
+  status?: string;
+  stage_history?: StageHistory []; // Add a type if you use stage history in UI
+} 
 
 export interface LoginResponse {
   success: true;
@@ -59,3 +64,30 @@ export interface RegisterData {
   }>;
   password: string;
 }
+
+export interface StageHistory {
+  candidate: string; // ObjectId as string
+  from_stage?: string;
+  to_stage: string;
+  changed_by: string; // User ObjectId
+  action?: string;
+  remarks?: string;
+  changed_at?: string; // ISO string
+}
+
+export interface DocumentItem {
+  _id: string;
+  candidate: string;
+  document_type: string;
+  document_url: string;
+  uploaded_at: string; // ISO date string
+  public_id?: string;
+}
+
+export interface RoleItem {
+  _id: string;
+  name: string;
+  description?: string;
+}
+
+
