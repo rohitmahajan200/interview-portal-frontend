@@ -90,7 +90,7 @@ const onSubmit = async (data: FormValues) => {
         ...data,
         profile_photo_url: profilePhotoUrl,
         documents: [
-          { document_type: "resume", document_url: resumeUrl }
+          { document_type: "resume", document_url: resumeUrl.url, publicid: resumeUrl.publicId }
         ],
       };
 

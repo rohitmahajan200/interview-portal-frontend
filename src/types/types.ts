@@ -13,7 +13,7 @@ export interface User {
     publicId: string;
   };
   applied_role?: RoleItem | null;
-  documents?: DocumentItem[];
+  documents: DocumentItem[];
   current_stage?: string;
   email_verified: boolean;
   registration_date?: string; // ISO date string
