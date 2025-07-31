@@ -1,21 +1,23 @@
+// Importing required components, hooks, and utilities
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbList,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { useDispatch } from "react-redux";
 import { setUser } from "@/features/auth/authSlice";
 import api from "@/lib/api";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Importing page views
 import Home from "./Home";
 import Assessments from "./Assessments";
 import Interviews from "./Interviews";
@@ -27,22 +29,25 @@ export default function Page() {
   const dispatch = useDispatch();
   const currentView = useSelector((state: RootState) => state.view.currentView) as string;
   const navigate = useNavigate();
+
+  // Fetch candidate profile when component mounts
   useEffect(() => {
     const fetchCandidate = async () => {
       try {
         const res = await api.get("/candidates/me");
         if (res.data.user) {
-          dispatch(setUser(res.data.user));
+          dispatch(setUser(res.data.user)); // Save user info in Redux store
         }
       } catch (error) {
         console.error("Failed to fetch candidate profile:", error);
-        navigate("/login");
+        navigate("/login"); // Redirect to login if error occurs
       }
     };
 
     fetchCandidate();
   }, []);
 
+  // Dynamically render the selected view based on Redux state
   const renderView = (currentView: string) => {
     switch (currentView) {
       case "home":
@@ -64,15 +69,20 @@ export default function Page() {
 
   return (
     <SidebarProvider>
+      {/* Left navigation sidebar */}
       <AppSidebar />
+
+      {/* Main content wrapper */}
       <SidebarInset>
+        {/* Top header section */}
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="-ml-1" /> {/* Toggle sidebar */}
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
+            {/* Welcome breadcrumb */}
             <Breadcrumb>
               <BreadcrumbList>
                 <header className=" px-1 rounded-xl">
@@ -86,6 +96,8 @@ export default function Page() {
             </Breadcrumb>
           </div>
         </header>
+
+        {/* Render view based on current route/view state */}
         {renderView(currentView)}
       </SidebarInset>
     </SidebarProvider>

@@ -1,12 +1,19 @@
+// Import required components and hooks
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
-export const EmailVerification=()=> {
-  const navigate = useNavigate();
+// Email verification page UI
+export const EmailVerification = () => {
+  const navigate = useNavigate(); // Hook for navigation
+
   return (
+    // Center the entire content vertically and horizontally
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 sm:px-6 md:px-10 py-12">
       <div className="w-full max-w-lg">
+        {/* Card container */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
+          
+          {/* Header section with title and description */}
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-semibold">Email Verification Required</h2>
             <p className="text-sm text-gray-500">
@@ -14,6 +21,7 @@ export const EmailVerification=()=> {
             </p>
           </div>
 
+          {/* Instructional text for the user */}
           <div className="text-sm text-gray-700 space-y-4 text-center">
             <p>
               We have sent a verification link to your registered email address.
@@ -26,6 +34,7 @@ export const EmailVerification=()=> {
             </p>
           </div>
 
+          {/* Navigation button to return to login page */}
           <Button
             type="button"
             className="w-full text-sm py-2"
@@ -37,4 +46,4 @@ export const EmailVerification=()=> {
       </div>
     </div>
   );
-}
+};
