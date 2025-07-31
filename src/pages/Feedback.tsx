@@ -1,7 +1,6 @@
 import React from "react";
 import {
   MessageSquareText,
-  UserCircle2,
   Tags,
 } from "lucide-react"; // Optional icon library
 
@@ -53,11 +52,6 @@ const Feedback = () => {
             className="border rounded-xl bg-white shadow-sm p-5 hover:shadow-md transition duration-200"
           >
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
-              <div className="flex items-center text-sm text-gray-600 gap-2">
-                <UserCircle2 className="w-5 h-5 text-blue-600" />
-                <span className="font-medium">Candidate ID:</span>
-                <span className="text-gray-800 truncate">{fb.candidate}</span>
-              </div>
               <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize w-fit">
                 {fb.feedback_type.replace("-", " ")}
               </span>

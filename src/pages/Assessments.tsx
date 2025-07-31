@@ -43,13 +43,13 @@ const Assessments = () => {
 
           <TableHeader className="bg-gray-100">
             <TableRow>
-              <TableHead className="whitespace-nowrap">Type</TableHead>
-              <TableHead className="whitespace-nowrap">Status</TableHead>
-              <TableHead className="whitespace-nowrap">Assign Date</TableHead>
-              <TableHead className="whitespace-nowrap text-right">
+              <TableHead className="whitespace-nowrap text-center">Type</TableHead>
+              <TableHead className="whitespace-nowrap text-center">Status</TableHead>
+              <TableHead className="whitespace-nowrap text-center">Assign Date</TableHead>
+              <TableHead className="whitespace-nowrap text-center">
                 Action
               </TableHead>
-              <TableHead className="whitespace-nowrap text-right">
+              <TableHead className="whitespace-nowrap text-center">
                 Due Date
               </TableHead>
             </TableRow>
@@ -58,16 +58,16 @@ const Assessments = () => {
           <TableBody>
             {data.map((assessment) => (
               <TableRow key={assessment._id}>
-                <TableCell className="font-medium capitalize">
+                <TableCell className="font-medium capitalize text-center">
                   {assessment.assessment_type}
                 </TableCell>
-                <TableCell className="capitalize text-gray-700">
+                <TableCell className="capitalize text-center text-gray-700">
                   {assessment.status}
                 </TableCell>
-                <TableCell className="text-gray-600">
+                <TableCell className="text-center text-gray-600">
                   {new Date(assessment.assigned_at).toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-center">
                   {assessment.status === "pending" && (
                     <button className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-md border border-yellow-300 hover:bg-yellow-200 text-sm font-medium transition">
                       Start
@@ -92,7 +92,7 @@ const Assessments = () => {
                     </button>
                   )}
                 </TableCell>
-                <TableCell className="text-right text-gray-600">
+                <TableCell className="text-center text-gray-600">
                   {new Date(assessment.due_at).toLocaleString()}
                 </TableCell>
               </TableRow>
