@@ -72,7 +72,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             user={{
               name: state.user.first_name,
               email: state.user.email,
-              avatar: state.user.profile_photo_url,
+              avatar: state.user.profile_photo_url.url,
             }}
           />
         )}
