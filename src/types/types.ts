@@ -1,3 +1,4 @@
+export type Stage = 'registered' | 'hr' | 'assessment' | 'tech' | 'manager' | 'feedback';
 export interface User {
   _id: string;
   first_name: string;
@@ -14,7 +15,7 @@ export interface User {
   };
   applied_role?: RoleItem | null;
   documents: DocumentItem[];
-  current_stage?: string;
+  current_stage?: Stage;
   email_verified: boolean;
   registration_date?: string; // ISO date string
   status?: string;
@@ -65,14 +66,15 @@ export interface RegisterData {
   password: string;
 }
 
+
 export interface StageHistory {
-  candidate: string; // ObjectId as string
-  from_stage?: string;
-  to_stage: string;
-  changed_by: string; // User ObjectId
+  candidate: string;
+  from_stage?: Stage;
+  to_stage: Stage;
+  changed_by?: string;
   action?: string;
   remarks?: string;
-  changed_at?: string; // ISO string
+  changed_at?: string;
 }
 
 export interface DocumentItem {

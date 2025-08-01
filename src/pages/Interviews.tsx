@@ -43,11 +43,11 @@ const Interviews = () => {
 
     switch (status) {
       case 'Completed':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Completed</span>;
+        return <span className={`${baseClasses} bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900`}>Completed</span>;
       case 'Missed':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Missed</span>;
+        return <span className={`${baseClasses} bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900`}>Missed</span>;
       default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>;
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-200 dark:text-gray-900`}>{status}</span>;
     }
   };
 
@@ -69,7 +69,7 @@ const Interviews = () => {
       ) : (
         <button
           disabled
-          className="inline-block px-4 py-1 text-sm font-medium bg-gray-200 text-gray-500 rounded cursor-not-allowed"
+          className="inline-block px-4 py-1 text-sm font-medium bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 rounded cursor-not-allowed"
         >
           Not Yet Started
         </button>
@@ -81,19 +81,19 @@ const Interviews = () => {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto w-full">
-      <h2 className="text-2xl font-semibold mb-6">Your Interviews</h2>
+      <h2 className="text-2xl font-semibold mb-6 dark:text-white">Your Interviews</h2>
       <div className="space-y-4">
         {interviews.map((interview) => (
           <div
             key={interview._id}
-            className="rounded-xl border shadow-sm p-5 bg-white hover:shadow-md transition-all"
+            className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-md p-5 bg-white dark:bg-gray-900 hover:shadow-md transition-all"
           >
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
               <div>
-                <h3 className="text-lg font-semibold capitalize">
+                <h3 className="text-lg font-semibold capitalize dark:text-white">
                   {interview.interview_type} Round {interview.round}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Scheduled for: {format(new Date(interview.scheduled_at), 'PPpp')}
                 </p>
               </div>
@@ -103,28 +103,28 @@ const Interviews = () => {
               </div>
             </div>
 
-            <div className="text-sm text-gray-700 mb-2">
-              <span className="font-medium">Joining Link: </span>
+            <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              <span className="font-medium dark:text-white">Joining Link: </span>
               <a
                 href={interview.joining_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 underline break-all"
+                className="text-blue-600 dark:text-blue-400 underline break-all"
               >
                 {interview.joining_link}
               </a>
             </div>
 
             <div className="mt-2">
-              <p className="font-medium text-gray-800">Interviewers:</p>
-              <ul className="list-disc list-inside text-sm text-gray-700 mt-1">
+              <p className="font-medium text-gray-800 dark:text-white">Interviewers:</p>
+              <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 mt-1">
                 {interview.interviewers?.length ? (
                   interview.interviewers.map((i, idx) => (
                     <li key={idx}>
                       {i.name} (
                       <a
                         href={`mailto:${i.email}`}
-                        className="text-blue-500 hover:underline"
+                        className="text-blue-500 dark:text-blue-400 hover:underline"
                       >
                         {i.email}
                       </a>
@@ -140,7 +140,7 @@ const Interviews = () => {
         ))}
 
         {!interviews.length && (
-          <div className="text-center text-gray-500 mt-10">
+          <div className="text-center text-gray-500 dark:text-gray-400 mt-10">
             No interviews found.
           </div>
         )}

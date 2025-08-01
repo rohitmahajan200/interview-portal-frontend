@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Logo() {
   return (
     <div className="flex items-center gap-2 px-4 py-2">
@@ -10,7 +8,7 @@ export default function Logo() {
         onContextMenu={(e) => e.preventDefault()}
         className="h-6 w-auto"
       />
-      <span className="text-sm font-semibold tracking-wide text-gray-800">
+      <span className="text-sm font-semibold tracking-wide text-card-foreground">
         Change Networks
       </span>
     </div>

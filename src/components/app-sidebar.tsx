@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -21,14 +21,10 @@ import {
 import { useAppSelector } from "@/hooks/useAuth"
 import Logo from "./logo"
 
-
-// This is sample data.
-
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { open } = useSidebar(); 
-  const state=useAppSelector((state)=>state.auth);
-  console.log("state in dashboard ",state.user);
+  const { open } = useSidebar()
+  const state = useAppSelector((state) => state.auth)
+
   const data = {
     navMain: [
       {
@@ -55,29 +51,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Settings",
         icon: Settings2,
       },
-    ]
-  };
+    ],
+  }
 
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar
+      collapsible="icon"
+      className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700"
+      {...props}
+    >
+      <SidebarHeader className="border-b border-gray-200 dark:border-gray-700">
         {open && <Logo />}
       </SidebarHeader>
-      <SidebarContent>
+
+      <SidebarContent className="bg-white dark:bg-gray-900">
         <NavMain items={data.navMain} />
       </SidebarContent>
-      <SidebarFooter>
-        {state.user && state.user.first_name && state.user.email && state.user.profile_photo_url && (
-          <NavUser
-            user={{
-              name: state.user.first_name,
-              email: state.user.email,
-              avatar: state.user.profile_photo_url.url,
-            }}
-          />
-        )}
+
+      <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
+        {state.user &&
+          state.user.first_name &&
+          state.user.email &&
+          state.user.profile_photo_url && (
+            <NavUser
+              user={{
+                name: state.user.first_name,
+                email: state.user.email,
+                avatar: state.user.profile_photo_url.url,
+              }}
+            />
+          )}
       </SidebarFooter>
-      <SidebarRail />
+
+      <SidebarRail className="bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700" />
     </Sidebar>
   )
 }

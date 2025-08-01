@@ -92,14 +92,14 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-background text-foreground">
       <div className="grid auto-rows-min gap-4 md:grid-cols-2">
         <JobList />
-        <div className="bg-muted/50 rounded-xl">
+        <div className="rounded-xl bg-muted/50 dark:bg-muted/30">
           <EventNotificationCard events={events} />
         </div>
       </div>
-      <div className="bg-muted/50 min-h-[200px] rounded-xl p-4">
+      <div className="min-h-[200px] rounded-xl bg-muted/50 dark:bg-muted/30 p-4">
         <ProgressBar stages={applicationStatus} />
       </div>
     </div>

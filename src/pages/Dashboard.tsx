@@ -1,4 +1,3 @@
-// Importing required components, hooks, and utilities
 import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
@@ -23,12 +22,14 @@ import Assessments from "./Assessments";
 import Interviews from "./Interviews";
 import Feedback from "./Feedback";
 import Profile from "./Profile";
-import { Settings } from "lucide-react";
+import Settings from "./Settings";
+import ThemeToggle from "@/components/themeToggle";
 
 export default function Page() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const currentView = useSelector((state: RootState) => state.view.currentView);
+
   useEffect(() => {
     const fetchCandidate = async () => {
       try {
@@ -76,25 +77,28 @@ export default function Page() {
       {/* Main content wrapper */}
       <SidebarInset>
         {/* Top header section */}
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" /> {/* Toggle sidebar */}
-            <Separator
-              orientation="vertical"
-              className="mr-2 data-[orientation=vertical]:h-4"
-            />
-            {/* Welcome breadcrumb */}
-            <Breadcrumb>
-              <BreadcrumbList>
-                <header className=" px-1 rounded-xl">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-semibold text-gray-800">
-                      Welcome To Change Networks!
-                    </span>
-                  </div>
-                </header>
-              </BreadcrumbList>
-            </Breadcrumb>
+        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
+          <div className="flex items-center gap-2 px-4 justify-between w-full">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" /> {/* Toggle sidebar */}
+              <Separator
+                orientation="vertical"
+                className="mr-2 data-[orientation=vertical]:h-4"
+              />
+              {/* Welcome breadcrumb */}
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <header className="px-1 rounded-xl">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                        Welcome To Change Networks!
+                      </span>
+                    </div>
+                  </header>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <ThemeToggle />
           </div>
         </header>
         {currentView ? renderView(currentView) : null}

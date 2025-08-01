@@ -42,29 +42,29 @@ const feedbacks = [
 const Feedback = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
-      <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 text-center">
+      <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">
         Candidate Feedbacks
       </h2>
       <div className="space-y-6">
         {feedbacks.map((fb, index) => (
           <div
             key={index}
-            className="border rounded-xl bg-white shadow-sm p-5 hover:shadow-md transition duration-200"
+            className="border rounded-xl bg-white dark:bg-gray-900 dark:border-gray-700 shadow-sm p-5 hover:shadow-md transition duration-200"
           >
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize w-fit">
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 capitalize w-fit">
                 {fb.feedback_type.replace("-", " ")}
               </span>
             </div>
 
-            <div className="flex items-center text-sm text-gray-700 gap-2 mb-2">
-              <Tags className="w-4 h-4 text-gray-500" />
+            <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 gap-2 mb-2">
+              <Tags className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               <span className="font-medium">Stage:</span>
               <span className="capitalize">{fb.stage.replace("_", " ")}</span>
             </div>
 
-            <div className="text-gray-800 text-sm leading-relaxed border-l-4 border-blue-200 pl-4 italic">
-              <MessageSquareText className="w-4 h-4 inline text-blue-400 mr-1 mb-1" />
+            <div className="text-gray-800 dark:text-gray-100 text-sm leading-relaxed border-l-4 border-blue-200 dark:border-blue-700 pl-4 italic">
+              <MessageSquareText className="w-4 h-4 inline text-blue-400 dark:text-blue-300 mr-1 mb-1" />
               {fb.content}
             </div>
           </div>

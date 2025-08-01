@@ -1,13 +1,26 @@
 import { CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const statusIcon = {
+type StageStatus = "completed" | "current" | "failed";
+
+interface Stage {
+  stage: string;
+  status: StageStatus;
+  date?: string;
+  comment?: string;
+}
+
+interface Props {
+  stages: Stage[];
+}
+
+const statusIcon: Record<StageStatus, JSX.Element> = {
   completed: <CheckCircle className="text-green-500" size={20} />,
   current: <Clock className="text-blue-500" size={20} />,
   failed: <AlertCircle className="text-red-500" size={20} />,
 };
 
-export const ProgressBar = ({ stages }) => {
+export const ProgressBar: React.FC<Props> = ({ stages }) => {
   return (
     <div className="w-full overflow-x-auto">
       <h2 className="text-xl font-semibold mb-4">Application Status</h2>
@@ -48,7 +61,7 @@ export const ProgressBar = ({ stages }) => {
   );
 };
 
-function formatDate(date) {
+function formatDate(date?: string): string {
   if (!date) return "-";
   const d = new Date(date);
   return d.toLocaleDateString("en-GB", {

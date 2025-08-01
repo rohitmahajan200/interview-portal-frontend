@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setUser } from "@/features/auth/authSlice";
 import api from "@/lib/api";
+import { useAppSelector } from "@/hooks/useAuth";
 
 type Step = "enteremail" | "verifyOtp" | "resetPassword";
 
@@ -21,6 +22,14 @@ const OTPForgetPasswordForm: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const state=useAppSelector((state)=>state.auth?.user);
+
+  useEffect(()=>{
+    if(state==null){
+      return;
+    }
+    setStep('resetPassword');
+  },[]);
 
   // Send OTP
   const sendOtp = async () => {
@@ -256,6 +265,14 @@ const OTPForgetPasswordForm: React.FC = () => {
                     Back to login
                   </span>
                 </div>
+                {state!==null?<div className="text-center text-sm text-gray-600">
+                  <span
+                    onClick={() => navigate("/")}
+                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                  >
+                    Back to Settings
+                  </span>
+                </div>:null}
               </form>
             )}
           </CardContent>
