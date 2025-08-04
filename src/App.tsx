@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import OTPLoginForm from "./pages/OTPLoginForm";
 import OTPForgetPasswordForm from "./pages/OTPForgetPasswordForm";
 import NotFound from "./pages/NotFound";
+import SecureAssessmentLanding from "./pages/SecureAssessmentLanding";
 
 
 function App() {
@@ -38,6 +39,16 @@ function App() {
     {
       path:"/email-verification",
       element:<EmailVerification /> //Email verification informative form
+    },
+    {
+      path:"/start-assessment/:assessmentId",
+      element:<SecureAssessmentLanding />,
+      // children:[
+      //   {
+      //     path:"qna",
+      //     element:<QnaPage />
+      //   }
+      // ]
     },
     {
       path:"*",

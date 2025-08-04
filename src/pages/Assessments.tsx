@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useNavigate } from "react-router-dom";
 
 type Assessment = {
   _id: string;
@@ -19,7 +20,14 @@ type Assessment = {
 };
 
 const Assessments = () => {
+  const navigate = useNavigate();
   const [data, setData] = useState<Assessment[]>([]);
+  // const [queID,setQueId]=useState([]);
+  // const [que,setQue]=useState([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleStart = async (id: string) => {
+    navigate(`/start-assessment/${id}`);
+  };
 
   useEffect(() => {
     const fetchAssessments = async () => {
@@ -43,17 +51,30 @@ const Assessments = () => {
 
           <TableHeader className="bg-gray-100 dark:bg-gray-800">
             <TableRow>
-              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">Type</TableHead>
-              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">Status</TableHead>
-              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">Assign Date</TableHead>
-              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">Action</TableHead>
-              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">Due Date</TableHead>
+              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">
+                Type
+              </TableHead>
+              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">
+                Status
+              </TableHead>
+              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">
+                Assign Date
+              </TableHead>
+              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">
+                Action
+              </TableHead>
+              <TableHead className="whitespace-nowrap text-center text-gray-700 dark:text-gray-300">
+                Due Date
+              </TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {data.map((assessment) => (
-              <TableRow key={assessment._id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+              <TableRow
+                key={assessment._id}
+                className="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              >
                 <TableCell className="font-medium capitalize text-center text-gray-800 dark:text-gray-200">
                   {assessment.assessment_type ?? "Technical"}
                 </TableCell>
@@ -68,7 +89,10 @@ const Assessments = () => {
 
                 <TableCell className="text-center">
                   {assessment.status === "pending" && (
-                    <button className="bg-yellow-100 dark:bg-yellow-300 text-yellow-800 px-3 py-1 rounded-md border border-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-400 text-sm font-medium transition">
+                    <button
+                      className="bg-yellow-100 dark:bg-yellow-300 text-yellow-800 px-3 py-1 rounded-md border border-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-400 text-sm font-medium transition"
+                      onClick={() => handleStart(assessment._id)}
+                    >
                       Start
                     </button>
                   )}
