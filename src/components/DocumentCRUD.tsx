@@ -2,7 +2,7 @@ import { useAppSelector } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { setUser } from '@/features/auth/authSlice';
+import { setUser } from '@/features/Candidate/auth/authSlice';
 import { Input } from '@/components/ui/input';
 import { uploadToCloudinary } from '@/lib/clodinary';
 import toast, { Toaster } from "react-hot-toast";

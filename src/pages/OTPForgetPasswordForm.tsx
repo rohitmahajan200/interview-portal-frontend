@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Spinner from "@/components/ui/spinner";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { setUser } from "@/features/auth/authSlice";
+import { setUser } from "@/features/Candidate/auth/authSlice";
 import api from "@/lib/api";
 import { useAppSelector } from "@/hooks/useAuth";
 

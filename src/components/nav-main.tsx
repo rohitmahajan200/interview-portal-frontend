@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/app/store";
-import { setCurrentView } from "@/features/view/viewSlice";
+import { setCurrentView } from "@/features/Candidate/view/viewSlice";
 
 import {
   SidebarGroup,

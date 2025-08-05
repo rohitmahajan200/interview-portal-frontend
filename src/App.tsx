@@ -11,6 +11,10 @@ import OTPLoginForm from "./pages/OTPLoginForm";
 import OTPForgetPasswordForm from "./pages/OTPForgetPasswordForm";
 import NotFound from "./pages/NotFound";
 import SecureAssessmentLanding from "./pages/SecureAssessmentLanding";
+import OrgLoginForm from "./pages/OrgLoginForm";
+import OrgOTPLoginForm from "./pages/OrgOTPLoginForm";
+import OrgSetupPasswordForm from "./pages/OrgSetupPasswordForm";
+import OrgDashboard from "./pages/OrgDashboard";
 import SecureHRInterview from "./pages/SecureHrQn";
 
 
@@ -40,6 +44,22 @@ function App() {
     {
       path:"/email-verification",
       element:<EmailVerification /> //Email verification informative form
+    },
+      {
+      path: "/org/login",
+      element: <OrgLoginForm />,
+    },
+    {
+      path: "/org/otp-login", 
+      element: <OrgOTPLoginForm />,
+    },
+    {
+      path: "/org/setup-password",
+      element: <OrgSetupPasswordForm />,
+    },
+    {
+      path: "/org",
+      element: <OrgDashboard />,
     },
     {
       path:"/start-assessment/:assessmentId",

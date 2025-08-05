@@ -1,5 +1,5 @@
 import type { RootState } from "@/app/store";
-import { setCurrentTheme } from "@/features/theme/themeSlice";
+import { setCurrentTheme } from "@/features/Candidate/theme/themeSlice";
 import { useAppSelector } from "@/hooks/useAuth";
 import { MoonIcon, SunIcon } from "lucide-react";
 import  { useEffect } from "react";

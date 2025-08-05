@@ -3,60 +3,62 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import Spinner from "@/components/ui/spinner"; // Use your spinner
+import Spinner from "@/components/ui/spinner";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useDispatch } from "react-redux";
-import { setUser } from "@/features/Candidate/auth/authSlice";
+import { setUser } from "@/features/Org/Auth/orgAuthSlice";
 import toast, { Toaster } from "react-hot-toast";
+import { Building } from "lucide-react";
 
 type Step = "enteremail" | "verifyOtp";
 
-const OTPLoginForm: React.FC = () => {
+const OrgOTPLoginForm: React.FC = () => {
   const [step, setStep] = useState<Step>("enteremail");
-  const [email, setemail] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const dispatch=useDispatch();
+  const dispatch = useDispatch();
 
-  // Simulate API call for sending OTP
+  // API call for sending OTP
   const sendOtp = async () => {
     setLoading(true);
     setError("");
     try {
-      await api.post("/candidates/otp-login", { email });
+      await api.post("/org/otp-login", { email });
       setStep("verifyOtp");
+      toast.success("OTP sent successfully!");
     } catch (e: any) {
       setError(
         e?.response?.data?.message ||
         e?.message || 
-        "Failed to send OTP. Please try again.");
+        "Failed to send OTP. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Simulate API call for verifying OTP
+  // API call for verifying OTP
   const verifyOtp = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await api.post("/candidates/verify-otp", { email, otp });                          
+      const res = await api.post("/org/verify-otp", { email, otp });                          
       // If backend logs in the user and returns user info:
-            if (res.data && res.data.success && res.data.user) {
-              dispatch(setUser(res.data.user)); // <--- Set user in redux
-              toast.success("User Login Successfully!")
-              setTimeout(()=>{
-                navigate("/")
-              },1000)
-            } else if (res.data && res.data.success) {
-              // If backend just returns success, move to reset password
-              setStep("enteremail");
-            } else {
-              setError("Verification failed.");
-            }
+      if (res.data && res.data.success && res.data.user) {
+        dispatch(setUser(res.data.user)); // Set org user in redux
+        toast.success("Login successful!");
+        setTimeout(() => {
+          navigate("/org");
+        }, 1000);
+      } else if (res.data && res.data.success) {
+        setStep("enteremail");
+      } else {
+        setError("Verification failed.");
+      }
     } catch (e: unknown) {
       setError("Invalid OTP. Please try again.");
       console.error(e);
@@ -70,13 +72,16 @@ const OTPLoginForm: React.FC = () => {
       <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-sm">
         <Card className="shadow-lg rounded-2xl border border-gray-200">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-center">
-              Login with OTP
+          <CardHeader className="space-y-3 text-center">
+            <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+              <Building className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-2xl font-semibold">
+              Organization OTP Login
             </CardTitle>
-            <CardDescription className="text-center text-gray-500 text-sm">
+            <CardDescription className="text-center text-muted-foreground text-sm">
               {step === "enteremail"
-                ? "Enter your email to receive an OTP."
+                ? "Enter your organization email to receive an OTP."
                 : `Enter the OTP sent to ${email}.`}
             </CardDescription>
           </CardHeader>
@@ -91,28 +96,28 @@ const OTPLoginForm: React.FC = () => {
               >
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-medium">
-                    email
+                    Organization Email
                   </Label>
                   <Input
                     id="email"
-                    type="text"
-                    placeholder="Enter your email"
+                    type="email"
+                    placeholder="admin@company.com"
                     value={email}
-                    onChange={(e) => setemail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
                 <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-muted-foreground">
                   <span
-                    onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    onClick={() => navigate("/org/login")}
+                    className="text-primary hover:underline font-medium cursor-pointer"
                   >
-                    Back to login
+                    Back to password login
                   </span>
                 </div>
               </form>
@@ -133,7 +138,7 @@ const OTPLoginForm: React.FC = () => {
                   <Input
                     id="otp"
                     type="text"
-                    placeholder="Enter OTP"
+                    placeholder="Enter 6-digit OTP"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
                     required
@@ -141,7 +146,7 @@ const OTPLoginForm: React.FC = () => {
                     inputMode="numeric"
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
                 <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP"}
@@ -154,6 +159,7 @@ const OTPLoginForm: React.FC = () => {
                   onClick={() => {
                     setStep("enteremail");
                     setOtp("");
+                    setError("");
                   }}
                 >
                   Change email
@@ -167,16 +173,27 @@ const OTPLoginForm: React.FC = () => {
                 >
                   Resend OTP
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-muted-foreground">
                   <span
-                    onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    onClick={() => navigate("/org/login")}
+                    className="text-primary hover:underline font-medium cursor-pointer"
                   >
-                    Back to login
+                    Back to password login
                   </span>
                 </div>
               </form>
             )}
+
+            {/* Candidate portal link */}
+            <div className="text-center text-sm text-muted-foreground pt-4 border-t mt-6">
+              Are you a candidate?{" "}
+              <span
+                onClick={() => navigate("/login-otp")}
+                className="text-primary hover:underline font-medium cursor-pointer"
+              >
+                Go to Candidate Portal
+              </span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -184,4 +201,4 @@ const OTPLoginForm: React.FC = () => {
   );
 };
 
-export default OTPLoginForm;
+export default OrgOTPLoginForm;

@@ -5,7 +5,7 @@ import { z } from "zod";
 import toast, { Toaster } from "react-hot-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { setUser } from "@/features/auth/authSlice";
+import { setUser } from "@/features/Candidate/auth/authSlice";
 import { Input } from "@/components/ui/input";
 import {
   FormControl,
