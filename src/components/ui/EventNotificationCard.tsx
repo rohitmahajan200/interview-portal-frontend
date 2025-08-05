@@ -1,7 +1,7 @@
 import React from "react";
 import { AlarmClock, Info } from "lucide-react";
 import { useDispatch } from "react-redux";
-import { setCurrentView } from "@/features/view/viewSlice";
+import { setCurrentView } from "@/features/Candidate/view/viewSlice.js";
 
 interface Event {
   id: string;

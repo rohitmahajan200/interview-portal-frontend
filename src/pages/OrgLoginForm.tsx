@@ -6,7 +6,7 @@ import { loginSchema } from "@/lib/zod";
 import toast, { Toaster } from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch } from "react-redux";
-import { setUser } from "@/features/Candidate/auth/authSlice";
+import { setUser } from "@/features/Org/Auth/orgAuthSlice";
 import {
   Card,
   CardContent,
@@ -17,26 +17,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
-import Spinner from "../components/ui/spinner";
+import Spinner from "@/components/ui/spinner";
 import { useState } from "react";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Building } from "lucide-react";
 
 // Define login form input types
-type LoginFormInputs = {
+type OrgLoginFormInputs = {
   email: string;
   password: string;
 };
 
-export function LoginForm({
+const OrgLoginForm = ({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div">) => {
   // Setup form with React Hook Form
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormInputs>({resolver: zodResolver(loginSchema)});
+  } = useForm<OrgLoginFormInputs>({ resolver: zodResolver(loginSchema) });
 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -44,14 +44,14 @@ export function LoginForm({
   const dispatch = useDispatch();
 
   // Handle login form submission
-  const onSubmit = async (data: LoginFormInputs) => {
+  const onSubmit = async (data: OrgLoginFormInputs) => {
     setLoading(true);
     try {
-      const res = await api.post("/candidates/login", data);
+      const res = await api.post("/org/login", data);
       if (res.data && res.data.success && res.data.user) {
-        dispatch(setUser(res.data.user)); // Redux state update
+        dispatch(setUser(res.data.user)); // Redux state update for org user
         toast.success("Login successful!");
-        setTimeout(() => navigate("/"), 1000);
+        setTimeout(() => navigate("/org"), 1000);
       } else {
         toast.error("Login failed, please try again.");
       }
@@ -63,18 +63,22 @@ export function LoginForm({
       setLoading(false);
     }
   };
+
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 sm:px-6 md:px-10 py-12">
       <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-sm">
         <div className={cn("flex flex-col gap-6", className)} {...props}>
           <Card className="shadow-lg rounded-2xl border border-gray-200">
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-2xl font-semibold text-center">
-                Login to your account
+            <CardHeader className="space-y-3 text-center">
+              <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                <Building className="w-6 h-6" />
+              </div>
+              <CardTitle className="text-2xl font-semibold">
+                Organization Portal
               </CardTitle>
-              <CardDescription className="text-center text-gray-500 text-sm">
-                Enter your email below to log in
+              <CardDescription className="text-sm">
+                Sign in to access your organization dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -82,23 +86,20 @@ export function LoginForm({
                 {/* Email field */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">
-                    Email
+                    Email Address
                   </Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="abc123@example.com"
+                    placeholder="admin@company.com"
                     {...register("email", { required: "Email is required" })}
                   />
                   {errors.email && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-destructive">
                       {errors.email.message}
                     </p>
                   )}
                 </div>
-
-                {/* Show loading spinner during API call */}
-                {loading && <Spinner />}
 
                 {/* Password field */}
                 <div className="space-y-2">
@@ -107,10 +108,10 @@ export function LoginForm({
                       Password
                     </Label>
                     <span
-                      onClick={()=>navigate("/forget-password")}
-                      className="text-xs text-blue-600 hover:underline cursor-pointer"
+                      onClick={() => navigate("/org/setup-password")}
+                      className="text-xs text-primary hover:underline cursor-pointer font-medium"
                     >
-                      Forgot password?
+                      Forgot Password?
                     </span>
                   </div>
 
@@ -118,7 +119,7 @@ export function LoginForm({
                   <div className="relative">
                     <Input
                       id="password"
-                      placeholder="Password"
+                      placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
                       {...register("password", {
                         required: "Password is required",
@@ -126,7 +127,7 @@ export function LoginForm({
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowPassword((prev) => !prev)}
                       tabIndex={-1}
                     >
@@ -138,46 +139,46 @@ export function LoginForm({
                     </button>
                   </div>
 
-                  {/* Display password error or backend message */}
+                  {/* Display password error */}
                   {errors.password && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-destructive">
                       {errors.password.message}
                     </p>
                   )}
                 </div>
 
-                {/* Submit and Google login buttons */}
-                <div className="space-y-3 pt-2">
-                  <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
-                    Login
-                  </Button>
-                  {/* <Button
-                    variant="outline"
-                    className="w-full text-sm py-2 hover:bg-gray-100"
-                    type="button"
+                {/* Show loading spinner during API call */}
+                {loading && <Spinner />}
+
+                {/* Submit button */}
+                <div className="pt-2">
+                  <Button 
+                    type="submit" 
+                    className="w-full text-sm font-medium" 
+                    disabled={loading}
                   >
-                    Login with Google
-                  </Button> */}
+                    {loading ? "Signing in..." : "Sign In"}
+                  </Button>
                 </div>
 
-                {/* Login with OTP link */}
-                <div className="text-center text-sm mt-4 text-gray-600">
+                {/* OTP login link */}
+                <div className="text-center text-sm text-muted-foreground">
                   <span
-                    onClick={() => navigate("/login-otp")}
-                    className="text-blue-600 hover:underline font-medium hover:cursor-pointer"
+                    onClick={() => navigate("/org/otp-login")}
+                    className="text-primary hover:underline font-medium cursor-pointer"
                   >
                     Login with OTP
                   </span>
                 </div>
 
-                {/* Signup link */}
-                <div className="text-center text-sm mt-4 text-gray-600">
-                  Don&apos;t have an account?{" "}
+                {/* Candidate portal link */}
+                <div className="text-center text-sm text-muted-foreground pt-4 border-t">
+                  Are you a candidate?{" "}
                   <span
-                    onClick={() => navigate("/register-candidate")}
-                    className="text-blue-600 hover:underline font-medium hover:cursor-pointer"
+                    onClick={() => navigate("/login")}
+                    className="text-primary hover:underline font-medium cursor-pointer"
                   >
-                    Sign up
+                    Go to Candidate Portal
                   </span>
                 </div>
               </form>
@@ -187,4 +188,6 @@ export function LoginForm({
       </div>
     </div>
   );
-}
+};
+
+export default OrgLoginForm;

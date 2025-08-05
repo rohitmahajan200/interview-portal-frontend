@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "@/hooks/useAuth";
-import { setCurrentView } from "@/features/view/viewSlice";
+import { setCurrentView } from "@/features/Candidate/view/viewSlice";
 import api from "@/lib/api";
 
 const Settings = () => {

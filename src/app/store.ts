@@ -1,13 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from '../features/auth/authSlice.js';
-import viewReducer from "../features/view/viewSlice";
-import themeReducer from "../features/theme/themeSlice.js"
+import authReducer from '../features/Candidate/auth/authSlice.js';
+import viewReducer from "../features/Candidate/view/viewSlice.js"
+import themeReducer from "../features/Candidate/theme/themeSlice.js"
+import orgAuthReducer from "../features/Org/Auth/orgAuthSlice.js"
+import adminViewReducer from "../features/Org/View/adminViewSlice.js"
 // Create and configure the Redux store
 export const store = configureStore({
   reducer: {
     auth: authReducer, // Register the auth reducer under 'auth' state slice
     view: viewReducer,
-    theme: themeReducer
+    theme: themeReducer,
+    orgAuth: orgAuthReducer,
+    adminView: adminViewReducer
   },
 });
 
