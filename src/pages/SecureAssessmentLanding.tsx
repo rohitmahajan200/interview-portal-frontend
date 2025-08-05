@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 
@@ -7,40 +7,54 @@ const dummyQuestions = [
   { id: 1, type: "mcq", question: "What is the output of 2 + '2' in JavaScript?", options: ["4", "22", "NaN", "undefined"] },
   { id: 2, type: "descriptive", question: "Explain event loop in JavaScript." },
   { id: 4, type: "code", question: "Write a function to check if a number is prime.", language: "javascript", functionName: "checkPrime" },
-  { id: 5, type: "video-response", question: "Please explain your solution approach by recording a short video (max 1 minute)." },
+  { id: 5, type: "video-response", question: "Please explain your solution approach by recording a short video (max 1 minute)." }
 ];
 
 export default function SecureAssessmentLanding() {
   const { assessmentId } = useParams();
-  const navigate          = useNavigate();
+  const navigate         = useNavigate();
 
-  /* assessment state */
-  const [started, setStarted]                   = useState(false);
-  const [error, setError]                       = useState<string | null>(null);
-  const [timer, setTimer]                       = useState(60);
-  const [answers, setAnswers]                   = useState<Record<number,string>>({});
-  const [currentQuestionIndex, setCurrent]      = useState(0);
-  const [stream, setStream]                     = useState<MediaStream | null>(null);
-  const submittedRef                            = useRef(false);
+  /* ───────────── Detect SEB (Safe-Exam-Browser) ───────────── */
+  const isSEB = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /SEB|SafeExamBrowser/i.test(navigator.userAgent);
+  }, []);
 
-  /* code-runner state */
+  /* ───────────── State ───────────── */
+  const [started, setStarted]               = useState(false);
+  const [error,   setError]                 = useState<string | null>(null);
+  const [timer,   setTimer]                 = useState(60);
+  const [answers, setAnswers]               = useState<Record<number, string>>({});
+  const [currentQuestionIndex, setCurrent]  = useState(0);
+  const [stream, setStream]                 = useState<MediaStream | null>(null);
+  const submittedRef                        = useRef(false);
+
+  /* code-runner */
   const [code, setCode]         = useState("");
   const [testInput, setTestInput] = useState("");
   const [output, setOutput]     = useState("");
 
-  /* SUBMIT (idempotent) */
+  /* ───────────── SUBMIT (idempotent) ───────────── */
   const handleSubmit = () => {
-    alert("Assessment is submitted")
     if (submittedRef.current) return;
     submittedRef.current = true;
+
     stream?.getTracks().forEach(t => t.stop());
-    if (document.fullscreenElement) document.exitFullscreen?.();
-    navigate("/");
+    if (!isSEB && document.fullscreenElement) document.exitFullscreen?.();
+
+    alert("Assessment submitted successfully!");
+
+    if (isSEB) {
+      /* closes Safe-Exam-Browser (supported in SEB ≥ 2.x) */
+      window.location.href = "http://localhost:5173/exam-completed";
+    } else {
+      navigate("/");
+    }
   };
 
-  /* SECURITY GUARDS */
+  /* ───────────── SECURITY GUARDS (skip inside SEB) ───────────── */
   useEffect(() => {
-    if (!started) return;
+    if (!started || isSEB) return;
 
     let isTabActive  = true;
     let lastActivity = Date.now();
@@ -53,34 +67,34 @@ export default function SecureAssessmentLanding() {
 
     const keyGuard = (e: KeyboardEvent) => {
       const k          = e.key.toLowerCase();
-      const refresh    = k === "f5" || ((e.ctrlKey||e.metaKey) && k === "r");
-      const clipboard  = (e.ctrlKey||e.metaKey) && ["c","v","x"].includes(k);
+      const refresh    = k === "f5" || ((e.ctrlKey || e.metaKey) && k === "r");
+      const clipboard  = (e.ctrlKey || e.metaKey) && ["c", "v", "x"].includes(k);
       const taskSwitch = (e.altKey && k === "tab") || (e.metaKey && k === "tab");
       if (refresh || clipboard || taskSwitch) {
         e.preventDefault();
-        triggerViolation("Blocked shortcut detected. Assessment auto-submitted.");
+        triggerViolation("Blocked shortcut detected – assessment auto-submitted.");
       } else {
         lastActivity = Date.now();
       }
     };
 
-    const ctxGuard       = (e: MouseEvent)    => e.preventDefault();
-    const clipGuard      = (e: ClipboardEvent)=> e.preventDefault();
+    const ctxGuard       = (e: MouseEvent)     => e.preventDefault();
+    const clipGuard      = (e: ClipboardEvent) => e.preventDefault();
     const mouseMoveGuard = () => (lastActivity = Date.now());
 
     const visibilityGuard = () => {
       isTabActive = document.visibilityState === "visible";
-      if (!isTabActive) triggerViolation("Tab/window switch detected. Assessment auto-submitted.");
+      if (!isTabActive) triggerViolation("Tab/window switch detected – assessment auto-submitted.");
       lastActivity = Date.now();
     };
 
-    const blurGuard       = () => triggerViolation("Window focus lost. Assessment auto-submitted.");
-    const mouseLeaveGuard = (e: MouseEvent) => { if (e.clientY < 0) triggerViolation("Cursor left window. Assessment auto-submitted."); };
-    const fullscreenGuard = () => { if (!document.fullscreenElement) triggerViolation("Fullscreen exited. Assessment auto-submitted."); };
+    const blurGuard       = () => triggerViolation("Window focus lost – assessment auto-submitted.");
+    const mouseLeaveGuard = (e: MouseEvent) => { if (e.clientY < 0) triggerViolation("Cursor left window – assessment auto-submitted."); };
+    const fullscreenGuard = () => { if (!document.fullscreenElement) triggerViolation("Fullscreen exited – assessment auto-submitted."); };
 
     const inactivityTimer = setInterval(() => {
       if (isTabActive && Date.now() - lastActivity > 30_000)
-        triggerViolation("30 s inactivity. Assessment auto-submitted.");
+        triggerViolation("30 s inactivity – assessment auto-submitted.");
     }, 5_000);
 
     /* listeners */
@@ -94,8 +108,9 @@ export default function SecureAssessmentLanding() {
     window.addEventListener("mouseleave", mouseLeaveGuard);
     window.addEventListener("beforeunload", e => { e.preventDefault(); e.returnValue = ""; });
     document.addEventListener("visibilitychange", visibilityGuard);
-    document.addEventListener("fullscreenchange", fullscreenGuard);
+    document.addEventListener("fullscreenchange",  fullscreenGuard);
 
+    /* cleanup */
     return () => {
       clearInterval(inactivityTimer);
       window.removeEventListener("keydown", keyGuard, true);
@@ -107,11 +122,11 @@ export default function SecureAssessmentLanding() {
       window.removeEventListener("blur", blurGuard);
       window.removeEventListener("mouseleave", mouseLeaveGuard);
       document.removeEventListener("visibilitychange", visibilityGuard);
-      document.removeEventListener("fullscreenchange", fullscreenGuard);
+      document.removeEventListener("fullscreenchange",  fullscreenGuard);
     };
-  }, [started, stream]);
+  }, [started, isSEB]);
 
-  /* TIMER */
+  /* ───────────── TIMER ───────────── */
   useEffect(() => {
     if (!started) return;
     if (timer === 0) handleSubmit();
@@ -119,21 +134,22 @@ export default function SecureAssessmentLanding() {
     return () => clearInterval(id);
   }, [started, timer]);
 
-  /* START */
+  /* ───────────── START ───────────── */
   const handleStart = async () => {
     try {
       const m = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setStream(m);
-      await document.documentElement.requestFullscreen?.();
+
+      if (!isSEB) await document.documentElement.requestFullscreen?.(); // SEB already in kiosk
       setStarted(true);
     } catch {
-      setError("Camera and microphone access, plus fullscreen permission, are required to start.");
+      setError("Camera + mic access and fullscreen permission are required.");
     }
   };
 
-  /* helpers */
+  /* ───────────── helpers ───────────── */
   const handleAnswerChange = (id: number, val: string) =>
-    setAnswers(prev => ({ ...prev, [id]: val }));
+    setAnswers(p => ({ ...p, [id]: val }));
 
   const handleRun = (fnName: string) => {
     const logs: string[] = [];
@@ -167,11 +183,12 @@ try {
     }
   };
 
-  /* UI */
-  const q        = dummyQuestions[currentQuestionIndex];
-  const total    = dummyQuestions.length;
-  const attempted= Object.keys(answers).length;
+  /* ───────────── UI variables ───────────── */
+  const q         = dummyQuestions[currentQuestionIndex];
+  const total     = dummyQuestions.length;
+  const attempted = Object.keys(answers).length;
 
+  /* ───────────── UI ───────────── */
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen transition-colors">
       {!started ? (
@@ -184,12 +201,18 @@ try {
             <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
               <li>Assessment ID: <strong>{assessmentId}</strong></li>
               <li>Duration: <strong>1 minute</strong></li>
-              <li>This assessment opens in <strong>mandatory fullscreen</strong>. Pressing Esc or leaving fullscreen auto-submits.</li>
-              <li>Tab/window switching, Alt/⌘-Tab, or window focus loss auto-submits.</li>
-              <li>Copy, paste, cut, refresh, F5, Ctrl/⌘-R, and right-click are disabled; attempting them auto-submits.</li>
-              <li>No activity for <strong>30 seconds</strong> triggers auto-submission.</li>
-              <li>Camera and microphone must remain enabled throughout; disabling them auto-submits.</li>
-              <li><strong>Violations result in immediate submission</strong>; unanswered questions receive zero credit.</li>
+              {isSEB ? (
+                <li>Running inside <strong>Safe Exam Browser</strong>; built-in security controls are active.</li>
+              ) : (
+                <>
+                  <li>Fullscreen is mandatory. Esc or exiting fullscreen auto-submits.</li>
+                  <li>Tab/window switch, Alt/⌘-Tab, or focus loss auto-submits.</li>
+                  <li>Copy, paste, cut, refresh, F5, Ctrl/⌘-R, right-click are disabled; attempts auto-submit.</li>
+                  <li>30 s inactivity auto-submits.</li>
+                  <li>Camera &amp; microphone must remain enabled.</li>
+                </>
+              )}
+              <li><strong>Any violation triggers immediate submission.</strong></li>
             </ul>
 
             {error && (

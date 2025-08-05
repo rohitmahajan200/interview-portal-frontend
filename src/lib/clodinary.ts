@@ -4,7 +4,7 @@ interface CloudinaryUploadResult {
 }
 export const uploadToCloudinary = async (
   file: File,
-  folder?: string
+  folder?: string //audio
 ): Promise<CloudinaryUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);

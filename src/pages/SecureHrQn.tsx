@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { hrQuestions } from "@/test/hrQna";
 
@@ -6,10 +6,16 @@ export default function SecureHRInterview() {
   const { interviewId } = useParams();
   const navigate        = useNavigate();
 
-  /* state ----------------------------------------------------- */
+  /* ───────────── Detect Safe-Exam-Browser ───────────── */
+  const isSEB = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /SEB|SafeExamBrowser/i.test(navigator.userAgent);
+  }, []);
+
+  /* ───────────── state ───────────── */
   const [started, setStarted] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
-  const [timer,   setTimer]   = useState(120);          // 2 min
+  const [timer,   setTimer]   = useState(120);     // 2 min
   const [answers, setAnswers] = useState<Record<string,string>>({});
   const [current, setCurrent] = useState(0);
   const submittedRef          = useRef(false);
@@ -18,20 +24,26 @@ export default function SecureHRInterview() {
   const total     = hrQuestions.length;
   const attempted = Object.keys(answers).length;
 
-  /* submit (idempotent) --------------------------------------- */
+  /* ───────────── SUBMIT (idempotent) ───────────── */
   const handleSubmit = () => {
     if (submittedRef.current) return;
     submittedRef.current = true;
-    if (document.fullscreenElement) document.exitFullscreen?.();
+
+    if (!isSEB && document.fullscreenElement) document.exitFullscreen?.();
     alert("Interview submitted successfully!");
-    navigate("/");
+
+    if (isSEB) {
+      window.location.href = "seb://quit";
+    } else {
+      navigate("/");
+    }
   };
 
-  /* guards ---------------------------------------------------- */
+  /* ───────────── SECURITY GUARDS (skip in SEB) ───────────── */
   useEffect(() => {
-    if (!started) return;
+    if (!started || isSEB) return;
 
-    let isTabActive = true;
+    let isTabActive  = true;
     let lastActivity = Date.now();
 
     const triggerViolation = (msg: string) => {
@@ -42,34 +54,34 @@ export default function SecureHRInterview() {
 
     const keyGuard = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      const refresh    = k === "f5" || ((e.ctrlKey || e.metaKey) && k === "r");
-      const clipboard  = (e.ctrlKey || e.metaKey) && ["c", "v", "x"].includes(k);
+      const refresh    = k === "f5" || ((e.ctrlKey||e.metaKey) && k === "r");
+      const clipboard  = (e.ctrlKey||e.metaKey) && ["c","v","x"].includes(k);
       const taskSwitch = (e.altKey && k === "tab") || (e.metaKey && k === "tab");
       if (refresh || clipboard || taskSwitch) {
         e.preventDefault();
-        triggerViolation("Blocked shortcut detected. Interview auto-submitted.");
+        triggerViolation("Blocked shortcut detected – interview auto-submitted.");
       } else {
         lastActivity = Date.now();
       }
     };
 
-    const ctxGuard       = (e: MouseEvent)    => e.preventDefault();
-    const clipGuard      = (e: ClipboardEvent)=> e.preventDefault();
+    const ctxGuard       = (e: MouseEvent)     => e.preventDefault();
+    const clipGuard      = (e: ClipboardEvent) => e.preventDefault();
     const mouseMoveGuard = () => (lastActivity = Date.now());
 
     const visibilityGuard = () => {
       isTabActive = document.visibilityState === "visible";
-      if (!isTabActive) triggerViolation("Tab/window switch detected. Interview auto-submitted.");
+      if (!isTabActive) triggerViolation("Tab/window switch detected – interview auto-submitted.");
       lastActivity = Date.now();
     };
 
-    const blurGuard       = () => triggerViolation("Window focus lost. Interview auto-submitted.");
-    const mouseLeaveGuard = (e: MouseEvent) => { if (e.clientY < 0) triggerViolation("Cursor left window. Interview auto-submitted."); };
-    const fullscreenGuard = () => { if (!document.fullscreenElement) triggerViolation("Fullscreen exited. Interview auto-submitted."); };
+    const blurGuard       = () => triggerViolation("Window focus lost – interview auto-submitted.");
+    const mouseLeaveGuard = (e: MouseEvent) => { if (e.clientY < 0) triggerViolation("Cursor left window – interview auto-submitted."); };
+    const fullscreenGuard = () => { if (!document.fullscreenElement) triggerViolation("Fullscreen exited – interview auto-submitted."); };
 
     const inactivityTimer = setInterval(() => {
       if (isTabActive && Date.now() - lastActivity > 30_000)
-        triggerViolation("30 s inactivity. Interview auto-submitted.");
+        triggerViolation("30 s inactivity – interview auto-submitted.");
     }, 5_000);
 
     window.addEventListener("keydown", keyGuard, true);
@@ -97,9 +109,9 @@ export default function SecureHRInterview() {
       document.removeEventListener("visibilitychange", visibilityGuard);
       document.removeEventListener("fullscreenchange", fullscreenGuard);
     };
-  }, [started]);
+  }, [started, isSEB]);
 
-  /* timer ------------------------------------------------------ */
+  /* ───────────── TIMER ───────────── */
   useEffect(() => {
     if (!started) return;
     if (timer === 0) handleSubmit();
@@ -107,21 +119,21 @@ export default function SecureHRInterview() {
     return () => clearInterval(id);
   }, [started, timer]);
 
-  /* start ------------------------------------------------------ */
+  /* ───────────── START ───────────── */
   const handleStart = async () => {
     try {
-      await document.documentElement.requestFullscreen?.();
+      if (!isSEB) await document.documentElement.requestFullscreen?.(); // SEB already fullscreen
       setStarted(true);
     } catch {
       setError("Fullscreen permission is required to begin.");
     }
   };
 
-  /* helpers ---------------------------------------------------- */
+  /* ───────────── helpers ───────────── */
   const handleAnswerChange = (id: string, v: string) =>
     setAnswers(p => ({ ...p, [id]: v }));
 
-  /* UI --------------------------------------------------------- */
+  /* ───────────── UI ───────────── */
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen transition-colors">
       {!started ? (
@@ -135,12 +147,17 @@ export default function SecureHRInterview() {
               <li>Interview ID: <strong className="text-gray-900 dark:text-white">{interviewId}</strong></li>
               <li>Total questions: <strong className="text-gray-900 dark:text-white">{total}</strong></li>
               <li>Duration: <strong className="text-gray-900 dark:text-white">2 minutes</strong></li>
-              <li>The interview runs in <strong>mandatory fullscreen</strong>. Pressing Esc or exiting fullscreen auto-submits.</li>
-              <li>Switching tabs/windows or using Alt/⌘-Tab will auto-submit.</li>
-              <li>Copy, paste, cut, refresh, F5, Ctrl/⌘-R and right-click are disabled; attempting them auto-submits.</li>
-              <li>If no input is detected for <strong>30 seconds</strong>, the interview auto-submits.</li>
-              <li>Leaving the browser window with your mouse or losing focus auto-submits.</li>
-              <li><strong>Violations result in immediate submission</strong>; unanswered questions will be graded as blank.</li>
+              {isSEB ? (
+                <li>Running inside <strong>Safe Exam Browser</strong>; its security controls are active.</li>
+              ) : (
+                <>
+                  <li>The interview requires <strong>fullscreen</strong>; Esc or exit auto-submits.</li>
+                  <li>Tab/window switch, Alt/⌘-Tab, or focus loss auto-submits.</li>
+                  <li>Copy, paste, cut, refresh, F5, Ctrl/⌘-R and right-click are disabled; attempts auto-submit.</li>
+                  <li>30 s inactivity auto-submits.</li>
+                </>
+              )}
+              <li><strong>Any violation triggers immediate submission.</strong></li>
             </ul>
 
             {error && (
@@ -160,7 +177,6 @@ export default function SecureHRInterview() {
           </div>
         </>
       ) : (
-        /* ... interview body remains unchanged ... */
         <>
           {/* header */}
           <div className="flex justify-between items-center">
