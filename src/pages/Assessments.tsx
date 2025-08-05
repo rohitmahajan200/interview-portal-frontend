@@ -25,8 +25,12 @@ const Assessments = () => {
   // const [queID,setQueId]=useState([]);
   // const [que,setQue]=useState([]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleStart = async (id: string) => {
-    navigate(`/start-assessment/${id}`);
+  const handleStart = async (id: string,type:string) => {
+    if(type=="technical"){
+      navigate(`/start-assessment/${id}`);
+    }else{
+      navigate(`/start-hrqna/${id}`);
+    }
   };
 
   useEffect(() => {
@@ -91,7 +95,7 @@ const Assessments = () => {
                   {assessment.status === "pending" && (
                     <button
                       className="bg-yellow-100 dark:bg-yellow-300 text-yellow-800 px-3 py-1 rounded-md border border-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-400 text-sm font-medium transition"
-                      onClick={() => handleStart(assessment._id)}
+                      onClick={() => handleStart(assessment._id,assessment.assessment_type)}
                     >
                       Start
                     </button>

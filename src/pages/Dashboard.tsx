@@ -24,7 +24,6 @@ import Feedback from "./Feedback";
 import Profile from "./Profile";
 import Settings from "./Settings";
 import ThemeToggle from "@/components/themeToggle";
-import SecureAssessmentLanding from "./SecureAssessmentLanding";
 
 export default function Page() {
   const dispatch = useDispatch();

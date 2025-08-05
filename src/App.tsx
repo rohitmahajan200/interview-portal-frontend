@@ -11,6 +11,7 @@ import OTPLoginForm from "./pages/OTPLoginForm";
 import OTPForgetPasswordForm from "./pages/OTPForgetPasswordForm";
 import NotFound from "./pages/NotFound";
 import SecureAssessmentLanding from "./pages/SecureAssessmentLanding";
+import SecureHRInterview from "./pages/SecureHrQn";
 
 
 function App() {
@@ -43,12 +44,10 @@ function App() {
     {
       path:"/start-assessment/:assessmentId",
       element:<SecureAssessmentLanding />,
-      // children:[
-      //   {
-      //     path:"qna",
-      //     element:<QnaPage />
-      //   }
-      // ]
+    },
+    {
+      path:"/start-hrqna/:assessmentId",
+      element:<SecureHRInterview />,
     },
     {
       path:"*",

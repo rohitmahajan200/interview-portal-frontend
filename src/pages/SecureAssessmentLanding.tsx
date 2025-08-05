@@ -1,119 +1,199 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 
+/* ───────────── Dummy data ───────────── */
 const dummyQuestions = [
-  {
-    id: 1,
-    type: "mcq",
-    question: "What is the output of 2 + '2' in JavaScript?",
-    options: ["4", "22", "NaN", "undefined"],
-  },
-  {
-    id: 2,
-    type: "descriptive",
-    question: "Explain event loop in JavaScript.",
-  },
-  {
-    id: 3,
-    type: "case",
-    question: "Watch the following video and summarize the key points.",
-    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-  },
-  {
-    id: 4,
-    type: "code",
-    question: "Write a function to check if a number is prime.",
-    language: "javascript",
-  },
-  {
-  id: 5,
-  type: "video-response",
-  question: "Please explain your solution approach by recording a short video (max 1 minute)."
-}
-
+  { id: 1, type: "mcq", question: "What is the output of 2 + '2' in JavaScript?", options: ["4", "22", "NaN", "undefined"] },
+  { id: 2, type: "descriptive", question: "Explain event loop in JavaScript." },
+  { id: 4, type: "code", question: "Write a function to check if a number is prime.", language: "javascript", functionName: "checkPrime" },
+  { id: 5, type: "video-response", question: "Please explain your solution approach by recording a short video (max 1 minute)." },
 ];
 
 export default function SecureAssessmentLanding() {
-  const [started, setStarted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isSEB, setIsSEB] = useState(false);
-  const [timer, setTimer] = useState(60);
-  const [answers, setAnswers] = useState({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const { assessmentId } = useParams();
-  const navigate = useNavigate();
+  const navigate          = useNavigate();
 
-  useEffect(() => {
-    const userAgent = navigator.userAgent || "";
-    if (userAgent.includes("SEB")) setIsSEB(true);
-    else setIsSEB(false);
-  }, []);
+  /* assessment state */
+  const [started, setStarted]                   = useState(false);
+  const [error, setError]                       = useState<string | null>(null);
+  const [timer, setTimer]                       = useState(60);
+  const [answers, setAnswers]                   = useState<Record<number,string>>({});
+  const [currentQuestionIndex, setCurrent]      = useState(0);
+  const [stream, setStream]                     = useState<MediaStream | null>(null);
+  const submittedRef                            = useRef(false);
 
+  /* code-runner state */
+  const [code, setCode]         = useState("");
+  const [testInput, setTestInput] = useState("");
+  const [output, setOutput]     = useState("");
+
+  /* SUBMIT (idempotent) */
+  const handleSubmit = () => {
+    alert("Assessment is submitted")
+    if (submittedRef.current) return;
+    submittedRef.current = true;
+    stream?.getTracks().forEach(t => t.stop());
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    navigate("/");
+  };
+
+  /* SECURITY GUARDS */
   useEffect(() => {
-    if (started && timer > 0) {
-      const countdown = setInterval(() => setTimer((t) => t - 1), 1000);
-      return () => clearInterval(countdown);
-    } else if (timer === 0) {
+    if (!started) return;
+
+    let isTabActive  = true;
+    let lastActivity = Date.now();
+
+    const triggerViolation = (msg: string) => {
+      if (submittedRef.current) return;
+      alert(msg);
       handleSubmit();
-    }
+    };
+
+    const keyGuard = (e: KeyboardEvent) => {
+      const k          = e.key.toLowerCase();
+      const refresh    = k === "f5" || ((e.ctrlKey||e.metaKey) && k === "r");
+      const clipboard  = (e.ctrlKey||e.metaKey) && ["c","v","x"].includes(k);
+      const taskSwitch = (e.altKey && k === "tab") || (e.metaKey && k === "tab");
+      if (refresh || clipboard || taskSwitch) {
+        e.preventDefault();
+        triggerViolation("Blocked shortcut detected. Assessment auto-submitted.");
+      } else {
+        lastActivity = Date.now();
+      }
+    };
+
+    const ctxGuard       = (e: MouseEvent)    => e.preventDefault();
+    const clipGuard      = (e: ClipboardEvent)=> e.preventDefault();
+    const mouseMoveGuard = () => (lastActivity = Date.now());
+
+    const visibilityGuard = () => {
+      isTabActive = document.visibilityState === "visible";
+      if (!isTabActive) triggerViolation("Tab/window switch detected. Assessment auto-submitted.");
+      lastActivity = Date.now();
+    };
+
+    const blurGuard       = () => triggerViolation("Window focus lost. Assessment auto-submitted.");
+    const mouseLeaveGuard = (e: MouseEvent) => { if (e.clientY < 0) triggerViolation("Cursor left window. Assessment auto-submitted."); };
+    const fullscreenGuard = () => { if (!document.fullscreenElement) triggerViolation("Fullscreen exited. Assessment auto-submitted."); };
+
+    const inactivityTimer = setInterval(() => {
+      if (isTabActive && Date.now() - lastActivity > 30_000)
+        triggerViolation("30 s inactivity. Assessment auto-submitted.");
+    }, 5_000);
+
+    /* listeners */
+    window.addEventListener("keydown", keyGuard, true);
+    window.addEventListener("contextmenu", ctxGuard, true);
+    window.addEventListener("copy",  clipGuard, true);
+    window.addEventListener("paste", clipGuard, true);
+    window.addEventListener("cut",   clipGuard, true);
+    window.addEventListener("mousemove", mouseMoveGuard);
+    window.addEventListener("blur", blurGuard);
+    window.addEventListener("mouseleave", mouseLeaveGuard);
+    window.addEventListener("beforeunload", e => { e.preventDefault(); e.returnValue = ""; });
+    document.addEventListener("visibilitychange", visibilityGuard);
+    document.addEventListener("fullscreenchange", fullscreenGuard);
+
+    return () => {
+      clearInterval(inactivityTimer);
+      window.removeEventListener("keydown", keyGuard, true);
+      window.removeEventListener("contextmenu", ctxGuard, true);
+      window.removeEventListener("copy",  clipGuard, true);
+      window.removeEventListener("paste", clipGuard, true);
+      window.removeEventListener("cut",   clipGuard, true);
+      window.removeEventListener("mousemove", mouseMoveGuard);
+      window.removeEventListener("blur", blurGuard);
+      window.removeEventListener("mouseleave", mouseLeaveGuard);
+      document.removeEventListener("visibilitychange", visibilityGuard);
+      document.removeEventListener("fullscreenchange", fullscreenGuard);
+    };
+  }, [started, stream]);
+
+  /* TIMER */
+  useEffect(() => {
+    if (!started) return;
+    if (timer === 0) handleSubmit();
+    const id = setInterval(() => setTimer(t => t - 1), 1_000);
+    return () => clearInterval(id);
   }, [started, timer]);
 
+  /* START */
   const handleStart = async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const m = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setStream(m);
+      await document.documentElement.requestFullscreen?.();
       setStarted(true);
-    } catch (err) {
-      setError("Camera and microphone access is required to start the assessment.");
+    } catch {
+      setError("Camera and microphone access, plus fullscreen permission, are required to start.");
     }
   };
 
-  const handleAnswerChange = (qid, value) => {
-    setAnswers((prev) => ({ ...prev, [qid]: value }));
+  /* helpers */
+  const handleAnswerChange = (id: number, val: string) =>
+    setAnswers(prev => ({ ...prev, [id]: val }));
+
+  const handleRun = (fnName: string) => {
+    const logs: string[] = [];
+    const orig = console.log;
+    console.log = (...a) => logs.push(a.join(" "));
+
+    const n = Number(testInput);
+    if (Number.isNaN(n)) {
+      setOutput("❗ Please enter a valid number.");
+      console.log = orig;
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line no-eval
+      eval(`
+${code}
+
+try {
+  const result = ${fnName}(${n});
+  console.log("Output:", result);
+} catch (err) {
+  console.log("Error:", err.message);
+}
+`);
+      setOutput(logs.join("\n"));
+    } catch (err: any) {
+      setOutput("❌ Execution Error: " + err.message);
+    } finally {
+      console.log = orig;
+    }
   };
 
-  const handleSubmit = () => {
-    alert("Assessment Submitted!\n" + JSON.stringify(answers, null, 2));
-    // Navigate or send to backend here
-  };
-
-  const currentQuestion = dummyQuestions[currentQuestionIndex];
-  const total = dummyQuestions.length;
-  const attempted = Object.keys(answers).length;
-
-  if (!isSEB) {
-    return (
-      <div className="h-screen flex flex-col justify-center items-center px-4">
-        <h1 className="text-2xl font-semibold text-red-700 dark:text-red-400 mb-4">
-          Unauthorized Browser
-        </h1>
-        <p className="text-gray-600 dark:text-gray-300 text-center max-w-md">
-          Please open this assessment using the <strong>Safe Exam Browser</strong>.
-        </p>
-      </div>
-    );
-  }
+  /* UI */
+  const q        = dummyQuestions[currentQuestionIndex];
+  const total    = dummyQuestions.length;
+  const attempted= Object.keys(answers).length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen transition-colors">
       {!started ? (
         <>
-          <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-gray-100 mb-6">
-            Secure Assessment Instructions
+          <h1 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-gray-100">
+            Secure Assessment
           </h1>
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow p-6 space-y-4">
+
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-6 space-y-4">
             <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-              <li>The assessment Id is <strong>{assessmentId}</strong>.</li>
-              <li>The assessment duration is <strong>1 minute</strong>.</li>
-              <li>Once started, you <strong>cannot end or pause</strong> the assessment.</li>
-              <li><strong>Camera and microphone access</strong> is mandatory for monitoring.</li>
-              <li>Make sure you are in a quiet, distraction-free environment.</li>
-              <li>Do not switch tabs or minimize the browser during the test.</li>
+              <li>Assessment ID: <strong>{assessmentId}</strong></li>
+              <li>Duration: <strong>1 minute</strong></li>
+              <li>This assessment opens in <strong>mandatory fullscreen</strong>. Pressing Esc or leaving fullscreen auto-submits.</li>
+              <li>Tab/window switching, Alt/⌘-Tab, or window focus loss auto-submits.</li>
+              <li>Copy, paste, cut, refresh, F5, Ctrl/⌘-R, and right-click are disabled; attempting them auto-submits.</li>
+              <li>No activity for <strong>30 seconds</strong> triggers auto-submission.</li>
+              <li>Camera and microphone must remain enabled throughout; disabling them auto-submits.</li>
+              <li><strong>Violations result in immediate submission</strong>; unanswered questions receive zero credit.</li>
             </ul>
 
             {error && (
-              <div className="bg-red-100 dark:bg-red-200 text-red-800 px-4 py-2 rounded-md border border-red-300">
+              <div className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 px-4 py-2 rounded border border-red-300 dark:border-red-800">
                 {error}
               </div>
             )}
@@ -121,7 +201,7 @@ export default function SecureAssessmentLanding() {
             <div className="flex justify-center mt-6">
               <button
                 onClick={handleStart}
-                className="px-6 py-2 rounded-md text-white text-sm font-semibold bg-green-600 hover:bg-green-700 transition"
+                className="px-6 py-2 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 transition-colors"
               >
                 Start Assessment
               </button>
@@ -131,31 +211,35 @@ export default function SecureAssessmentLanding() {
       ) : (
         <>
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Time left: {timer}s</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Time left: {timer}s</h2>
             <button
               onClick={handleSubmit}
-              className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+              className="px-4 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded transition-colors"
             >
               Submit Now
             </button>
           </div>
 
           <div className="flex gap-6">
+            {/* Question panel */}
             <div className="w-2/3 space-y-4">
-              <div className="bg-white dark:bg-gray-900 p-4 rounded shadow">
-                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Question {currentQuestionIndex + 1}</h3>
-                <p className="mb-4 text-gray-800 dark:text-white">{currentQuestion.question}</p>
-                {currentQuestion.type === "mcq" && (
+              <div className="bg-white dark:bg-gray-800 p-4 rounded shadow-lg border border-gray-200 dark:border-gray-700">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                  Question {currentQuestionIndex + 1}
+                </h3>
+                <p className="mb-4 text-gray-800 dark:text-gray-300">{q.question}</p>
+
+                {q.type === "mcq" && (
                   <div className="space-y-2">
-                    {currentQuestion.options.map((opt, idx) => (
-                      <label key={idx} className="block text-gray-700 dark:text-gray-200">
+                    {q.options!.map((opt, i) => (
+                      <label key={i} className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
                         <input
                           type="radio"
-                          name={`q_${currentQuestion.id}`}
+                          name={`q_${q.id}`}
                           value={opt}
-                          checked={answers[currentQuestion.id] === opt}
-                          onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                          className="mr-2"
+                          checked={answers[q.id] === opt}
+                          onChange={e => handleAnswerChange(q.id, e.target.value)}
+                          className="accent-blue-500"
                         />
                         {opt}
                       </label>
@@ -163,74 +247,86 @@ export default function SecureAssessmentLanding() {
                   </div>
                 )}
 
-                {currentQuestion.type === "descriptive" && (
+                {q.type === "descriptive" && (
                   <textarea
                     rows={4}
-                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded"
-                  ></textarea>
+                    value={answers[q.id] || ""}
+                    onChange={e => handleAnswerChange(q.id, e.target.value)}
+                    onCopy={e => e.preventDefault()}
+                    onPaste={e => e.preventDefault()}
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+                  />
                 )}
 
-                {currentQuestion.type === "case" && (
-                  <>
-                    <video controls className="w-full rounded mb-2">
-                      <source src={currentQuestion.videoUrl} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                    <textarea
-                      rows={3}
-                      onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded"
-                    ></textarea>
-                  </>
-                )}
-
-                {currentQuestion.type === "code" && (
+                {q.type === "code" && (
                   <div className="bg-gray-900 p-2 rounded">
                     <Editor
                       height="200px"
-                      defaultLanguage={currentQuestion.language}
-                      defaultValue={"// write your code here"}
-                      onChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                      defaultLanguage="javascript"
+                      defaultValue={`function checkPrime(n) {\n  // your code\n}`}
                       theme="vs-dark"
                       options={{ fontSize: 14, minimap: { enabled: false } }}
+                      onChange={v => setCode(v ?? "")}
+                      value={code}
                     />
-                    <div className="mt-2 p-2 bg-gray-800 text-green-400 rounded">
-                      Output: <span>(Simulated Output...)</span>
+
+                    <div className="flex items-center gap-2 mt-3">
+                      <input
+                        type="number"
+                        placeholder="Enter number to test"
+                        value={testInput}
+                        onChange={e => setTestInput(e.target.value)}
+                        className="flex-1 p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
+                      />
+                      <button
+                        onClick={() => handleRun(q.functionName!)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded transition-colors"
+                      >
+                        ▶ Run Code
+                      </button>
                     </div>
+
+                    <pre className="mt-4 bg-gray-800 text-green-400 p-3 rounded overflow-x-auto">
+                      {output}
+                    </pre>
                   </div>
                 )}
               </div>
+
               <div className="flex justify-between">
                 <button
                   disabled={currentQuestionIndex === 0}
-                  onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  onClick={() => setCurrent(p => p - 1)}
+                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 rounded disabled:opacity-50 transition-colors"
                 >
                   Previous
                 </button>
                 <button
                   disabled={currentQuestionIndex === total - 1}
-                  onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  onClick={() => setCurrent(p => p + 1)}
+                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 rounded disabled:opacity-50 transition-colors"
                 >
                   Next
                 </button>
               </div>
             </div>
 
-            <div className="w-1/3 bg-white dark:bg-gray-900 p-4 rounded shadow space-y-4">
-              <h4 className="font-semibold text-gray-700 dark:text-gray-200">Dashboard</h4>
-              <p>Total: {total}</p>
-              <p>Attempted: {attempted}</p>
-              <p>Pending: {total - attempted}</p>
-              <div className="grid grid-cols-4 gap-2 mt-4">
-                {dummyQuestions.map((q, i) => (
+            {/* Dashboard */}
+            <div className="w-1/3 bg-white dark:bg-gray-800 p-4 rounded shadow-lg border border-gray-200 dark:border-gray-700 space-y-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white">Dashboard</h4>
+              <p className="text-gray-700 dark:text-gray-300">Total: {total}</p>
+              <p className="text-gray-700 dark:text-gray-300">Attempted: {attempted}</p>
+              <p className="text-gray-700 dark:text-gray-300">Pending: {total - attempted}</p>
+
+              <div className="grid grid-cols-4 gap-2">
+                {dummyQuestions.map((qq, i) => (
                   <button
-                    key={q.id}
-                    onClick={() => setCurrentQuestionIndex(i)}
+                    key={qq.id}
+                    onClick={() => setCurrent(i)}
                     className={`px-2 py-1 rounded text-white text-sm ${
-                      answers[q.id] ? "bg-green-600" : "bg-gray-400"
+                      answers[qq.id]
+                        ? "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
+                        : "bg-gray-400 hover:bg-gray-500 dark:bg-gray-600 dark:hover:bg-gray-500"
                     }`}
                   >
                     {i + 1}
