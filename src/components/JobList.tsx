@@ -16,7 +16,7 @@ type Job = {
 };
 
 const JobList = () => {
-  const role = useAppSelector((state) => state.auth.user?.applied_role) as Job | undefined;
+  const role = useAppSelector((state) => state.auth.user?.applied_job) as Job | undefined;
 
   return (
     <div className="w-full bg-muted/50 rounded-xl px-4 py-6">

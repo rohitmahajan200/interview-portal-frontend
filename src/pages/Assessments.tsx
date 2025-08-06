@@ -29,13 +29,15 @@ const Assessments = () => {
     if(type=="technical"){
       navigate(`/start-assessment/${id}`);
     }else{
-      navigate(`/start-hrqna/${id}`);
+      navigate(`/start-hrqna`);
     }
   };
 
   useEffect(() => {
     const fetchAssessments = async () => {
+      
       const response = await api.get("candidates/assessments");
+
       setData(response.data.assessments);
     };
     fetchAssessments();

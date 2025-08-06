@@ -53,4 +53,18 @@ export const candidateUpdateSchema = z.object({
   profile_photo_url: z.object({ url: z.url("Invalid profile photo URL"), publicId: z.string() }).optional(),
   portfolio_url: z.url("Invalid portfolio URL").optional().or(z.literal("")),
 }).strict();
+
+export const hrQuestionnaireResponseSchema = z.object({
+  responses: z.array(
+    z.object({
+      question: z.string().length(24, "Invalid question ObjectId"),
+      answer: z.union([
+        z.string().trim().min(1, "Text answer is required"),           // for text
+        z.string().url("Invalid audio file URL"),                     // for audio  
+        z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format") // for date (YYYY-MM-DD)
+      ]),
+      attachment: z.string().url("Invalid attachment URL").optional() // Add attachment support
+    })
+  ).min(1, "At least one answer is required")
+});
  

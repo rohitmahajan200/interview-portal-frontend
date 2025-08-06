@@ -66,7 +66,7 @@ function App() {
       element:<SecureAssessmentLanding />,
     },
     {
-      path:"/start-hrqna/:assessmentId",
+      path:"/start-hrqna",
       element:<SecureHRInterview />,
     },
     {

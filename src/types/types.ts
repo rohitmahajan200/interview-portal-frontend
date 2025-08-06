@@ -13,7 +13,7 @@ export interface User {
     url: string;
     publicId: string;
   };
-  applied_role?: RoleItem | null;
+  applied_job?: JobItem | null;
   documents: DocumentItem[];
   current_stage?: Stage;
   email_verified: boolean;
@@ -58,7 +58,7 @@ export interface RegisterData {
   gender: "male" | "female" | "other";
   address: string;
   profile_photo_url: string; // Cloudinary URL
-  applied_role: string;
+  applied_job: string;
   documents: Array<{
     document_type: string;
     document_url: string;
@@ -86,7 +86,7 @@ export interface DocumentItem {
   public_id?: string;
 }
 
-export interface RoleItem {
+export interface JobItem {
   _id: string;
   name: string;
   description?: string;
