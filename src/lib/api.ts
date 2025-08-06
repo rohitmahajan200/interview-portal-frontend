@@ -16,6 +16,24 @@ const api = axios.create({
   },
 });
 
+// Helper function to determine auth type based on current route
+const getAuthType = () => {
+  const currentPath = window.location.pathname;
+  return currentPath.startsWith('/org') ? 'org' : 'candidate';
+};
+
+// Helper function to get refresh endpoint based on auth type
+const getRefreshEndpoint = (authType: 'org' | 'candidate') => {
+  return authType === 'org' 
+    ? `${api.defaults.baseURL}/org/refresh-token`
+    : `${api.defaults.baseURL}/candidates/refresh-token`;
+};
+
+// Helper function to get redirect path based on auth type
+const getLoginPath = (authType: 'org' | 'candidate') => {
+  return authType === 'org' ? '/org/login' : '/login';
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -34,7 +52,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axios.get(`${api.defaults.baseURL}/candidates/refresh-token`, {
+        const authType = getAuthType();
+        const refreshEndpoint = getRefreshEndpoint(authType);
+        
+        await axios.get(refreshEndpoint, {
           withCredentials: true,
           headers: {
             "x-client-type": "web",
@@ -45,7 +66,8 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (err) {
         processQueue(err);
-        window.location.href = "/login";
+        const authType = getAuthType();
+        window.location.href = getLoginPath(authType);
       } finally {
         isRefreshing = false;
       }

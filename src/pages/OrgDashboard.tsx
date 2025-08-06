@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentRole } from "@/features/Org/View/adminViewSlice";
@@ -7,12 +7,15 @@ import type { RootState } from "@/app/store";
 
 // Import dashboard components (create these)
 import Admin from '@/components/Admin/Admin';
-import Hr from '@/components/Hr';
+import Hr from '@/components/Hr/Hr';
 import Invigilator from '@/components/Invigilator';
 import Manager from '@/components/Manager';
+import api from '@/lib/api';
+import { setUser } from '@/features/Candidate/auth/authSlice';
 
 
 const OrgDashboard = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
@@ -20,14 +23,34 @@ const OrgDashboard = () => {
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
   const currentRole = useSelector((state: RootState) => state.adminView.currentRole);
   
-  // If no user, redirect to login
-    useEffect(() => {
-        if (!orgUser) {
-        navigate("/org/login");
-        return;
+  useEffect(() => {
+    const fetchOrgUser = async () => {
+      try {
+        const response = await api.get("/org/me");
+        
+        if (response.data.user) {
+          dispatch(setUser(response.data.user));
+        } else {
+          navigate("/org/login");
         }
-    }, [orgUser, navigate]);
+      } catch (error) {
+        console.error("Failed to fetch org user:", error);
+        navigate("/org/login");
+      } finally {
+        setIsLoading(false); // Local state update
+      }
+    };
+
+    fetchOrgUser();
+  }, [dispatch, navigate]);
   
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    );
+  }
   // If user is not admin, show only their role dashboard
   if (orgUser && orgUser.role !== "ADMIN") {
     const renderRoleDashboard = () => {

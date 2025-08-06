@@ -9,8 +9,6 @@ import {
   Plug,
   LayoutDashboard,
 } from "lucide-react";
-
-import { NavMain } from "@/components/nav-main";
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -27,6 +25,7 @@ import {
   setCurrentAdminPage,
 } from "@/features/Org/View/adminViewSlice";
 import Logo from "../logo";
+import { NavMainAdmin } from "./NavMainAdmin";
 
 export function AdminSidebar(
   props: React.ComponentProps<typeof Sidebar>,
@@ -61,12 +60,12 @@ export function AdminSidebar(
       className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700"
       {...props}
     >
-      <SidebarHeader className="border-b border-gray-200 dark:border-gray-700">
-        {open && <Logo />}
-      </SidebarHeader>
+      {open && <SidebarHeader className="border-b border-gray-200 dark:border-gray-700">
+        <Logo />
+      </SidebarHeader>}
 
       <SidebarContent className="bg-white dark:bg-gray-900">
-        <NavMain items={adminNav} />
+        <NavMainAdmin items={adminNav} />
       </SidebarContent>
 
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">

@@ -72,7 +72,7 @@ function App() {
     {
       path:"*",
       element:<NotFound /> //Email verification informative form
-    }
+    },
   ]);
 
   return (
