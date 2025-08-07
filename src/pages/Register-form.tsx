@@ -23,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { registerCandidateSchema } from '@/lib/zod';
 import { zodResolver } from './../../node_modules/@hookform/resolvers/zod/src/zod';
-type Role = {
+type job = {
   _id: string;
   name: string;
 };
@@ -37,9 +37,9 @@ type FormValues = {
   date_of_birth: string;
   gender: "male" | "female" | "other";
   address: string;
-  portfolio_url:string,
+  portfolio_url?:string,
   profile_photo_url: FileList;
-  applied_role: string;
+  applied_job: string;
   resume: FileList; // set this after upload
   password: string;
 };
@@ -59,19 +59,19 @@ export default function RegisterForm({
     formState: { errors },
   } = useForm<FormValues>({resolver: zodResolver(registerCandidateSchema)});
   const [open, setOpen] = useState(false);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [jobs, setjobs] = useState<job[]>([]);
+  const [loadingjobs, setLoadingjobs] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
-    setLoadingRoles(true);
-    api.get("/candidates/roles")
-      .then(res => setRoles(res.data.roles))
-      .catch(() => setRoles([]))
-      .finally(() => setLoadingRoles(false));
+    setLoadingjobs(true);
+    api.get("/candidates/jobs")
+      .then(res => setjobs(res.data.jobs))
+      .catch(() => setjobs([]))
+      .finally(() => setLoadingjobs(false));
   }, []);
-  const selectedRoleId = watch("applied_role");
+  const selectedjobId = watch("applied_job");
 
 
 const onSubmit = async (data: FormValues) => {
@@ -255,7 +255,7 @@ const onSubmit = async (data: FormValues) => {
                   <div className="md:col-span-2">
                     <Label htmlFor="portfolio_url">PortFolio URL</Label>
                     <Input
-                      {...register("portfolio_url", { required: true })}
+                      {...register("portfolio_url")}
                       id="portfolio_url"
                     />
                     {errors.portfolio_url && (
@@ -296,7 +296,7 @@ const onSubmit = async (data: FormValues) => {
                     )}
                  </div>
                   <div>
-                    <Label htmlFor="applied_role">Applied Role</Label>
+                    <Label htmlFor="applied_job">Applied job</Label>
                     <Popover open={open} onOpenChange={setOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -306,34 +306,34 @@ const onSubmit = async (data: FormValues) => {
                           className="w-[300px] justify-between"
                           type="button"
                         >
-                          {selectedRoleId
-                            ? roles.find((r) => r._id === selectedRoleId)?.name
-                            : loadingRoles
+                          {selectedjobId
+                            ? jobs.find((r) => r._id === selectedjobId)?.name
+                            : loadingjobs
                               ? "Loading..."
-                              : "Select role..."}
+                              : "Select job..."}
                           <ChevronsUpDown className="opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[300px] p-0">
                         <Command>
-                          <CommandInput placeholder="Search role..." className="h-9" />
+                          <CommandInput placeholder="Search job..." className="h-9" />
                           <CommandList>
-                            <CommandEmpty>No roles found.</CommandEmpty>
+                            <CommandEmpty>No jobs found.</CommandEmpty>
                             <CommandGroup>
-                              {roles.map((role) => (
+                              {jobs.map((job) => (
                                 <CommandItem
-                                  key={role._id}
-                                  value={role._id}
+                                  key={job._id}
+                                  value={job._id}
                                   onSelect={(currentValue) => {
-                                    setValue("applied_role", currentValue, { shouldValidate: true });
+                                    setValue("applied_job", currentValue, { shouldValidate: true });
                                     setOpen(false);
                                   }}
                                 >
-                                  {role.name}
+                                  {job.name}
                                   <Check
                                     className={cn(
                                       "ml-auto",
-                                      selectedRoleId === role._id ? "opacity-100" : "opacity-0"
+                                      selectedjobId === job._id ? "opacity-100" : "opacity-0"
                                     )}
                                   />
                                 </CommandItem>
@@ -343,8 +343,8 @@ const onSubmit = async (data: FormValues) => {
                         </Command>
                       </PopoverContent>
                     </Popover>
-                    {errors.applied_role && (
-                      <p className="text-red-500 text-sm mt-1">{errors.applied_role.message}</p>
+                    {errors.applied_job && (
+                      <p className="text-red-500 text-sm mt-1">{errors.applied_job.message}</p>
                     )}
                   </div>
 

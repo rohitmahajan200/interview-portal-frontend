@@ -8,12 +8,13 @@ export const registerCandidateSchema = z.object({
   date_of_birth: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["male", "female", "other"]),
   address: z.string().min(1, "Address is required"),
+  portfolio_url: z.string().url("Invalid portfolio URL").optional().or(z.literal("")), // Add this line
   profile_photo_url: z
     .any()
     .refine((fileList) => fileList && fileList.length === 1, {
       message: "Profile photo is required",
     }),
-  applied_role: z.string().min(1, "Role is required"),
+  applied_job: z.string().min(1, "Role is required"),
   resume: z
     .any()
     .refine((fileList) => fileList && fileList.length === 1, {
