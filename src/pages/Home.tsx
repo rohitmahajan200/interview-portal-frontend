@@ -22,6 +22,8 @@ interface Stage {
 
 const Home = () => {
   const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const applicationStatus: Stage[] = [
     {
@@ -56,24 +58,38 @@ const Home = () => {
     },
   ];
 
+  const getAssessmentTitle = (assessmentType: string): string => {
+    switch (assessmentType) {
+      case "domain-specific":
+        return "Technical Assessment";
+      case "hr":
+        return "HR Assessment";
+      default:
+        return "Assessment";
+    }
+  };
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
         const [assessmentRes, interviewRes] = await Promise.all([
           api.get("/candidates/assessments"),
           api.get("/candidates/interviews"),
         ]);
 
-        const assessments: Event[] = assessmentRes.data.assessments.map(
+        const assessments: Event[] = (assessmentRes.data.combined || []).map(
           (a: any): Event => ({
             id: a._id,
             type: "Assessment",
-            title: a.assessment_type,
+            title: getAssessmentTitle(a.assessment_type),
             date: a.assigned_at,
           })
         );
 
-        const interviews: Event[] = interviewRes.data.data.map(
+        const interviews: Event[] = (interviewRes.data.data || []).map(
           (i: any): Event => ({
             id: i._id,
             type: "Interview",
@@ -85,14 +101,35 @@ const Home = () => {
         setEvents([...assessments, ...interviews]);
       } catch (error) {
         console.error("Failed to fetch candidate events:", error);
+        setError("Failed to load events. Please try again later.");
+        setEvents([]);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchEvents();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-background text-foreground">
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-2 rounded-lg">
+          {error}
+        </div>
+      )}
+      
       <div className="grid auto-rows-min gap-4 md:grid-cols-2">
         <JobList />
         <div className="rounded-xl bg-muted/50 dark:bg-muted/30">

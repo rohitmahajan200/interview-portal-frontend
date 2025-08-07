@@ -19,12 +19,11 @@ type Assessment = {
   status: string;
 };
 
+
 const Assessments = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<Assessment[]>([]);
-  // const [queID,setQueId]=useState([]);
-  // const [que,setQue]=useState([]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [assessment, setAssessmentData] = useState<Assessment[]>([])                      
+  
   const handleStart = async (id: string,type:string) => {
     if(type=="technical"){
       navigate(`/start-assessment/${id}`);
@@ -36,9 +35,12 @@ const Assessments = () => {
   useEffect(() => {
     const fetchAssessments = async () => {
       
-      const response = await api.get("candidates/assessments");
-
-      setData(response.data.assessments);
+      try {
+        const response=await api.get('/candidates/assessments');
+        setAssessmentData(response.data.combined);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      }
     };
     fetchAssessments();
   }, []);
@@ -76,46 +78,46 @@ const Assessments = () => {
           </TableHeader>
 
           <TableBody>
-            {data.map((assessment) => (
+            {assessment.map((a) => (
               <TableRow
-                key={assessment._id}
+                key={a._id}
                 className="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
               >
                 <TableCell className="font-medium capitalize text-center text-gray-800 dark:text-gray-200">
-                  {assessment.assessment_type ?? "Technical"}
+                  {a.assessment_type ?? "Technical"}
                 </TableCell>
 
                 <TableCell className="capitalize text-center text-gray-700 dark:text-gray-300">
-                  {assessment.status}
+                  {a.status}
                 </TableCell>
 
                 <TableCell className="text-center text-gray-600 dark:text-gray-400">
-                  {new Date(assessment.assigned_at).toLocaleString()}
+                  {new Date(a.assigned_at).toLocaleString()}
                 </TableCell>
 
                 <TableCell className="text-center">
-                  {assessment.status === "pending" && (
+                  {a.status === "pending" && (
                     <button
                       className="bg-yellow-100 dark:bg-yellow-300 text-yellow-800 px-3 py-1 rounded-md border border-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-400 text-sm font-medium transition"
-                      onClick={() => handleStart(assessment._id,assessment.assessment_type)}
+                      onClick={() => handleStart(a._id,a.assessment_type)}
                     >
                       Start
                     </button>
                   )}
 
-                  {assessment.status === "started" && (
+                  {a.status === "started" && (
                     <button className="bg-blue-100 dark:bg-blue-300 text-blue-800 px-3 py-1 rounded-md border border-blue-300 hover:bg-blue-200 dark:hover:bg-blue-400 text-sm font-medium transition">
                       In Progress
                     </button>
                   )}
 
-                  {assessment.status === "completed" && (
+                  {a.status === "completed" && (
                     <button className="bg-green-100 dark:bg-green-300 text-green-800 px-3 py-1 rounded-md border border-green-300 hover:bg-green-200 dark:hover:bg-green-400 text-sm font-medium transition">
                       Attempted
                     </button>
                   )}
 
-                  {assessment.status === "expired" && (
+                  {a.status === "expired" && (
                     <button className="bg-red-100 dark:bg-red-300 text-red-800 px-3 py-1 rounded-md border border-red-300 dark:border-red-400 text-sm font-medium cursor-not-allowed">
                       Expired
                     </button>
@@ -123,7 +125,7 @@ const Assessments = () => {
                 </TableCell>
 
                 <TableCell className="text-center text-gray-600 dark:text-gray-400">
-                  {new Date(assessment.due_at).toLocaleString()}
+                  {new Date(a.due_at).toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}
