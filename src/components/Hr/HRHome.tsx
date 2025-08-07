@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,11 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, Search, Users, UserCheck, UserX, Calendar } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
-
 
 type Candidate = {
   _id: string;
@@ -25,7 +24,15 @@ type Candidate = {
     url: string;
     publicId: string;
   };
-  applied_job: string;
+  applied_job: {
+    description: {
+      location: string;
+      country: string;
+      time: string;
+      expInYears: string;
+      salary: string;
+    };
+  };
   current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback";
   status: "active" | "inactive" | "withdrawn" | "rejected" | "hired" | "deleted";
   email_verified: boolean;
@@ -33,6 +40,11 @@ type Candidate = {
   last_login?: string;
   createdAt: string;
   updatedAt: string;
+  documents?: { _id: string; document_type: string; document_url: string }[];
+  hrQuestionnaire?: { _id: string; status: string }[];
+  assessments?: { _id: string; status: string }[];
+  interviews?: { _id: string; status: string }[];
+  stage_history?: { _id: string; changed_at: string }[];
 };
 
 const HRHome = () => {
@@ -40,10 +52,9 @@ const HRHome = () => {
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCandidate, setLoadingCandidate] = useState(false);
-
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -66,11 +77,10 @@ const HRHome = () => {
     fetchCandidates();
   }, []);
 
-  // Filter candidates based on search and filters
+  // Filter candidates
   useEffect(() => {
     let filtered = candidates;
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(candidate =>
         candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,12 +89,10 @@ const HRHome = () => {
       );
     }
 
-    // Stage filter
     if (stageFilter !== "all") {
       filtered = filtered.filter(candidate => candidate.current_stage === stageFilter);
     }
 
-    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(candidate => candidate.status === statusFilter);
     }
@@ -92,7 +100,7 @@ const HRHome = () => {
     setFilteredCandidates(filtered);
   }, [candidates, searchTerm, stageFilter, statusFilter]);
 
-  // Get stage badge color
+  // Badge color functions
   const getStageColor = (stage: string) => {
     switch (stage) {
       case "registered": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
@@ -105,7 +113,6 @@ const HRHome = () => {
     }
   };
 
-  // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
@@ -117,7 +124,6 @@ const HRHome = () => {
     }
   };
 
-  // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -134,6 +140,20 @@ const HRHome = () => {
     pending_review: candidates.filter(c => c.current_stage === 'registered').length,
   };
 
+  const fetchCandidateDetails = async (candidateId: string) => {
+    try {
+      setLoadingCandidate(true);
+      const response = await api.get(`/org/candidates/${candidateId}`);
+      setSelectedCandidate(response.data.data);
+      setDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch candidate details:", error);
+      toast.error("Failed to load candidate details");
+    } finally {
+      setLoadingCandidate(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -141,20 +161,6 @@ const HRHome = () => {
       </div>
     );
   }
-  const fetchCandidateDetails = async (candidateId: string) => {
-  try {
-    setLoadingCandidate(true);
-    const response = await api.get(`/org/candidates/${candidateId}`);
-    setSelectedCandidate(response.data.data);
-    setDialogOpen(true);
-  } catch (error) {
-    console.error("Failed to fetch candidate details:", error);
-    toast.error("Failed to load candidate details");
-  } finally {
-    setLoadingCandidate(false);
-  }
-};
-
 
   return (
     <div className="p-6 space-y-6">
@@ -270,76 +276,7 @@ const HRHome = () => {
                   <TableHead>Status</TableHead>
                   <TableHead>Registration Date</TableHead>
                   <TableHead>Last Login</TableHead>
-                  <TableHead><TableCell>
-                  <div className="flex space-x-2">
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => fetchCandidateDetails(candidate._id)}
-                          disabled={loadingCandidate}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </DialogTrigger>
-                      
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Candidate Details</DialogTitle>
-                        </DialogHeader>
-                        
-                        {selectedCandidate && (
-                          <div className="space-y-6">
-                            {/* Your existing dialog content remains the same */}
-                            {/* Basic Information */}
-                            <Card>
-                              <CardHeader>
-                                <CardTitle>Personal Information</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="flex items-center space-x-4">
-                                    <Avatar className="w-16 h-16">
-                                      <AvatarImage src={selectedCandidate.profile_photo_url.url} />
-                                      <AvatarFallback>
-                                        {selectedCandidate.first_name[0]}{selectedCandidate.last_name[0]}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <h3 className="text-xl font-semibold">
-                                        {selectedCandidate.first_name} {selectedCandidate.last_name}
-                                      </h3>
-                                      <p className="text-muted-foreground">{selectedCandidate.email}</p>
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="space-y-2">
-                                    <div><strong>Phone:</strong> {selectedCandidate.phone}</div>
-                                    <div><strong>Gender:</strong> {selectedCandidate.gender}</div>
-                                    <div><strong>Date of Birth:</strong> {formatDate(selectedCandidate.date_of_birth)}</div>
-                                    <div><strong>Address:</strong> {selectedCandidate.address}</div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-
-                            {/* All your other existing cards remain the same */}
-                            {/* ... Status Information, Applied Job, Documents, etc. ... */}
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-
-                    {candidates.current_stage === 'registered' && (
-                      <Button size="sm">
-                        Review
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-                </TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -387,215 +324,15 @@ const HRHome = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        {/* Candidate Details Dialog */}
-                        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Candidate Details</DialogTitle>
-                            </DialogHeader>
-                            
-                            {selectedCandidate && (
-                              <div className="space-y-6">
-                                {/* Basic Information */}
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Personal Information</CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div className="flex items-center space-x-4">
-                                        <Avatar className="w-16 h-16">
-                                          <AvatarImage src={selectedCandidate.profile_photo_url.url} />
-                                          <AvatarFallback>
-                                            {selectedCandidate.first_name[0]}{selectedCandidate.last_name[0]}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                          <h3 className="text-xl font-semibold">
-                                            {selectedCandidate.first_name} {selectedCandidate.last_name}
-                                          </h3>
-                                          <p className="text-muted-foreground">{selectedCandidate.email}</p>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="space-y-2">
-                                        <div><strong>Phone:</strong> {selectedCandidate.phone}</div>
-                                        <div><strong>Gender:</strong> {selectedCandidate.gender}</div>
-                                        <div><strong>Date of Birth:</strong> {formatDate(selectedCandidate.date_of_birth)}</div>
-                                        <div><strong>Address:</strong> {selectedCandidate.address}</div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-
-                                {/* Status Information */}
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Application Status</CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                      <div>
-                                        <div className="text-sm text-muted-foreground">Current Stage</div>
-                                        <Badge className={getStageColor(selectedCandidate.current_stage)}>
-                                          {selectedCandidate.current_stage.toUpperCase()}
-                                        </Badge>
-                                      </div>
-                                      <div>
-                                        <div className="text-sm text-muted-foreground">Status</div>
-                                        <Badge className={getStatusColor(selectedCandidate.status)}>
-                                          {selectedCandidate.status.toUpperCase()}
-                                        </Badge>
-                                      </div>
-                                      <div>
-                                        <div className="text-sm text-muted-foreground">Email Verified</div>
-                                        <Badge className={selectedCandidate.email_verified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                                          {selectedCandidate.email_verified ? 'Verified' : 'Not Verified'}
-                                        </Badge>
-                                      </div>
-                                      <div>
-                                        <div className="text-sm text-muted-foreground">Registration Date</div>
-                                        <div className="text-sm">{formatDate(selectedCandidate.registration_date)}</div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-
-                                {/* Applied Job */}
-                                {selectedCandidate.applied_job && (
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle>Applied Position</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div><strong>Location:</strong> {selectedCandidate.applied_job.description.location}</div>
-                                        <div><strong>Country:</strong> {selectedCandidate.applied_job.description.country}</div>
-                                        <div><strong>Time:</strong> {selectedCandidate.applied_job.description.time}</div>
-                                        <div><strong>Experience:</strong> {selectedCandidate.applied_job.description.expInYears}</div>
-                                        <div><strong>Salary:</strong> {selectedCandidate.applied_job.description.salary}</div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                )}
-
-                                {/* Documents */}
-                                {selectedCandidate.documents && selectedCandidate.documents.length > 0 && (
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle>Documents</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="space-y-2">
-                                        {selectedCandidate.documents.map((doc: any) => (
-                                          <div key={doc._id} className="flex items-center justify-between p-2 border rounded">
-                                            <div>
-                                              <span className="font-medium capitalize">{doc.document_type}</span>
-                                            </div>
-                                            <Button 
-                                              variant="outline" 
-                                              size="sm"
-                                              onClick={() => window.open(doc.document_url, '_blank')}
-                                            >
-                                              View Document
-                                            </Button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                )}
-
-                                {/* HR Questionnaire Status */}
-                                {selectedCandidate.hrQuestionnaire && selectedCandidate.hrQuestionnaire.length > 0 && (
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle>HR Questionnaire</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="space-y-2">
-                                        {selectedCandidate.hrQuestionnaire.map((questionnaire: any) => (
-                                          <div key={questionnaire._id} className="flex items-center justify-between">
-                                            <span>Questionnaire Status:</span>
-                                            <Badge className={questionnaire.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
-                                              {questionnaire.status.toUpperCase()}
-                                            </Badge>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                )}
-
-                                {/* Assessments Status */}
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Assessments</CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    {selectedCandidate.assessments && selectedCandidate.assessments.length > 0 ? (
-                                      <div className="space-y-2">
-                                        {selectedCandidate.assessments.map((assessment: any) => (
-                                          <div key={assessment._id} className="flex items-center justify-between">
-                                            <span>Assessment Status:</span>
-                                            <Badge>{assessment.status.toUpperCase()}</Badge>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-muted-foreground">No assessments assigned yet</p>
-                                    )}
-                                  </CardContent>
-                                </Card>
-
-                                {/* Interviews Status */}
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Interviews</CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    {selectedCandidate.interviews && selectedCandidate.interviews.length > 0 ? (
-                                      <div className="space-y-2">
-                                        {selectedCandidate.interviews.map((interview: any) => (
-                                          <div key={interview._id} className="flex items-center justify-between">
-                                            <span>Interview Status:</span>
-                                            <Badge>{interview.status.toUpperCase()}</Badge>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-muted-foreground">No interviews scheduled yet</p>
-                                    )}
-                                  </CardContent>
-                                </Card>
-
-                                {/* Stage History */}
-                                {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
-                                  <Card>
-                                    <CardHeader>
-                                      <CardTitle>Stage History</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="space-y-2">
-                                        {selectedCandidate.stage_history.map((stage: any) => (
-                                          <div key={stage._id} className="text-sm">
-                                            <strong>Changed At:</strong> {formatDate(stage.changed_at)}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                )}
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-
-                        {candidate.current_stage === 'registered' && (
-                          <Button size="sm">
-                            Review
-                          </Button>
-                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => fetchCandidateDetails(candidate._id)}
+                          disabled={loadingCandidate}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -611,6 +348,214 @@ const HRHome = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Candidate Details Dialog - Outside of table */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Candidate Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedCandidate && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* Single row layout with better spacing */}
+                  <div className="flex flex-col gap-6">
+                    {/* Avatar and Name Section */}
+                    <div className="flex items-center space-x-4 md:min-w-[300px]">
+                      <Avatar className="w-20 h-20 flex-shrink-0">
+                        <AvatarImage src={selectedCandidate.profile_photo_url?.url} />
+                        <AvatarFallback>
+                          {selectedCandidate.first_name?.[0]}{selectedCandidate.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <h3 className="text-xl font-semibold">
+                          {selectedCandidate.first_name} {selectedCandidate.last_name}
+                        </h3>
+                        <p className="text-muted-foreground">{selectedCandidate.email}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Personal Details Section */}
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><strong>Phone:</strong> {selectedCandidate.phone}</div>
+                      <div><strong>Gender:</strong> {selectedCandidate.gender}</div>
+                      <div><strong>Date of Birth:</strong> {formatDate(selectedCandidate.date_of_birth)}</div>
+                      <div className="sm:col-span-2"><strong>Address:</strong> {selectedCandidate.address}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+
+              {/* Status Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Application Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Current Stage</div>
+                      <Badge className={getStageColor(selectedCandidate.current_stage)}>
+                        {selectedCandidate.current_stage?.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Status</div>
+                      <Badge className={getStatusColor(selectedCandidate.status)}>
+                        {selectedCandidate.status?.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Email Verified</div>
+                      <Badge className={selectedCandidate.email_verified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                        {selectedCandidate.email_verified ? 'Verified' : 'Not Verified'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Registration Date</div>
+                      <div className="text-sm">{formatDate(selectedCandidate.registration_date)}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Applied Job */}
+              {selectedCandidate.applied_job && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Applied Position</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div><strong>Location:</strong> {selectedCandidate.applied_job.description?.location}</div>
+                      <div><strong>Country:</strong> {selectedCandidate.applied_job.description?.country}</div>
+                      <div><strong>Time:</strong> {selectedCandidate.applied_job.description?.time}</div>
+                      <div><strong>Experience:</strong> {selectedCandidate.applied_job.description?.expInYears}</div>
+                      <div><strong>Salary:</strong> {selectedCandidate.applied_job.description?.salary}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Documents */}
+              {selectedCandidate.documents && selectedCandidate.documents.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Documents</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedCandidate.documents.map((doc: { _id: string; document_type: string; document_url: string }) => (
+                        <div key={doc._id} className="flex items-center justify-between p-2 border rounded">
+                          <div>
+                            <span className="font-medium capitalize">{doc.document_type}</span>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(doc.document_url, '_blank')}
+                          >
+                            View Document
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* HR Questionnaire Status */}
+              {selectedCandidate.hrQuestionnaire && selectedCandidate.hrQuestionnaire.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>HR Questionnaire</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedCandidate.hrQuestionnaire.map((questionnaire: { _id: string; status: string }) => (
+                        <div key={questionnaire._id} className="flex items-center justify-between">
+                          <span>Questionnaire Status:</span>
+                          <Badge className={questionnaire.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
+                            {questionnaire.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Assessments Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Assessments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedCandidate.assessments && selectedCandidate.assessments.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedCandidate.assessments.map((assessment: { _id: string; status: string }) => (
+                        <div key={assessment._id} className="flex items-center justify-between">
+                          <span>Assessment Status:</span>
+                          <Badge>{assessment.status.toUpperCase()}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No assessments assigned yet</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Interviews Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Interviews</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedCandidate.interviews && selectedCandidate.interviews.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedCandidate.interviews.map((interview: { _id: string; status: string }) => (
+                        <div key={interview._id} className="flex items-center justify-between">
+                          <span>Interview Status:</span>
+                          <Badge>{interview.status.toUpperCase()}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No interviews scheduled yet</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Stage History */}
+              {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Stage History</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {selectedCandidate.stage_history.map((stage: { _id: string; changed_at: string }) => (
+                        <div key={stage._id} className="text-sm">
+                          <strong>Changed At:</strong> {formatDate(stage.changed_at)}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
