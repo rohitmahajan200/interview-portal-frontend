@@ -25,7 +25,7 @@ const Assessments = () => {
   const [assessment, setAssessmentData] = useState<Assessment[]>([])                      
   
   const handleStart = async (id: string,type:string) => {
-    if(type=="technical"){
+    if(type=="domain-specific"){
       navigate(`/start-assessment/${id}`);
     }else{
       navigate(`/start-hrqna`);
@@ -84,7 +84,7 @@ const Assessments = () => {
                 className="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
               >
                 <TableCell className="font-medium capitalize text-center text-gray-800 dark:text-gray-200">
-                  {a.assessment_type ?? "Technical"}
+                  {a.assessment_type ?? "domain-specific"}
                 </TableCell>
 
                 <TableCell className="capitalize text-center text-gray-700 dark:text-gray-300">

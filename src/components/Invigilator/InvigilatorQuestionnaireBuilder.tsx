@@ -1,0 +1,1233 @@
+import { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle } from 'lucide-react';
+import api from '@/lib/api';
+import toast, {Toaster} from 'react-hot-toast';
+
+// Validation Schemas
+const questionnaireSchema = z.object({
+  candidates: z.array(z.string().length(24, 'Invalid candidate ID')).min(1, 'Select at least one candidate'),
+  assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
+  days_to_complete: z.number().int().min(1).max(30, 'Days must be between 1-30')
+});
+
+const questionnaireUpdateSchema = z.object({
+  assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
+  due_at: z.string().min(1, 'Due date is required'),
+});
+
+type CreateFormData = z.infer<typeof questionnaireSchema>;
+type EditFormData = z.infer<typeof questionnaireUpdateSchema>;
+
+// Types
+interface Question {
+  _id: string;
+  text: string;
+  type: 'mcq' | 'coding' | 'essay' | 'voice' | 'case_study';
+  options?: string[];
+  correct_answers?: any[];
+  explanation?: string;
+  is_must_ask?: boolean;
+  max_score?: number;
+  attachments?: string[];
+  difficulty?: 'easy' | 'medium' | 'hard';
+  tags?: string[];
+  job_tags?: string[];
+  stage?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Candidate {
+  _id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile_photo_url?: {
+    url: string;
+    publicId: string;
+  };
+  hrQuestionnaire: string[]
+}
+
+interface Assessment {
+  _id: string;
+  candidate: string;
+  job: string;
+  question_bank: string;
+  questions_by_stage: {
+    [stageName: string]: string[];
+  };
+  assigned_at: string;
+  due_at?: string;
+  started_at?: string;
+  access_token?: string;
+  completed_at?: string;
+  status: 'pending' | 'started' | 'completed' | 'expired';
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+const InvigilatorQuestionnaireBuilder = () => {
+  // State
+  const [assessment, setAssessment] = useState<Assessment[]>([]);
+  const [filteredAssessment, setFilteredAssessment] = useState<Assessment[]>([]);
+    // Add these state variables
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteTargetName, setDeleteTargetName] = useState<string>('');
+
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  // Helper function to extract unique tags
+  const getUniqueTags = () => {
+    const tagSet = new Set<string>();
+    questions.forEach(question => {
+      question.tags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  };
+
+  // Helper function to toggle tag selection
+  const toggleTagSelection = (tag: string, field: any) => {
+    const newSelectedTags = new Set(selectedTags);
+    const currentSelectedQuestions = new Set(field.value || []);
+    
+    if (selectedTags.has(tag)) {
+      // Remove tag and all its questions
+      newSelectedTags.delete(tag);
+      questions.forEach(question => {
+        if (question.tags?.includes(tag)) {
+          currentSelectedQuestions.delete(question._id);
+        }
+      });
+    } else {
+      // Add tag and all its questions
+      newSelectedTags.add(tag);
+      questions.forEach(question => {
+        if (question.tags?.includes(tag)) {
+          currentSelectedQuestions.add(question._id);
+        }
+      });
+    }
+    
+    setSelectedTags(newSelectedTags);
+    field.onChange(Array.from(currentSelectedQuestions));
+  };
+
+  // Create Form
+  const createForm = useForm<CreateFormData>({
+    resolver: zodResolver(questionnaireSchema),
+    defaultValues: {
+      candidates: [],
+      assigned_questions: [],
+      days_to_complete: 7,
+    }
+  });
+
+  // Edit Form
+  const editForm = useForm<EditFormData>({
+    resolver: zodResolver(questionnaireUpdateSchema),
+    defaultValues: {
+      assigned_questions: [],
+      due_at: '',
+    }
+  });
+
+  const isEditing = !!editingAssessment;
+
+  // Fetch all data
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      const [AssessmentRes, questionsRes, candidatesRes] = await Promise.all([
+        api.get('/org/assessment'),
+        api.get('/org/question'),
+        api.get('/org/candidates'),
+      ]);
+      
+      setAssessment(AssessmentRes.data.data || []);
+      setFilteredAssessment(AssessmentRes.data.data || []);
+      setQuestions(questionsRes.data.data || []);
+      setCandidates(candidatesRes.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to load data', );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  // Filter questionnaires
+  useEffect(() => {
+    let filtered = assessment;
+
+    if (searchTerm) {
+      filtered = filtered.filter(q =>
+        q.candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(q => q.status === statusFilter);
+    }
+
+    setFilteredAssessment(filtered);
+  }, [assessment, searchTerm, statusFilter]);
+
+  // Dialog handlers
+  const openCreateDialog = () => {
+    setEditingAssessment(null);
+    setSelectedTags(new Set());
+    createForm.reset({ 
+      candidates: [], 
+      assigned_questions: [], 
+      days_to_complete: 7 
+    });
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (assessment: Assessment) => {
+    setEditingAssessment(assessment);
+    setSelectedTags(new Set());
+    
+    // Format the due date for the input
+    const dueDate = new Date(assessment.due_at);
+    const formattedDate = dueDate.toISOString().split('T')[0];
+    
+    editForm.reset({
+      assigned_questions: assessment.assigned_questions.map(q => q._id),
+      due_at: formattedDate,
+    });
+    setDialogOpen(true);
+  };
+
+  const openViewDialog = (assessment: Assessment) => {
+    setSelectedAssessment(assessment);
+    setViewDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingAssessment(null);
+    setSelectedTags(new Set());
+    createForm.reset();
+    editForm.reset();
+  };
+
+  const closeViewDialog = () => {
+    setViewDialogOpen(false);
+    setSelectedAssessment(null);
+  };
+  // Function to open delete confirmation dialog
+  const openDeleteDialog = (id: string, candidateName: string) => {
+    setDeleteTargetId(id);
+    setDeleteTargetName(candidateName);
+    setDeleteDialogOpen(true);
+  };
+
+  // Function to handle confirmed deletion
+  const handleDeleteConfirmed = async () => {
+    if (!deleteTargetId) return;
+    
+    try {
+      setDeleteLoadingId(deleteTargetId);
+      await api.delete(`/org/assessment/${deleteTargetId}`);
+      
+      toast.success('Questionnaire deleted successfully');
+      setDeleteDialogOpen(false);
+      fetchAllData();
+    } catch (error: any) {
+      console.error('Failed to delete questionnaire:', error);
+      toast.error(
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to delete questionnaire'
+      );
+    } finally {
+      setDeleteLoadingId(null);
+      setDeleteTargetId(null);
+      setDeleteTargetName('');
+    }
+  };
+
+  // Function to cancel deletion
+  const handleDeleteCancelled = () => {
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
+    setDeleteTargetName('');
+  };
+
+  // Submit handlers
+ const onCreateSubmit = async (data: CreateFormData) => {
+  try {
+    setSubmitting(true);
+    console.log("data on submit===>", data);
+    
+    // Calculate due date string
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + data.days_to_complete);
+    
+    // Create questions_by_stage structure (stage_name -> question_ids)
+    const questions_by_stage = {
+      "general": data.assigned_questions // or use specific stage names
+    };
+    
+    // Send individual requests for each candidate (matching your schema)
+    const assignmentPromises = data.candidates.map(async (candidateId) => {
+      return api.post('/org/assessment/assign', {
+        candidate_id: candidateId,
+        due_at: dueDate.toISOString(),
+        questions_by_stage: questions_by_stage
+      });
+    });
+    
+    const responses = await Promise.all(assignmentPromises);
+    
+    // Check results
+    const successful = responses.filter(res => res.data.success);
+    const failed = responses.filter(res => !res.data.success);
+    
+    if (successful.length > 0) {
+      toast.success(`Questionnaire assigned to ${successful.length} candidates successfully`);
+    }
+    
+    if (failed.length > 0) {
+      toast.error(`Failed to assign to ${failed.length} candidates`);
+    }
+    
+    closeDialog();
+    fetchAllData();
+  } catch (error: any) {
+    console.error('Failed to create questionnaire:', error);
+    toast.error(
+      error?.response?.data?.message || 
+      error?.message || 
+      'Failed to create questionnaire'
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+  const onEditSubmit = async (data: EditFormData) => {
+    if (!editingAssessment) return;
+    
+    try {
+      setSubmitting(true);
+      await api.put(`/org/hr-questionnaires/${editingAssessment._id}`, {
+        assigned_questions: data.assigned_questions,
+        due_at: new Date(data.due_at).toISOString(),
+      });
+      
+      toast.success('Questionnaire updated successfully');
+      closeDialog();
+      fetchAllData();
+    } catch (error: any) {
+      console.error('Failed to update questionnaire:', error);
+      toast.error(
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to update questionnaire'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+  // Get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'submitted': return 'bg-green-100 text-green-800';
+      case 'expired': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Get available candidates (those without questionnaires)
+  const getAvailableCandidates = () => {
+    return candidates.filter(candidate => 
+      !candidate.hrQuestionnaire || candidate.hrQuestionnaire.length === 0
+    );
+  };
+
+  // Statistics
+  const stats = {
+    total: assessment.length,
+    pending: assessment.filter(q => q.status === 'pending').length,
+    submitted: assessment.filter(q => q.status === 'completed').length,
+    expired: assessment.filter(q => q.status === 'expired').length,
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <Toaster position="bottom-right" />
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Questionnaire Builder</h1>
+          <p className="text-muted-foreground">
+            Assign and manage Assessment for candidates
+          </p>
+        </div>
+        <Button onClick={openCreateDialog} disabled={getAvailableCandidates().length === 0}>
+          <Plus className="mr-2 w-4 h-4" /> Assign Questionnaire
+        </Button>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <div className="text-sm text-muted-foreground">Total Questionnaires</div>
+              </div>
+              <Users className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+                <div className="text-sm text-muted-foreground">Pending</div>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-green-600">{stats.submitted}</div>
+                <div className="text-sm text-muted-foreground">Submitted</div>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
+                <div className="text-sm text-muted-foreground">Expired</div>
+              </div>
+              <Clock className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by candidate name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="submitted">submitted</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Questionnaires Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Questionnaires ({filteredAssessment.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidate</TableHead>
+                    <TableHead>Questions</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Assigned By</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAssessment.map((assessment) => (
+                    <TableRow key={assessment._id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar>
+                            <AvatarImage src={assessment.candidate.profile_photo_url?.url} />
+                            <AvatarFallback>
+                              {assessment.candidate.first_name[0]}{assessment.candidate.last_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">
+                              {assessment.candidate.first_name} {assessment.candidate.last_name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {assessment.candidate?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(assessment.assigned_questions || []).slice(0, 2).map((question) => (
+                            <Badge key={question._id} variant="outline" className="text-xs">
+                              {question.input_type.toUpperCase()}
+                            </Badge>
+                          ))}
+                          {(assessment.assigned_questions?.length || 0) > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{assessment.assigned_questions.length - 2} more
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(assessment.status)}>
+                          {assessment.status.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {formatDate(assessment.due_at)}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {assessment.assigned_by?.name}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(assessment.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openViewDialog(assessment)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(assessment)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => openDeleteDialog(
+                            assessment._id, 
+                            `${assessment.candidate.first_name} ${assessment.candidate.last_name}`
+                          )}
+                          disabled={deleteLoadingId === assessment._id}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
+
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {filteredAssessment.length === 0 && !loading && (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">
+                    {searchTerm || statusFilter !== 'all' 
+                      ? 'No questionnaires match your filters.' 
+                      : 'No questionnaires found. Create your first questionnaire!'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={closeDialog}>
+        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
+          <DialogHeader className="flex-shrink-0 pb-4">
+            <DialogTitle>
+              {isEditing ? 'Edit Questionnaire' : 'Assign New Questionnaire'}
+            </DialogTitle>
+            <DialogDescription>
+              {isEditing 
+                ? 'Update the questionnaire details and questions'
+                : 'Select candidates and assign questions to create new questionnaires'
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {/* Create Form */}
+              {!isEditing && (
+                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
+                  {/* Candidates Selection */}
+                  <div className="space-y-3">
+                    <Label>Select Candidates ({getAvailableCandidates().length} available)</Label>
+                    <Controller
+                      name="candidates"
+                      control={createForm.control}
+                      render={({ field }) => (
+                        <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
+                          <div className="space-y-3">
+                            {getAvailableCandidates().length === 0 ? (
+                              <p className="text-muted-foreground text-center py-4">
+                                No candidates available for assignment
+                              </p>
+                            ) : (
+                              getAvailableCandidates().map((candidate) => {
+                                const isChecked = field.value?.includes(candidate._id) || false;
+                                return (
+                                  <div key={candidate._id} className="flex items-start space-x-3">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        const currentValue = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentValue, candidate._id]);
+                                        } else {
+                                          field.onChange(currentValue.filter((id: string) => id !== candidate._id));
+                                        }
+                                      }}
+                                    />
+                                    <div className="flex items-center space-x-3">
+                                      <Avatar className="w-8 h-8">
+                                        <AvatarImage src={candidate.profile_photo_url?.url} />
+                                        <AvatarFallback>
+                                          {candidate.first_name[0]}{candidate.last_name[0]}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <div className="font-medium">
+                                          {candidate.first_name} {candidate.last_name}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                          {candidate.email}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    />
+                    {createForm.formState.errors.candidates && (
+                      <p className="text-red-600 text-sm">{createForm.formState.errors.candidates.message}</p>
+                    )}
+                  </div>
+
+                  {/* Questions Selection for Create */}
+                  <div className="space-y-3">
+                    <Label>Select Questions</Label>
+                    
+                    {/* Tag Selection */}
+                    {getUniqueTags().length > 0 && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {getUniqueTags().map((tag) => (
+                            <Controller
+                              key={tag}
+                              name="assigned_questions"
+                              control={createForm.control}
+                              render={({ field }) => {
+                                const isTagSelected = selectedTags.has(tag);
+                                return (
+                                  <Button
+                                    type="button"
+                                    variant={isTagSelected ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => toggleTagSelection(tag, field)}
+                                    className="text-xs"
+                                  >
+                                    {isTagSelected && "✓ "}{tag}
+                                    <Badge variant="secondary" className="ml-1 text-xs">
+                                      {questions.filter(q => q.tags?.includes(tag)).length}
+                                    </Badge>
+                                  </Button>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Individual Questions */}
+                    <Controller
+                      name="assigned_questions"
+                      control={createForm.control}
+                      render={({ field }) => (
+                        <div className="border rounded-lg">
+                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
+                            <span className="text-sm font-medium">Select Questions:</span>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange(questions.map(q => q._id));
+                                  setSelectedTags(new Set(getUniqueTags()));
+                                }}
+                                className="text-xs"
+                              >
+                                Select All
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange([]);
+                                  setSelectedTags(new Set());
+                                }}
+                                className="text-xs"
+                              >
+                                Clear All
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="max-h-64 overflow-y-auto">
+                            <div className="p-4 space-y-3">
+                              {questions.map((question) => {
+                                const isChecked = field.value?.includes(question._id) || false;
+                                return (
+                                  <div key={question._id} className="flex items-start space-x-3">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        const currentValue = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentValue, question._id]);
+                                        } else {
+                                          field.onChange(currentValue.filter((id: string) => id !== question._id));
+                                        }
+                                      }}
+                                    />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium">{question.text}</p>
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        <Badge variant="outline" className="text-xs">
+                                          {question.type.toUpperCase()}
+                                        </Badge>
+                                        {question.tags?.map((tag) => (
+                                          <Badge key={tag} variant="secondary" className="text-xs">
+                                            {tag}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
+                            Selected: {field.value?.length || 0} of {questions.length} questions
+                          </div>
+                        </div>
+                      )}
+                    />
+                    {createForm.formState.errors.assigned_questions && (
+                      <p className="text-red-600 text-sm">{createForm.formState.errors.assigned_questions.message}</p>
+                    )}
+                  </div>
+
+                  {/* Days to Complete */}
+                  <div className="space-y-2">
+                    <Label htmlFor="days_to_complete">Days to Complete</Label>
+                    <Input
+                      type="number"
+                      {...createForm.register('days_to_complete', { valueAsNumber: true })}
+                      min={1}
+                      max={30}
+                      className="w-32"
+                    />
+                    {createForm.formState.errors.days_to_complete && (
+                      <p className="text-red-600 text-sm">{createForm.formState.errors.days_to_complete.message}</p>
+                    )}
+                  </div>
+                </form>
+              )}
+
+              {/* Edit Form */}
+              {isEditing && (
+                <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6">
+                  {/* Candidate Info (Read-only) */}
+                  {editingAssessment && (
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <Label className="text-sm font-medium mb-2 block">Candidate:</Label>
+                      <div className="flex items-center space-x-3">
+                        <Avatar>
+                          <AvatarImage src={editingAssessment.candidate.profile_photo_url?.url} />
+                          <AvatarFallback>
+                            {editingAssessment.candidate.first_name[0]}{editingAssessment.candidate.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {editingAssessment.candidate.first_name} {editingAssessment.candidate.last_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {editingAssessment.candidate.email}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Questions Selection for Edit */}
+                  <div className="space-y-3">
+  <Label>Update Questions</Label>
+  
+  {/* Tag Selection Section */}
+  {getUniqueTags().length > 0 && (
+    <div className="p-3 bg-gray-50 rounded-lg">
+      <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
+      <div className="flex flex-wrap gap-2">
+        {getUniqueTags().map((tag) => (
+          <Controller
+            key={tag}
+            name="assigned_questions"
+            control={editForm.control}
+            render={({ field }) => {
+              const isTagSelected = selectedTags.has(tag);
+              return (
+                <Button
+                  type="button"
+                  variant={isTagSelected ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleTagSelection(tag, field)}
+                  className="text-xs flex-shrink-0"
+                >
+                  {isTagSelected && "✓ "}{tag}
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {questions.filter(q => q.tags?.includes(tag)).length}
+                  </Badge>
+                </Button>
+              );
+            }}
+          />
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Click tags to select/deselect all questions with that tag
+      </p>
+    </div>
+  )}
+
+  {/* Individual Question Selection */}
+  <Controller
+    name="assigned_questions"
+    control={editForm.control}
+    render={({ field }) => (
+      <div className="border rounded-lg">
+        {/* Select All/None Actions - Fixed Header */}
+        <div className="flex justify-between items-center p-3 border-b bg-white">
+          <span className="text-sm font-medium">Individual Questions:</span>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                field.onChange(questions.map(q => q._id));
+                setSelectedTags(new Set(getUniqueTags()));
+              }}
+              className="text-xs"
+            >
+              Select All
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                field.onChange([]);
+                setSelectedTags(new Set());
+              }}
+              className="text-xs"
+            >
+              Clear All
+            </Button>
+          </div>
+        </div>
+
+        {/* Scrollable Questions List */}
+        <div className="p-4 max-h-64 overflow-y-auto space-y-3">
+          {questions.map((question) => {
+            const isChecked = field.value?.includes(question._id) || false;
+            return (
+              <div key={question._id} className="flex items-start space-x-3">
+                <Checkbox
+                  checked={isChecked}
+                  onCheckedChange={(checked) => {
+                    const currentValue = field.value || [];
+                    if (checked) {
+                      field.onChange([...currentValue, question._id]);
+                    } else {
+                      field.onChange(currentValue.filter((id: string) => id !== question._id));
+                      // Update selected tags if this was the last question of a tag
+                      const newSelectedTags = new Set(selectedTags);
+                      question.tags?.forEach(tag => {
+                        const otherQuestionsWithTag = questions.filter(q => 
+                          q._id !== question._id && 
+                          q.tags?.includes(tag) && 
+                          currentValue.includes(q._id)
+                        );
+                        if (otherQuestionsWithTag.length === 0) {
+                          newSelectedTags.delete(tag);
+                        }
+                      });
+                      setSelectedTags(newSelectedTags);
+                    }
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium break-words">{question.text}</p>
+                  <div className="flex items-center flex-wrap gap-1 mt-1">
+                    <Badge variant="outline" className="text-xs">
+                      {question.type.toUpperCase()}
+                    </Badge>
+                    {question.tags && question.tags.map((tag) => (
+                      <Badge 
+                        key={tag} 
+                        variant={selectedTags.has(tag) ? "default" : "secondary"} 
+                        className="text-xs"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Selection Summary */}
+        <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
+          Selected: {field.value?.length || 0} of {questions.length} questions
+          {selectedTags.size > 0 && (
+            <span className="ml-2">
+              | Tags: {Array.from(selectedTags).join(', ')}
+            </span>
+          )}
+        </div>
+      </div>
+    )}
+  />
+  {editForm.formState.errors.assigned_questions && (
+    <p className="text-red-600 text-sm mt-1">{editForm.formState.errors.assigned_questions.message}</p>
+  )}
+</div>
+
+
+                  {/* Due Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="due_at">Due Date</Label>
+                    <Input
+                      type="date"
+                      {...editForm.register('due_at')}
+                      className="w-48"
+                    />
+                    {editForm.formState.errors.due_at && (
+                      <p className="text-red-600 text-sm">{editForm.formState.errors.due_at.message}</p>
+                    )}
+                  </div>
+                </form>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={closeDialog}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={isEditing ? editForm.handleSubmit(onEditSubmit) : createForm.handleSubmit(onCreateSubmit)}
+              disabled={submitting}
+            >
+              {submitting && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
+              {isEditing ? 'Update Questionnaire' : 'Assign Questionnaire'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={closeViewDialog}>
+        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
+          <DialogHeader className="flex-shrink-0 pb-4">
+            <DialogTitle>Questionnaire Details</DialogTitle>
+            <DialogDescription>
+              Complete details of the assigned questionnaire
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAssessment && (
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-6">
+                {/* Candidate Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Candidate Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="w-16 h-16">
+                        <AvatarImage src={selectedAssessment.candidate.profile_photo_url?.url} />
+                        <AvatarFallback>
+                          {selectedAssessment.candidate.first_name[0]}
+                          {selectedAssessment.candidate.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          {selectedAssessment.candidate.first_name} {selectedAssessment.candidate.last_name}
+                        </h3>
+                        <p className="text-muted-foreground">{selectedAssessment.candidate.email}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Questions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Assigned Questions ({selectedAssessment.questions_by_stage.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {selectedAssessment.questions_by_stage.map((question, index) => (
+                        <div key={question._id} className="border rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium mb-2">
+                                {index + 1}. {question.text}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                <Badge variant="outline">
+                                  {question.input_type.toUpperCase()}
+                                </Badge>
+                                {question.tags?.map((tag) => (
+                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Questionnaire Details */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Status</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge className={getStatusColor(selectedAssessment.status)}>
+                        {selectedAssessment.status.toUpperCase()}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Due Date</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p>{formatDate(selectedAssessment.due_at)}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Assigned By</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-medium">{selectedAssessment.assigned_by.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAssessment.assigned_by.email}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Timestamps */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Created At</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p>{formatDate(selectedAssessment.createdAt)}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Last Updated</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p>{formatDate(selectedAssessment.updatedAt)}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <Button onClick={closeViewDialog}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the questionnaire assigned to{' '}
+              <span className="font-semibold">{deleteTargetName}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 my-4">
+            <div className="flex items-start space-x-2">
+              <div className="text-yellow-600 text-sm">⚠️</div>
+              <div className="text-sm text-yellow-800">
+                This action cannot be undone. The questionnaire will be permanently removed 
+                from the candidate's record.
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDeleteCancelled}
+              disabled={deleteLoadingId === deleteTargetId}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteConfirmed}
+              disabled={deleteLoadingId === deleteTargetId}
+            >
+              {deleteLoadingId === deleteTargetId ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                'Delete Questionnaire'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+};
+
+export default InvigilatorQuestionnaireBuilder;

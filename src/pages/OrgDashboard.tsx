@@ -8,7 +8,7 @@ import type { RootState } from "@/app/store";
 // Import dashboard components (create these)
 import Admin from '@/components/Admin/Admin';
 import Hr from '@/components/Hr/Hr';
-import Invigilator from '@/components/Invigilator';
+import Invigilator from '@/components/Invigilator/Invigilator';
 import Manager from '@/components/Manager';
 import api from '@/lib/api';
 import { setUser } from '@/features/Candidate/auth/authSlice';
