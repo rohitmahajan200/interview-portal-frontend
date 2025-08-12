@@ -37,11 +37,10 @@ export default function AdminDashboard() {
       try {
         const res = await api.get("/org/me");
         if (res.data.user) {
-          dispatch(setUser(res.data.user)); // Save org user info in Redux store
+          dispatch(setUser(res.data.user));
         }
       } catch (error) {
         console.error("Failed to fetch org user profile:", error);
-        // navigate("/org/login"); // Redirect to org login if error occurs
       }
     };
 
@@ -74,39 +73,41 @@ export default function AdminDashboard() {
   };
 
   return (
-    <SidebarProvider>
-      {/* Left navigation sidebar */}
-      <AdminSidebar className="static md:static h-full" />
-
-      {/* Main content wrapper */}
-      <SidebarInset className=" overflow-hidden">
-        {/* Top header section */}
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
-          <div className="flex items-center gap-2 px-4 justify-between w-full">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" /> {/* Toggle sidebar */}
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
-              {/* Admin breadcrumb */}
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <header className="px-1 rounded-xl">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                        Admin Portal - Change Networks
-                      </span>
-                    </div>
-                  </header>
-                </BreadcrumbList>
-              </Breadcrumb>
+    <div className="h-full flex overflow-hidden">
+      <SidebarProvider>
+        {/* Fixed Width Sidebar */}
+        <AdminSidebar className="w-64 h-full flex-shrink-0" />
+        
+        {/* Main Content Area */}
+        <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
+          {/* Fixed Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background dark:bg-gray-900">
+            <div className="flex items-center gap-2 px-4 justify-between w-full">
+              <div className="flex items-center gap-2 px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <header className="px-1 rounded-xl">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                          Admin Portal - Change Networks
+                        </span>
+                      </div>
+                    </header>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
+          </header>
+          
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {currentView ? renderAdminView(currentView) : null}
           </div>
-        </header>
-        {currentView ? renderAdminView(currentView) : null}
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }

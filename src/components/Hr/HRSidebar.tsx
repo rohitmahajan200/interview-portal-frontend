@@ -16,7 +16,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 import { useAppSelector } from "@/hooks/useAuth";
 import { useDispatch } from "react-redux";
@@ -50,22 +49,24 @@ export function HRSidebar(
     navItem("HR Analytics",          BarChart3,   "hr-analytics"),
     navItem("Interview Management",  Settings,    "interview-management"),
   ] as unknown as { title: string; icon: React.ElementType }[];
-
-  return (
+ return (
     <Sidebar
       collapsible="icon"
-      className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700"
+      className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700 h-full"
       {...props}
     >
-      {open && <SidebarHeader className="border-b border-gray-200 dark:border-gray-700">
-         <Logo />
-      </SidebarHeader>}
+      {open && (
+        <SidebarHeader className="border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0">
+          <Logo />
+        </SidebarHeader>
+      )}
 
-      <SidebarContent className="bg-white dark:bg-gray-900">
+      {/* Scrollable Content Area */}
+      <SidebarContent className="bg-white dark:bg-gray-900 flex-1 overflow-y-auto">
         <NavMainHR items={hrNav} />
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
+      <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
         {orgState.user && (
           <NavUser
             user={{
@@ -76,8 +77,6 @@ export function HRSidebar(
           />
         )}
       </SidebarFooter>
-
-      <SidebarRail className="bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700" />
     </Sidebar>
   );
 }

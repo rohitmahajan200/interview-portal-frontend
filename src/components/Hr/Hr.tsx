@@ -23,12 +23,10 @@ import InterviewScheduling from "./InterviewScheduling";
 import HRAnalytics from "./HRAnalytics";
 import InterviewManagement from "./InterviewManagement";
 import { HRSidebar } from "./HRSidebar";
-
-export default function Hr() { // Changed from AdminDashboard
+export default function Hr() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  // Updated to use hrView slice instead of adminView
   const currentView = useSelector((state: RootState) => state.hrView.currentHRPage);
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
 
@@ -48,7 +46,6 @@ export default function Hr() { // Changed from AdminDashboard
   }, [dispatch, navigate]);
 
   useEffect(() => {
-    // Updated localStorage key for HR
     localStorage.setItem("hrCurrentView", currentView);
   }, [currentView]);
 
@@ -74,35 +71,41 @@ export default function Hr() { // Changed from AdminDashboard
   };
 
   return (
-    <SidebarProvider>
-      <HRSidebar className="static md:static h-full" />
-
-      <SidebarInset className=" overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
-          <div className="flex items-center gap-2 px-4 justify-between w-full">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <header className="px-1 rounded-xl">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                        HR Portal - Change Networks
-                      </span>
-                    </div>
-                  </header>
-                </BreadcrumbList>
-              </Breadcrumb>
+    <div className="h-full flex overflow-hidden">
+      <SidebarProvider>
+        {/* Fixed Width Sidebar */}
+        <HRSidebar className="w-64 h-full flex-shrink-0" />
+        
+        {/* Main Content Area */}
+        <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
+          {/* Fixed Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-2 px-4 justify-between w-full">
+              <div className="flex items-center gap-2 px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <header className="px-1 rounded-xl">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                          HR Portal - Change Networks
+                        </span>
+                      </div>
+                    </header>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
+          </header>
+          
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {currentView ? renderHRView(currentView) : null}
           </div>
-        </header>
-        {currentView ? renderHRView(currentView) : null}
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }

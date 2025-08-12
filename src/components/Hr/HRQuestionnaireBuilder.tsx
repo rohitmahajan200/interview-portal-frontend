@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import toast, {Toaster} from 'react-hot-toast';
 
@@ -36,7 +36,7 @@ type EditFormData = z.infer<typeof questionnaireUpdateSchema>;
 interface Question {
   _id: string;
   question: string;
-  input_type: 'text' | 'audio' | 'date';
+  input_type: 'text' | 'audio' | 'date'; 
   tags?: string[];
 }
 
@@ -45,12 +45,59 @@ interface Candidate {
   first_name: string;
   last_name: string;
   email: string;
+  phone: string;
+  date_of_birth: string;
+  gender: "male" | "female" | "other";
+  address: string;
+  shortlisted: boolean;
   profile_photo_url?: {
     url: string;
     publicId: string;
+    _id: string;
   };
-  hrQuestionnaire: string[]
+  applied_job: {
+    _id: string;
+    name: string;
+    description: {
+      time: string;
+      country: string;
+      location: string;
+      expInYears: string;
+      salary: string;
+      jobId: string;
+    };
+  };
+  documents?: Array<{
+    _id: string;
+    document_type: string;
+    document_url: string;
+  }>;
+  assessments?: string[];
+  hrQuestionnaire?: string[];
+  interviews?: string[];
+  default_hr_responses?: Array<{
+    _id: string;
+    question_text: string;
+    response: string | string[];
+    input_type: "text" | "audio" | "date" | "mcq" | "checkbox";
+  }>;
+  stage_history?: string[];
+  current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback" | "shortlisted";
+  status: "active" | "inactive" | "withdrawn" | "rejected" | "hired" | "deleted";
+  email_verified: boolean;
+  flagged_for_deletion: boolean;
+  registration_date: string;
+  last_login?: string;
+  createdAt: string;
+  updatedAt: string;
+  __v?: number;
+  otp?: {
+    code: string;
+    expiresAt: string;
+    purpose: string;
+  };
 }
+
 
 interface HrQuestionnaire {
   _id: string;
@@ -75,6 +122,7 @@ const HRQuestionnaireBuilder = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState<string>('');
+  const [selectedJobForAutoSelect, setSelectedJobForAutoSelect] = useState<string>('');
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -90,6 +138,34 @@ const HRQuestionnaireBuilder = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  // Add these helper functions
+  const getUniqueJobs = () => {
+    const jobMap = new Map();
+    getAvailableCandidates().forEach(candidate => {
+      if (candidate.applied_job && candidate.applied_job._id) {
+        jobMap.set(candidate.applied_job._id, candidate.applied_job);
+      }
+    });
+    return Array.from(jobMap.values());
+  };
+
+  const selectCandidatesByJob = (jobId: string, field: { onChange: (value: string[]) => void }) => {
+    if (!jobId) {
+      field.onChange([]);
+      return;
+    }
+    
+    const candidatesForJob = getAvailableCandidates()
+      .filter(candidate => candidate.applied_job?._id === jobId)
+      .map(candidate => candidate._id);
+    
+    field.onChange(candidatesForJob);
+    toast.success(`Selected ${candidatesForJob.length} candidates for this job`);
+  };
+
+  const clearJobSelection = () => {
+    setSelectedJobForAutoSelect('');
+  };
 
   // Helper function to extract unique tags
   const getUniqueTags = () => {
@@ -474,7 +550,7 @@ const HRQuestionnaireBuilder = () => {
       </Card>
 
       {/* Questionnaires Table */}
-      <Card>
+      <Card className='flex overflow-y-auto mb-7'>
         <CardHeader>
           <CardTitle>Questionnaires ({filteredQuestionnaires.length})</CardTitle>
         </CardHeader>
@@ -612,67 +688,160 @@ const HRQuestionnaireBuilder = () => {
           </DialogHeader>
 
           <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
+            <div className="">
               {/* Create Form */}
               {!isEditing && (
-                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
+                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="">
                   {/* Candidates Selection */}
-                  <div className="space-y-3">
-                    <Label>Select Candidates ({getAvailableCandidates().length} available)</Label>
-                    <Controller
-                      name="candidates"
-                      control={createForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
-                          <div className="space-y-3">
-                            {getAvailableCandidates().length === 0 ? (
-                              <p className="text-muted-foreground text-center py-4">
-                                No candidates available for assignment
-                              </p>
-                            ) : (
-                              getAvailableCandidates().map((candidate) => {
-                                const isChecked = field.value?.includes(candidate._id) || false;
+<div className="space-y-3">
+                  <Label>Select Candidates ({getAvailableCandidates().length} available)</Label>
+                  
+                  {/* Job Auto-Select Section - NEW */}
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <Label className="text-sm font-medium mb-2 block">Quick Select by Job Applied:</Label>
+                    <div className="flex items-center gap-2">
+                      <Controller
+                        name="candidates"
+                        control={createForm.control}
+                        render={({ field }) => (
+                          <Select 
+                            value={selectedJobForAutoSelect} 
+                            onValueChange={(jobId) => {
+                              setSelectedJobForAutoSelect(jobId);
+                              selectCandidatesByJob(jobId, field);
+                            }}
+                          >
+                            <SelectTrigger className="w-64">
+                              <SelectValue placeholder="Select a job to auto-select candidates" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getUniqueJobs().map((job) => {
+                                const candidateCount = getAvailableCandidates().filter(
+                                  c => c.applied_job?._id === job._id
+                                ).length;
                                 return (
-                                  <div key={candidate._id} className="flex items-start space-x-3">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...currentValue, candidate._id]);
-                                        } else {
-                                          field.onChange(currentValue.filter((id: string) => id !== candidate._id));
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex items-center space-x-3">
-                                      <Avatar className="w-8 h-8">
-                                        <AvatarImage src={candidate.profile_photo_url?.url} />
-                                        <AvatarFallback>
-                                          {candidate.first_name[0]}{candidate.last_name[0]}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div>
-                                        <div className="font-medium">
-                                          {candidate.first_name} {candidate.last_name}
-                                        </div>
-                                        <div className="text-sm text-muted-foreground">
-                                          {candidate.email}
-                                        </div>
+                                  <SelectItem key={job._id} value={job._id}>
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{job.name}</span>
+                                      <Badge variant="secondary" className="ml-2 text-xs">
+                                        {candidateCount} candidates
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      
+                      {selectedJobForAutoSelect && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            clearJobSelection();
+                            createForm.setValue('candidates', []);
+                          }}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select a job to automatically choose all candidates who applied for that position
+                    </p>
+                  </div>
+
+                  {/* Rest of your existing candidate selection */}
+                  <Controller
+                    name="candidates"
+                    control={createForm.control}
+                    render={({ field }) => (
+                      <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
+                        {/* Show selected job info if any */}
+                        {selectedJobForAutoSelect && (
+                          <div className="mb-3 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              <span className="text-sm text-green-700 dark:text-green-300">
+                                Auto-selected candidates for: {getUniqueJobs().find(j => j._id === selectedJobForAutoSelect)?.name}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-3">
+                          {getAvailableCandidates().length === 0 ? (
+                            <p className="text-muted-foreground text-center py-4">
+                              No candidates available for assignment
+                            </p>
+                          ) : (
+                            getAvailableCandidates().map((candidate) => {
+                              const isChecked = field.value?.includes(candidate._id) || false;
+                              const isJobMatch = selectedJobForAutoSelect && candidate.applied_job?._id === selectedJobForAutoSelect;
+                              
+                              return (
+                                <div 
+                                  key={candidate._id} 
+                                  className={`flex items-start space-x-3 p-2 rounded ${
+                                    isJobMatch ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : ''
+                                  }`}
+                                >
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={(checked) => {
+                                      const currentValue = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...currentValue, candidate._id]);
+                                      } else {
+                                        field.onChange(currentValue.filter((id: string) => id !== candidate._id));
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex items-center space-x-3 flex-1">
+                                    <Avatar className="w-8 h-8">
+                                      <AvatarImage src={candidate.profile_photo_url?.url} />
+                                      <AvatarFallback>
+                                        {candidate.first_name[0]}{candidate.last_name[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium">
+                                        {candidate.first_name} {candidate.last_name}
                                       </div>
+                                      <div className="text-sm text-muted-foreground truncate">
+                                        {candidate.email}
+                                      </div>
+                                      {/* Show applied job info */}
+                                      {candidate.applied_job && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant="outline" className="text-xs">
+                                            {candidate.applied_job.name}
+                                          </Badge>
+                                          {isJobMatch && (
+                                            <Badge variant="default" className="text-xs bg-blue-600">
+                                              ✓ Job Match
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                );
-                              })
-                            )}
-                          </div>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
-                      )}
-                    />
-                    {createForm.formState.errors.candidates && (
-                      <p className="text-red-600 text-sm">{createForm.formState.errors.candidates.message}</p>
+                      </div>
                     )}
-                  </div>
+                  />
+                  {createForm.formState.errors.candidates && (
+                    <p className="text-red-600 text-sm">{createForm.formState.errors.candidates.message}</p>
+                  )}
+                </div>
 
                   {/* Questions Selection for Create */}
                   <div className="space-y-3">

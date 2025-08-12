@@ -16,7 +16,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,
 } from "@/components/ui/sidebar"
 import { useAppSelector } from "@/hooks/useAuth"
 import Logo from "./logo"
@@ -82,8 +81,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           )}
       </SidebarFooter>
-
-      <SidebarRail className="bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700" />
     </Sidebar>
   )
 }

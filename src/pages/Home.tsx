@@ -22,41 +22,33 @@ interface Stage {
 
 const Home = () => {
   const [events, setEvents] = useState<Event[]>([]);
+  // Add these to your existing state declarations
+  const [user, setUser] = useState<any>(null);
+  const [applicationStatus, setApplicationStatus] = useState<Stage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Add this function in your Home component before useEffect
+  const convertStageHistoryToProgress = (stageHistory: any[], currentStage: string): Stage[] => {
+    // Sort stage history by changed_at (oldest first)
+    const sortedHistory = stageHistory.sort((a, b) => 
+      new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime()
+    );
 
-  const applicationStatus: Stage[] = [
-    {
-      stage: "registered",
-      date: "2025-06-01",
-      status: "completed",
-      comment: "User registered",
-    },
-    {
-      stage: "hr",
-      date: "2025-06-03",
-      status: "completed",
-      comment: "HR screening done",
-    },
-    {
-      stage: "assessment",
-      date: "2025-07-09",
-      status: "completed",
-      comment: "Passed",
-    },
-    {
-      stage: "technical",
-      date: "2025-08-01",
-      status: "completed",
-      comment: "Passed",
-    },
-    {
-      stage: "feedback",
-      date: "2025-08-01",
-      status: "current",
-      comment: "-",
-    },
-  ];
+    // Convert stage history to progress format
+    const progressStages: Stage[] = sortedHistory.map((historyItem, index) => {
+      const isCurrentStage = historyItem.to_stage === currentStage;
+      
+      return {
+        stage: historyItem.to_stage, // Keep original stage name - component will map it
+        date: historyItem.changed_at.split('T')[0],
+        status: isCurrentStage ? "current" : "completed",
+        comment: historyItem.remarks || historyItem.action || "-"
+      };
+    });
+
+    return progressStages;
+  };
+
 
   const getAssessmentTitle = (assessmentType: string): string => {
     switch (assessmentType) {
@@ -69,12 +61,27 @@ const Home = () => {
     }
   };
 
+  // Replace your existing useEffect with this updated version
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        // Fetch user data first
+        const userRes = await api.get("/candidates/me");
+        setUser(userRes.data.user);
+
+        // Convert stage history to progress bar format
+        if (userRes.data.user.stage_history && userRes.data.user.current_stage) {
+          const progressStages = convertStageHistoryToProgress(
+            userRes.data.user.stage_history,
+            userRes.data.user.current_stage
+          );
+          setApplicationStatus(progressStages);
+        }
+
+        // Fetch events data
         const [assessmentRes, interviewRes] = await Promise.all([
           api.get("/candidates/assessments"),
           api.get("/candidates/interviews"),
@@ -100,16 +107,18 @@ const Home = () => {
 
         setEvents([...assessments, ...interviews]);
       } catch (error) {
-        console.error("Failed to fetch candidate events:", error);
-        setError("Failed to load events. Please try again later.");
+        console.error("Failed to fetch candidate data:", error);
+        setError("Failed to load data. Please try again later.");
         setEvents([]);
+        setApplicationStatus([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEvents();
+    fetchData();
   }, []);
+
 
   if (loading) {
     return (

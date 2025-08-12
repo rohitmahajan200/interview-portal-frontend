@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,26 +8,59 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronsUpDown, EyeIcon, EyeOffIcon } from "lucide-react";
+import { 
+  Check, 
+  ChevronsUpDown, 
+  EyeIcon, 
+  EyeOffIcon,
+  Mic,
+  MicOff,
+  Calendar,
+  Type,
+  Volume2,
+  Play,
+  Pause,
+  Square,
+  Upload,
+  CheckCircle2,
+  FileAudio,
+  X,
+  Loader2
+} from "lucide-react";
 import api from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { Controller } from "react-hook-form";
 import { PhoneInput } from "@/components/ui/phone-input";
 import Spinner from "../components/ui/spinner";
 import { uploadToCloudinary } from "@/lib/clodinary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { registerCandidateSchema } from '@/lib/zod';
-import { zodResolver } from './../../node_modules/@hookform/resolvers/zod/src/zod';
-type job = {
+import { zodResolver } from '@hookform/resolvers/zod';
+
+type Job = {
   _id: string;
   name: string;
 };
 
+type HRQuestion = {
+  _id: string;
+  question: string;
+  input_type: "text" | "audio" | "date" | "mcq" | "checkbox";
+  options?: string[];
+};
 
 type FormValues = {
   first_name: string;
@@ -37,13 +70,17 @@ type FormValues = {
   date_of_birth: string;
   gender: "male" | "female" | "other";
   address: string;
-  portfolio_url?:string,
+  portfolio_url?: string;
   profile_photo_url: FileList;
   applied_job: string;
-  resume: FileList; // set this after upload
+  resume: FileList;
   password: string;
+  hr_responses?: Array<{
+    question_text: string;
+    response: string | string[] | Date;
+    input_type: "text" | "audio" | "date" | "mcq" | "checkbox";
+  }>;
 };
-
 
 export default function RegisterForm({
   className,
@@ -57,47 +94,542 @@ export default function RegisterForm({
     handleSubmit,
     setError,
     formState: { errors },
-  } = useForm<FormValues>({resolver: zodResolver(registerCandidateSchema)});
+  } = useForm<FormValues>({ resolver: zodResolver(registerCandidateSchema) });
+
+  // Basic states
   const [open, setOpen] = useState(false);
-  const [jobs, setjobs] = useState<job[]>([]);
-  const [loadingjobs, setLoadingjobs] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // HR Questionnaire states
+  const [hrQuestionnaireOpen, setHrQuestionnaireOpen] = useState(false);
+  const [hrQuestions, setHrQuestions] = useState<HRQuestion[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [hrResponses, setHrResponses] = useState<FormValues['hr_responses']>([]);
+
+  // Audio states for HR questionnaire
+  const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
+  const [mediaRecorders, setMediaRecorders] = useState<{ [key: number]: MediaRecorder | null }>({});
+  const [audioBlobs, setAudioBlobs] = useState<{ [key: number]: Blob | null }>({});
+  const [audioUrls, setAudioUrls] = useState<{ [key: number]: string | null }>({});
+  const [playingStates, setPlayingStates] = useState<{ [key: number]: boolean }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: File | null }>({});
+  const [checkboxSelections, setCheckboxSelections] = useState<{ [key: number]: string[] }>({});
+  const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
+
+  const selectedJobId = watch("applied_job");
+
+  // Load jobs on component mount
   useEffect(() => {
-    setLoadingjobs(true);
+    setLoadingJobs(true);
     api.get("/candidates/jobs")
-      .then(res => setjobs(res.data.jobs))
-      .catch(() => setjobs([]))
-      .finally(() => setLoadingjobs(false));
+      .then(res => setJobs(res.data.jobs))
+      .catch(() => setJobs([]))
+      .finally(() => setLoadingJobs(false));
   }, []);
-  const selectedjobId = watch("applied_job");
 
-
-const onSubmit = async (data: FormValues) => {
-    setLoading(true);
-    console.log(data)
+  // Load HR questions when dialog opens
+  const loadHRQuestions = async () => {
+    setLoadingQuestions(true);
     try {
+      const response = await api.get("/candidates/hr-questions/default");
+      setHrQuestions(response.data.data || []);
+      
+      // Initialize responses array
+      const initialResponses = response.data.data.map((q: HRQuestion) => ({
+        question_text: q.question,
+        response: "",
+        input_type: q.input_type
+      }));
+      setHrResponses(initialResponses);
+
+      // Initialize checkbox selections
+      const initialCheckboxSelections: { [key: number]: string[] } = {};
+      response.data.data.forEach((q: HRQuestion, index: number) => {
+        if (q.input_type === "checkbox") {
+          initialCheckboxSelections[index] = [];
+        }
+      });
+      setCheckboxSelections(initialCheckboxSelections);
+    } catch (error) {
+      console.error("Failed to load HR questions:", error);
+      toast.error("Failed to load HR questions");
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  // Audio recording functions
+  const startRecording = async (questionIndex: number) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(chunks, { type: "audio/wav" });
+        setAudioBlobs((prev) => ({ ...prev, [questionIndex]: audioBlob }));
+
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setAudioUrls((prev) => ({ ...prev, [questionIndex]: audioUrl }));
+
+        // Update hr_responses
+        const updatedResponses = [...(hrResponses || [])];
+        updatedResponses[questionIndex] = {
+          ...updatedResponses[questionIndex],
+          response: `audio_recorded_${questionIndex}`
+        };
+        setHrResponses(updatedResponses);
+
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setMediaRecorders((prev) => ({ ...prev, [questionIndex]: mediaRecorder }));
+      setRecordingStates((prev) => ({ ...prev, [questionIndex]: true }));
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      toast.error("Could not access microphone. Please check permissions.");
+    }
+  };
+
+  const stopRecording = (questionIndex: number) => {
+    const mediaRecorder = mediaRecorders[questionIndex];
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
+      setRecordingStates((prev) => ({ ...prev, [questionIndex]: false }));
+    }
+  };
+
+  // Audio playback functions
+  const playAudio = (questionIndex: number) => {
+    const audioUrl = audioUrls[questionIndex];
+    if (!audioUrl) return;
+
+    Object.keys(audioRefs.current).forEach((key) => {
+      const audio = audioRefs.current[parseInt(key)];
+      if (audio && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+        setPlayingStates((prev) => ({ ...prev, [parseInt(key)]: false }));
+      }
+    });
+
+    if (!audioRefs.current[questionIndex]) {
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setPlayingStates((prev) => ({ ...prev, [questionIndex]: false }));
+      audio.onerror = () => {
+        toast.error("Error playing audio");
+        setPlayingStates((prev) => ({ ...prev, [questionIndex]: false }));
+      };
+      audioRefs.current[questionIndex] = audio;
+    }
+
+    const audio = audioRefs.current[questionIndex];
+    if (audio) {
+      audio.play()
+        .then(() => setPlayingStates((prev) => ({ ...prev, [questionIndex]: true })))
+        .catch(() => toast.error("Error playing audio"));
+    }
+  };
+
+  const pauseAudio = (questionIndex: number) => {
+    const audio = audioRefs.current[questionIndex];
+    if (audio && !audio.paused) {
+      audio.pause();
+      setPlayingStates((prev) => ({ ...prev, [questionIndex]: false }));
+    }
+  };
+
+  const deleteRecording = (questionIndex: number) => {
+    const audio = audioRefs.current[questionIndex];
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    const audioUrl = audioUrls[questionIndex];
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+
+    setAudioBlobs((prev) => ({ ...prev, [questionIndex]: null }));
+    setAudioUrls((prev) => ({ ...prev, [questionIndex]: null }));
+    setPlayingStates((prev) => ({ ...prev, [questionIndex]: false }));
+
+    const updatedResponses = [...(hrResponses || [])];
+    updatedResponses[questionIndex] = {
+      ...updatedResponses[questionIndex],
+      response: ""
+    };
+    setHrResponses(updatedResponses);
+
+    toast.success("Recording deleted");
+  };
+
+  // Handle file upload for audio questions
+  const handleFileUpload = async (questionIndex: number, file: File) => {
+    if (!file.type.startsWith("audio/")) {
+      toast.error("Please select an audio file");
+      return;
+    }
+
+    setUploadedFiles((prev) => ({ ...prev, [questionIndex]: file }));
+    const audioUrl = URL.createObjectURL(file);
+    setAudioUrls((prev) => ({ ...prev, [questionIndex]: audioUrl }));
+
+    const updatedResponses = [...(hrResponses || [])];
+    updatedResponses[questionIndex] = {
+      ...updatedResponses[questionIndex],
+      response: `audio_uploaded_${questionIndex}`
+    };
+    setHrResponses(updatedResponses);
+
+    toast.success("Audio file uploaded successfully");
+  };
+
+  // Update HR response for a question
+  const updateHRResponse = (questionIndex: number, response: string | string[]) => {
+    const updatedResponses = [...(hrResponses || [])];
+    updatedResponses[questionIndex] = {
+      ...updatedResponses[questionIndex],
+      response
+    };
+    setHrResponses(updatedResponses);
+  };
+
+  // Open HR questionnaire dialog
+  const openHRQuestionnaire = () => {
+    setHrQuestionnaireOpen(true);
+    loadHRQuestions();
+  };
+
+  // Close HR questionnaire dialog
+  const closeHRQuestionnaire = () => {
+    setHrQuestionnaireOpen(false);
+    // Cleanup audio URLs
+    Object.values(audioUrls).forEach((url) => {
+      if (url) URL.revokeObjectURL(url);
+    });
+    setAudioUrls({});
+    setAudioBlobs({});
+    setPlayingStates({});
+    setRecordingStates({});
+    setUploadedFiles({});
+  };
+
+  // Render HR question input based on type
+  const renderHRQuestionInput = (question: HRQuestion, index: number) => {
+    const currentResponse = hrResponses?.[index]?.response || "";
+
+    switch (question.input_type) {
+      case "text":
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Type className="w-4 h-4" />
+              <span className="text-sm font-medium">Text Response</span>
+            </div>
+            <Textarea
+              placeholder="Type your answer here..."
+              value={typeof currentResponse === 'string' ? currentResponse : ''}
+              onChange={(e) => updateHRResponse(index, e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+        );
+
+      case "mcq":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-sm font-medium">Multiple Choice</span>
+            </div>
+            <div className="space-y-3">
+              {question.options?.map((optionText, optionIndex) => (
+                <div key={optionIndex} className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name={`hr-question-${index}`}
+                    value={optionText}
+                    id={`hr-question-${index}-option-${optionIndex}`}
+                    checked={currentResponse === optionText}
+                    onChange={(e) => updateHRResponse(index, e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <Label
+                    htmlFor={`hr-question-${index}-option-${optionIndex}`}
+                    className="text-sm font-normal cursor-pointer flex-1"
+                  >
+                    {optionText}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+case "checkbox": {
+  const selectedOptions = checkboxSelections[index] || [];
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <CheckCircle2 className="w-4 h-4" />
+        <span className="text-sm font-medium">Multiple Selection</span>
+      </div>
+      <div className="space-y-3">
+        {question.options?.map((optionText, optionIndex) => {
+          const isSelected = selectedOptions.includes(optionText);
+          return (
+            <div key={optionIndex} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`hr-question-${index}-checkbox-${optionIndex}`}
+                checked={isSelected}
+                onChange={(e) => {
+                  let newSelections;
+                  if (e.target.checked) {
+                    newSelections = [...selectedOptions, optionText];
+                  } else {
+                    newSelections = selectedOptions.filter(option => option !== optionText);
+                  }
+
+                  setCheckboxSelections((prev) => ({
+                    ...prev,
+                    [index]: newSelections,
+                  }));
+
+                  updateHRResponse(index, newSelections.length > 0 ? newSelections : []);
+                }}
+                className="w-4 h-4 text-blue-600"
+              />
+              <Label
+                htmlFor={`hr-question-${index}-checkbox-${optionIndex}`}
+                className="text-sm font-normal cursor-pointer flex-1"
+              >
+                {optionText}
+              </Label>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+      case "audio":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Volume2 className="w-4 h-4" />
+              <span className="text-sm font-medium">Audio Response</span>
+            </div>
+
+            {/* File Upload Section */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <div className="text-center">
+                <FileAudio className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm text-gray-600 mb-2">Upload an audio file or record below</p>
+                <Input
+                  type="file"
+                  accept="audio/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(index, file);
+                  }}
+                  className="hidden"
+                  id={`hr-file-upload-${index}`}
+                />
+                <Label
+                  htmlFor={`hr-file-upload-${index}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-md cursor-pointer hover:bg-blue-100"
+                >
+                  <Upload className="w-4 h-4" />
+                  Choose Audio File
+                </Label>
+              </div>
+            </div>
+
+            {/* Recording Controls */}
+            <div className="flex items-center gap-2">
+              {!recordingStates[index] ? (
+                <Button
+                  type="button"
+                  onClick={() => startRecording(index)}
+                  variant="outline"
+                  size="sm"
+                  disabled={!!uploadedFiles[index]}
+                >
+                  <Mic className="w-4 h-4 mr-2" />
+                  Start Recording
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => stopRecording(index)}
+                  variant="destructive"
+                  size="sm"
+                >
+                  <MicOff className="w-4 h-4 mr-2" />
+                  Stop Recording
+                </Button>
+              )}
+            </div>
+
+            {/* Audio Playback Controls */}
+            {(audioBlobs[index] || uploadedFiles[index]) && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium">
+                      {uploadedFiles[index] ? `Uploaded: ${uploadedFiles[index]?.name}` : "Recorded Audio:"}
+                    </div>
+
+                    {!playingStates[index] ? (
+                      <Button type="button" onClick={() => playAudio(index)} variant="outline" size="sm">
+                        <Play className="w-4 h-4 mr-1" />
+                        Play
+                      </Button>
+                    ) : (
+                      <Button type="button" onClick={() => pauseAudio(index)} variant="outline" size="sm">
+                        <Pause className="w-4 h-4 mr-1" />
+                        Pause
+                      </Button>
+                    )}
+
+                    <Button
+                      type="button"
+                      onClick={() => deleteRecording(index)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case "date":
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-4 h-4" />
+              <span className="text-sm font-medium">Date Selection</span>
+            </div>
+            <Input
+              type="date"
+              value={typeof currentResponse === 'string' ? currentResponse : ''}
+              onChange={(e) => updateHRResponse(index, e.target.value)}
+            />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Main form submission
+  const onSubmit = async (data: FormValues) => {
+    setLoading(true);
+    try {
+      if (!hrResponses || hrResponses.length === 0) {
+        toast.error("Please complete the HR questionnaire to continue");
+        setHrQuestionnaireOpen(true);
+        setLoading(false);
+        return;
+      }
+
+      // Check if all questions are answered
+      const unansweredQuestions = hrResponses.filter(response => 
+        !response.response || 
+        (Array.isArray(response.response) && response.response.length === 0) ||
+        response.response === ""
+      );
+
+      if (unansweredQuestions.length > 0) {
+        toast.error(`Please answer all ${hrResponses.length} HR questions`);
+        setHrQuestionnaireOpen(true);
+        setLoading(false);
+        return;
+      }
       const profilePhotoFile = data.profile_photo_url[0];
       const resumeFile = data.resume[0];
 
-      // 1. Upload both files
+      // Upload files
       const profilePhotoUrl = await uploadToCloudinary(profilePhotoFile, "profiles");
       const resumeUrl = await uploadToCloudinary(resumeFile, "resume");
 
-      // 2. Make backend-compatible payload
+      // Process HR responses - upload audio files if any
+      let processedHRResponses: FormValues['hr_responses'] = [];
+      
+      if (hrResponses && hrResponses.length > 0) {
+        processedHRResponses = await Promise.all(
+          hrResponses.map(async (response, index) => {
+            if (response.input_type === "audio") {
+              let fileToUpload: File | null = null;
+
+              if (uploadedFiles[index]) {
+                fileToUpload = uploadedFiles[index];
+              } else if (audioBlobs[index]) {
+                fileToUpload = new File([audioBlobs[index]!], `audio_${index}.wav`, { type: "audio/wav" });
+              }
+
+              if (fileToUpload) {
+                try {
+                  const uploadResult = await uploadToCloudinary(fileToUpload, "audio");
+                  return {
+                    ...response,
+                    response: uploadResult.url
+                  };
+                } catch (uploadError) {
+                  console.error(`Failed to upload audio for question ${index}:`, uploadError);
+                  throw new Error(`Failed to upload audio for question ${index + 1}`);
+                }
+              }
+            }
+
+            // For checkbox, ensure it's properly formatted
+            if (response.input_type === 'checkbox' && Array.isArray(response.response)) {
+              return {
+                ...response,
+                response: response.response
+              };
+            }
+
+            return response;
+          })
+        );
+      }
+
+      // Prepare payload
       const payload = {
         ...data,
         profile_photo_url: profilePhotoUrl,
         documents: [
           { document_type: "resume", document_url: resumeUrl.url, publicid: resumeUrl.publicId }
         ],
+        hr_responses: processedHRResponses
       };
 
-      // Remove the `resume` property so backend doesn't complain
+      // Remove the resume property
       delete (payload as any).resume;
 
-      // 3. POST to backend
+      // Submit to backend
       await api.post("/candidates/register", payload);
 
       toast.success("Account created successfully. Please verify your email.");
@@ -105,28 +637,25 @@ const onSubmit = async (data: FormValues) => {
         navigate("/email-verification");
       }, 1000);
     } catch (err: any) {
-    // Zod / backend validation error format
-    if (err?.response?.data?.errors) {
-      Object.entries(err.response.data.errors).forEach(([field, msg]) => {
-        setError(field as keyof FormValues, {
-          type: "manual",
-          message: Array.isArray(msg) ? msg[0] : msg,
+      if (err?.response?.data?.errors) {
+        Object.entries(err.response.data.errors).forEach(([field, msg]) => {
+          setError(field as keyof FormValues, {
+            type: "manual",
+            message: Array.isArray(msg) ? msg[0] : msg,
+          });
+          toast.error(`${Array.isArray(msg) ? msg[0] : msg}`);
         });
-        toast.error(`${Array.isArray(msg) ? msg[0] : msg}`);
-      });
-    } else if (err?.response?.data?.message) {
-      toast.error(err.response.data.message);
-    } else if (err?.message) {
-      toast.error(err.message);
-    } else {
-      toast.error("Something went wrong. Please try again.");
-    }
-  }
- finally {
+      } else if (err?.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else if (err?.message) {
+        toast.error(err.message);
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
+    } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
@@ -145,6 +674,7 @@ const onSubmit = async (data: FormValues) => {
             <CardContent>
               <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* All your existing form fields remain the same */}
                   <div>
                     <Label htmlFor="first_name">First Name</Label>
                     <Input
@@ -157,6 +687,7 @@ const onSubmit = async (data: FormValues) => {
                       </p>
                     )}
                   </div>
+
                   <div>
                     <Label htmlFor="last_name">Last Name</Label>
                     <Input
@@ -185,26 +716,26 @@ const onSubmit = async (data: FormValues) => {
                     )}
                   </div>
 
-                 <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Controller
-                    name="phone"
-                    control={control}
-                    rules={{ required: "Phone number is required" }}
-                    render={({ field }) => (
-                      <PhoneInput
-                        {...field}
-                        id="phone"
-                        international
-                        defaultCountry="IN" // or any default
-                        className="w-full"
-                      />
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Controller
+                      name="phone"
+                      control={control}
+                      rules={{ required: "Phone number is required" }}
+                      render={({ field }) => (
+                        <PhoneInput
+                          {...field}
+                          id="phone"
+                          international
+                          defaultCountry="IN"
+                          className="w-full"
+                        />
+                      )}
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
                     )}
-                  />
-                  {errors.phone && (
-                    <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
-                  )}
-                </div>
+                  </div>
 
                   <div>
                     <Label htmlFor="date_of_birth">Date Of Birth</Label>
@@ -253,7 +784,7 @@ const onSubmit = async (data: FormValues) => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="portfolio_url">PortFolio URL</Label>
+                    <Label htmlFor="portfolio_url">Portfolio URL</Label>
                     <Input
                       {...register("portfolio_url")}
                       id="portfolio_url"
@@ -294,9 +825,10 @@ const onSubmit = async (data: FormValues) => {
                         Resume is required
                       </p>
                     )}
-                 </div>
+                  </div>
+
                   <div>
-                    <Label htmlFor="applied_job">Applied job</Label>
+                    <Label htmlFor="applied_job">Applied Job</Label>
                     <Popover open={open} onOpenChange={setOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -306,9 +838,9 @@ const onSubmit = async (data: FormValues) => {
                           className="w-[300px] justify-between"
                           type="button"
                         >
-                          {selectedjobId
-                            ? jobs.find((r) => r._id === selectedjobId)?.name
-                            : loadingjobs
+                          {selectedJobId
+                            ? jobs.find((r) => r._id === selectedJobId)?.name
+                            : loadingJobs
                               ? "Loading..."
                               : "Select job..."}
                           <ChevronsUpDown className="opacity-50" />
@@ -333,7 +865,7 @@ const onSubmit = async (data: FormValues) => {
                                   <Check
                                     className={cn(
                                       "ml-auto",
-                                      selectedjobId === job._id ? "opacity-100" : "opacity-0"
+                                      selectedJobId === job._id ? "opacity-100" : "opacity-0"
                                     )}
                                   />
                                 </CommandItem>
@@ -347,7 +879,6 @@ const onSubmit = async (data: FormValues) => {
                       <p className="text-red-500 text-sm mt-1">{errors.applied_job.message}</p>
                     )}
                   </div>
-
 
                   <div className="md:col-span-2">
                     <Label htmlFor="password">Password</Label>
@@ -380,13 +911,42 @@ const onSubmit = async (data: FormValues) => {
                   </div>
                 </div>
 
-                <div className="pt-6 space-y-4">
-                  <Button type="submit" className="w-full text-base py-2.5">
-                    Register
-                  </Button>
+                {/* HR Questionnaire Section */}
+                <div className="pt-6 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium">HR Questionnaire <span className="text-red-500">*</span></h3>
+                      <p className="text-sm text-gray-600">Please answer all questions to complete your registration</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={hrResponses && hrResponses.length > 0 ? "outline" : "destructive"}
+                      onClick={openHRQuestionnaire}
+                    >
+                      {hrResponses && hrResponses.length > 0 ? "Edit Responses" : "Complete Required Questions"}
+                    </Button>
+                  </div>
 
-                  
-                  <div>{loading ? <Spinner /> : null}</div>
+                  {hrResponses && hrResponses.length > 0 && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-600">
+                        ✓ You have answered {hrResponses.filter(r => r.response).length} out of {hrResponses.length} questions
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-6 space-y-4">
+                  <Button type="submit" className="w-full text-base py-2.5" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Account...
+                      </>
+                    ) : (
+                      "Register"
+                    )}
+                  </Button>
 
                   <div className="text-center text-sm text-gray-600">
                     Already have an account?{" "}
@@ -403,7 +963,50 @@ const onSubmit = async (data: FormValues) => {
           </Card>
         </div>
       </div>
+
+      {/* HR Questionnaire Dialog */}
+      <Dialog open={hrQuestionnaireOpen} onOpenChange={setHrQuestionnaireOpen}>
+        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-11/12 flex flex-col overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>HR Questionnaire</DialogTitle>
+            <DialogDescription>
+              Please answer the following questions. You can provide text responses, select from multiple choices, 
+              record audio, upload audio files, or select dates as required.
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingQuestions ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <span className="ml-2">Loading questions...</span>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {hrQuestions.map((question, index) => (
+                <Card key={question._id} className="border-l-4 border-l-blue-500">
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">
+                        {index + 1}. {question.question}
+                      </h3>
+                      {renderHRQuestionInput(question, index)}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeHRQuestionnaire}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => setHrQuestionnaireOpen(false)}>
+              Save Responses
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

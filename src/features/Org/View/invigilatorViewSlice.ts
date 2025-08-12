@@ -1,4 +1,3 @@
-// src/features/Org/View/hrViewSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 export type InvigilatorPage =
@@ -16,7 +15,7 @@ const initialState: InvigilatorViewState = {
   currentHRPage: "invigilator-home",
 };
 
-const hrViewSlice = createSlice({
+const invigilatorViewSlice = createSlice({ // Fix: was hrViewSlice
   name: "invigilatorView",
   initialState,
   reducers: {
@@ -26,5 +25,5 @@ const hrViewSlice = createSlice({
   },
 });
 
-export const { setCurrentInvigilatorPage } = hrViewSlice.actions;
-export default hrViewSlice.reducer;
+export const { setCurrentInvigilatorPage } = invigilatorViewSlice.actions;
+export default invigilatorViewSlice.reducer;
