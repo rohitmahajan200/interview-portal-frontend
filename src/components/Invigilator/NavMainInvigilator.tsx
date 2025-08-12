@@ -1,56 +1,35 @@
-// src/components/nav-main-hr.tsx
-import { useDispatch, useSelector } from "react-redux";
-import type { RootState } from "@/app/store";
-import { setCurrentInvigilatorPage } from "@/features/Org/View/invigilatorViewSlice";
-
+// src/components/Invigilator/NavMainInvigilator.tsx
 import {
   SidebarGroup,
-  SidebarGroupLabel,
+  SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 
-export function NavMainINVIGILATOR({
-  items,
-}: {
-  items: { title: string; icon: React.ElementType; onClick?: () => void }[];
-}) {
-  const currentView = useSelector((state: RootState) => state.hrView.currentHRPage);
-  const dispatch = useDispatch();
-
+export function NavMainINVIGILATOR({ items }: { items: Array<{
+  title: string;
+  icon: React.ElementType;
+  isActive?: boolean;
+  onClick: () => void;
+}> }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Menu</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) => {
-          const viewKey = item.title.toLowerCase().replace(/\s+/g, "-");
-          const isActive = currentView === viewKey;
-          
-          return (
-            <SidebarMenuItem key={viewKey}>
-              <SidebarMenuButton
-                tooltip={item.title}
-                onClick={() => {
-                  if (item.onClick) {
-                    item.onClick(); // Use custom onClick if provided
-                  } else {
-                    dispatch(setCurrentInvigilatorPage(viewKey as any)); // Fallback
-                  }
-                }}
-                className={cn(
-                  "flex items-center gap-2 w-full text-sm transition-colors",
-                  isActive ? "text-primary font-medium" : "text-muted-foreground hover:text-primary"
-                )}
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton 
+                onClick={item.onClick}
+                className={item.isActive ? "font-bold bg-gray-100 dark:bg-gray-800" : ""}
               >
-                <item.icon className="w-4 h-4" />
+                <item.icon />
                 <span>{item.title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          );
-        })}
-      </SidebarMenu>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
     </SidebarGroup>
   );
 }

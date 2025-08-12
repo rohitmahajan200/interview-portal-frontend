@@ -5,7 +5,7 @@ import { setCurrentRole } from "@/features/Org/View/adminViewSlice";
 import { useNavigate } from "react-router-dom";
 import type { RootState } from "@/app/store";
 
-// Import dashboard components (create these)
+// Import dashboard components
 import Admin from '@/components/Admin/Admin';
 import Hr from '@/components/Hr/Hr';
 import Invigilator from '@/components/Invigilator/Invigilator';
@@ -13,13 +13,11 @@ import Manager from '@/components/Manager';
 import api from '@/lib/api';
 import { setUser } from '@/features/Candidate/auth/authSlice';
 
-
 const OrgDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  // Get org user and admin view state
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
   const currentRole = useSelector((state: RootState) => state.adminView.currentRole);
   
@@ -37,7 +35,7 @@ const OrgDashboard = () => {
         console.error("Failed to fetch org user:", error);
         navigate("/org/login");
       } finally {
-        setIsLoading(false); // Local state update
+        setIsLoading(false);
       }
     };
 
@@ -46,11 +44,12 @@ const OrgDashboard = () => {
   
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden flex items-center justify-center">
         <div>Loading...</div>
       </div>
     );
   }
+
   // If user is not admin, show only their role dashboard
   if (orgUser && orgUser.role !== "ADMIN") {
     const renderRoleDashboard = () => {
@@ -67,52 +66,50 @@ const OrgDashboard = () => {
     };
     
     return (
-      <div className="p-6">
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden">
         {renderRoleDashboard()}
       </div>
     );
   }
   
- return (
-    <div className="w-full h-full flex flex-col  overflow-hidden">
+  return (
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col">
       <Tabs 
         value={currentRole} 
         onValueChange={(value) => dispatch(setCurrentRole(value as "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER"))}
         className="w-full h-full flex flex-col"
       >
-    <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col">
+          {/* Fixed Tab Header - Height: 64px */}
+          <TabsList className="flex-shrink-0 w-fit gap-2 p-1 border bg-background h-16 md:ml-64">
+            <TabsTrigger value="ADMIN" className="px-6 py-2 whitespace-nowrap">Admin</TabsTrigger>
+            <TabsTrigger value="HR" className="px-6 py-2 whitespace-nowrap">HR</TabsTrigger>
+            <TabsTrigger value="INVIGILATOR" className="px-6 py-2 whitespace-nowrap">Invigilator</TabsTrigger>
+            <TabsTrigger value="MANAGER" className="px-6 py-2 whitespace-nowrap">Manager</TabsTrigger>
+          </TabsList>
 
-      {/* ①  Tabs bar  */}
-      <TabsList className="flex-shrink-0 w-fit gap-2 p-1 border-b bg-background  overflow-hidden">
-        <TabsTrigger value="ADMIN"       className="px-6 py-2">Admin</TabsTrigger>
-        <TabsTrigger value="HR"          className="px-6 py-2">HR</TabsTrigger>
-        <TabsTrigger value="INVIGILATOR" className="px-6 py-2">Invigilator</TabsTrigger>
-        <TabsTrigger value="MANAGER"     className="px-6 py-2">Manager</TabsTrigger>
-      </TabsList>
+          {/* Main Content Area - Remaining Height with Scroll */}
+          <div className="flex-1 w-full h-[calc(100vh-4rem)] overflow-hidden">
+            <TabsContent value="ADMIN" className="w-full h-full m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden">
+              <Admin />
+            </TabsContent>
 
-      {/* ②  Content area  */}
-      <div className="flex-1 overflow-hidden">
-        <TabsContent value="ADMIN"       className="h-full  overflow-hidden">
-          <Admin />
-        </TabsContent>
+            <TabsContent value="HR" className="w-full h-full m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden">
+              <Hr />
+            </TabsContent>
 
-        <TabsContent value="HR"          className="h-full  overflow-hidden">
-          <Hr />
-        </TabsContent>
+            <TabsContent value="INVIGILATOR" className="w-full h-full m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden">
+              <Invigilator />
+            </TabsContent>
 
-        <TabsContent value="INVIGILATOR" className="h-full  overflow-hidden">
-          <Invigilator />
-        </TabsContent>
-
-        <TabsContent value="MANAGER"     className="h-full  overflow-hidden">
-          <Manager />
-        </TabsContent>
-      </div>
-
-    </div>
-
+            <TabsContent value="MANAGER" className="w-full h-full m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden">
+              <Manager />
+            </TabsContent>
+          </div>
+        </div>
       </Tabs>
     </div>
   );
 };
+
 export default OrgDashboard;

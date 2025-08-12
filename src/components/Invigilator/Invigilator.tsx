@@ -18,18 +18,19 @@ import ThemeToggle from "@/components/themeToggle";
 import CandidateReview from "./CandidateReview";
 import InterviewScheduling from "./InterviewScheduling";
 import InterviewManagement from "./InterviewManagement";
-import { InvigilatorSidebar } from "./InvigilatorSidebar";
+import { InvigilatorSidebar } from "./InvigilatorSidebar"; // Fixed import path
 import InvigilatorHome from "./InvigilatorHome";
 import InvigilatorQuestionsManagement from "./InvigilatorQuestionsManagement";
 import InvigilatorQuestionnaireBuilder from "./InvigilatorQuestionnaireBuilder";
 import InvigilatorAnalytics from "./InvigilatorAnalytics";
 
-export default function Invigilator() { // Changed from AdminDashboard
+export default function Invigilator() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  // Updated to use hrView slice instead of adminView
-  const currentView = useSelector((state: RootState) => state.invigilator.currentHRPage);
+
+  const currentView = useSelector(
+    (state: RootState) => state.invigilator.currentHRPage
+  );
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
 
   useEffect(() => {
@@ -48,7 +49,6 @@ export default function Invigilator() { // Changed from AdminDashboard
   }, [dispatch, navigate]);
 
   useEffect(() => {
-    // Updated localStorage key for HR
     localStorage.setItem("invigilatorCurrentView", currentView);
   }, [currentView]);
 
@@ -74,35 +74,44 @@ export default function Invigilator() { // Changed from AdminDashboard
   };
 
   return (
-    <SidebarProvider>
-      <InvigilatorSidebar className="static md:static h-full" />
+    <div className="h-full flex overflow-hidden">
+      <SidebarProvider>
+          {/* Sidebar */}
+          <InvigilatorSidebar className="w-64 h-full flex-shrink-0" />
 
-      <SidebarInset className=" overflow-hidden">
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
-          <div className="flex items-center gap-2 px-4 justify-between w-full">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <header className="px-1 rounded-xl">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                        Invigilator Portal - Change Networks
-                      </span>
-                    </div>
-                  </header>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-            <ThemeToggle />
-          </div>
-        </header>
-        {currentView ? renderHRView(currentView) : null}
-      </SidebarInset>
-    </SidebarProvider>
+          {/* Main Content Area */}
+          <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
+            {/* Header */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <div className="flex items-center gap-2 px-4 justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <Separator
+                    orientation="vertical"
+                    className="mr-2 data-[orientation=vertical]:h-4"
+                  />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <header className="px-1 rounded-xl">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                            Invigilator Portal - Change Networks
+                          </span>
+                        </div>
+                      </header>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+                <ThemeToggle />
+              </div>
+            </header>
+
+            {/* Scrollable Content */}
+            <main className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-950">
+              {currentView ? renderHRView(currentView) : null}
+            </main>
+          </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }
