@@ -3,7 +3,7 @@ import axios from "axios";
 let isRefreshing = false;
 let failedQueue: (() => void)[] = [];
 
-const processQueue = (error: any) => {
+const processQueue = () => {
   failedQueue.forEach((cb) => cb());
   failedQueue = [];
 };
@@ -62,7 +62,7 @@ api.interceptors.response.use(
           },
         });
 
-        processQueue(null);
+        processQueue();
         return api(originalRequest);
       } catch (err) {
         processQueue(err);

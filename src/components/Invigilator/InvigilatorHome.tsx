@@ -29,12 +29,10 @@ import {
   Users,
   UserCheck,
   UserX,
-  Calendar,
   Plus,
   Check,
   Filter,
   ClipboardCheck,
-  X,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -144,7 +142,7 @@ const InvigilatorHome = () => {
   const allowedQuestionTypes = ['mcq', 'coding', 'essay', 'short_answer', 'long_answer'];
   
   //state to store detailed assessment data
-   const [assessmentDetails, setAssessmentDetails] = useState<{[candidateId: string]: any[]}>({});
+  // const [assessmentDetails, setAssessmentDetails] = useState<{[candidateId: string]: any[]}>({});
 
   // Form for assessment assignment
   const assignmentForm = useForm<AssignmentFormData>({
@@ -390,12 +388,12 @@ const InvigilatorHome = () => {
   /**
    * Get available candidates (those without active assessments)
    */
-  const getAvailableCandidates = () => {
-    return candidates.filter(candidate => 
-      candidate.current_stage === "assessment" && 
-      getAssessmentStatus(candidate) === "not-assigned"
-    );
-  };
+  // const getAvailableCandidates = () => {
+  //   return candidates.filter(candidate => 
+  //     candidate.current_stage === "assessment" && 
+  //     getAssessmentStatus(candidate) === "not-assigned"
+  //   );
+  // };
 
   /**
    * Badge styling for different assessment statuses
