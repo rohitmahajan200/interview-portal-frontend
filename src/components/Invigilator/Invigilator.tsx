@@ -17,7 +17,6 @@ import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/themeToggle";
 import CandidateReview from "./CandidateReview";
 import InterviewScheduling from "./InterviewScheduling";
-import InterviewManagement from "./InterviewManagement";
 import { InvigilatorSidebar } from "./InvigilatorSidebar"; // Fixed import path
 import InvigilatorHome from "./InvigilatorHome";
 import InvigilatorQuestionsManagement from "./InvigilatorQuestionsManagement";
@@ -66,8 +65,6 @@ export default function Invigilator() {
         return <InterviewScheduling />;
       case "analytics":
         return <InvigilatorAnalytics />;
-      case "interview-management":
-        return <InterviewManagement />;
       default:
         return <InvigilatorHome />;
     }

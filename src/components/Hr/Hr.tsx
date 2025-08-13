@@ -21,7 +21,6 @@ import HRQuestionnaireBuilder from "./HRQuestionnaireBuilder";
 import CandidateReview from "./CandidateReview";
 import InterviewScheduling from "./InterviewScheduling";
 import HRAnalytics from "./HRAnalytics";
-import InterviewManagement from "./InterviewManagement";
 import { HRSidebar } from "./HRSidebar";
 export default function Hr() {
   const dispatch = useDispatch();
@@ -63,8 +62,6 @@ export default function Hr() {
         return <InterviewScheduling />;
       case "hr-analytics":
         return <HRAnalytics />;
-      case "interview-management":
-        return <InterviewManagement />;
       default:
         return <HRHome />;
     }

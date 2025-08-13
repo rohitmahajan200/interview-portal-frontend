@@ -6,6 +6,7 @@ export type InvigilatorPage =
   | "invigilator-questionnaire"
   | "candidate-review"
   | "invigilator-analytics"
+  | "interview-scheduling"
 
 interface InvigilatorViewState {
   currentHRPage: InvigilatorPage;
