@@ -13,6 +13,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Eye, Search, Users, UserCheck, UserX, Calendar, FileText } from "lucide-react";
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
+import { useDispatch } from 'react-redux';
+import { setCurrentHRPage } from '@/features/Org/View/HrViewSlice';
+import { setPreSelectedCandidate } from '@/features/Org/HR/interviewSchedulingSlice';
 import { DialogDescription } from '@radix-ui/react-dialog';
 import { ScrollArea } from '@radix-ui/react-scroll-area';
 import { Label } from '@radix-ui/react-label';
@@ -98,6 +101,18 @@ const HRHome = () => {
   const [targetCandidate, setTargetCandidate] = useState<Candidate | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
+  const dispatch = useDispatch();
+
+  const handleAssignInterview = (candidate: Candidate) => {
+    // Set the pre-selected candidate
+    dispatch(setPreSelectedCandidate(candidate));
+    
+    // Navigate to interview scheduling
+    dispatch(setCurrentHRPage('interview-scheduling'));
+    
+    // Close any open dialogs
+    setSelectedCandidate(null); // or whatever your dialog state is
+  };
 
   const copyToClipboard = async (url: string, docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -646,14 +661,14 @@ const fetchAllData = async () => {
                           </Button>
                         )}
                         
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg flex-1 sm:flex-none"
-                          disabled
+                        <Button 
+                          onClick={() => handleAssignInterview(selectedCandidate)}
+                          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                         >
-                          📅 <span className="hidden xs:inline">Schedule Interview</span><span className="xs:hidden">Schedule</span>
+                          <Calendar className="h-4 w-4" />
+                          Schedule Interview
                         </Button>
+
                       </>
                     </div>
 

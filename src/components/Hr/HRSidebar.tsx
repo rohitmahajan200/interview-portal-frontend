@@ -7,7 +7,6 @@ import {
   Users,
   Calendar,
   BarChart3,
-  Settings,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
@@ -47,7 +46,6 @@ export function HRSidebar(
     navItem("Candidate Review",      Users,       "candidate-review"),
     navItem("Interview Scheduling",  Calendar,    "interview-scheduling"),
     navItem("HR Analytics",          BarChart3,   "hr-analytics"),
-    navItem("Interview Management",  Settings,    "interview-management"),
   ] as unknown as { title: string; icon: React.ElementType }[];
  return (
     <Sidebar

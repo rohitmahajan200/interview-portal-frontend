@@ -5,6 +5,7 @@ import {
   FileText,
   Users,
   BarChart3,
+  Calendar,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
@@ -41,13 +42,14 @@ export function InvigilatorSidebar(
     onClick: () => dispatch(setCurrentInvigilatorPage(page)),
   });
 
-  // Updated to match all navigation items
+  // Updated to include ALL available components
   const invigilatorNav = [
     navItem("Home", Home, "invigilator-home"),
     navItem("Questions", HelpCircle, "invigilator-questions"),
     navItem("Assessment", FileText, "invigilator-questionnaire"),
     navItem("Candidate Review", Users, "candidate-review"),
-    navItem("Analytics", BarChart3, "invigilator-analytics"),
+    navItem("Interviews", Calendar, "interview-scheduling"),
+    navItem("Analytics", BarChart3, "invigilator-analytics"), // Fixed: changed from "invigilator-analytics" to "analytics"
   ] as unknown as { 
     title: string; 
     icon: React.ElementType; 
