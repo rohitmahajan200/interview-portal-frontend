@@ -114,8 +114,6 @@ const HRHome = () => {
     }
   };
 
-
-
   // Create a separate form for single candidate assignment
   const singleCandidateForm = useForm<SingleCandidateFormData>({
     defaultValues: {
