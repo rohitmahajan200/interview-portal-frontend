@@ -3,13 +3,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-
+import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import type { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import {
   Tooltip,
@@ -17,48 +19,199 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search, X } from 'lucide-react';
+import { Plus, Edit, Trash, Search, X, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
-import toast from 'react-hot-toast';
-import { Switch } from '../ui/switch';
+import toast, { Toaster } from 'react-hot-toast';
 
-// Validation schema for technical question form
-const questionSchema = z.object({
-  text: z.string().min(10, 'Question must be at least 10 characters'),
-  type: z.enum(['mcq', 'coding', 'essay', 'voice', 'case_study']),
-  options: z.array(z.string()).optional(),
-  correct_answers: z.array(z.any()).optional(),
-  explanation: z.string().optional(),
-  is_must_ask: z.boolean().default(false),
-  max_score: z.number().min(1).max(100).default(1),
-  attachments: z.array(z.string()).optional(),
-  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-  tags: z.string().optional(),
-  job_tags: z.string().optional(),
-  stage: z.string().optional(),
+// Updated schema with correct_answer (singular) and proper required fields
+const singleQuestionSchema = z.object({
+  text: z.string().trim().min(10, "Question text must be at least 10 characters").max(2000, "Question text too long"),
+  type: z.enum(["mcq", "coding", "essay"], {
+    message: "Question type must be mcq, coding, or essay"
+  }),
+  options: z.array(z.string().trim().min(1)).optional(),
+  correct_answer: z.string().min(1, "Correct answer is required"), // Changed to singular
+  explanation: z.string().trim().max(1000, "Explanation too long").optional(),
+  is_must_ask: z.boolean(),
+  max_score: z.number().positive("Max score must be positive"),
+  difficulty: z.enum(["easy", "medium", "hard"], {
+    message: "Difficulty must be easy, medium, or hard"
+  }).optional(),
+  tags: z.array(z.string().trim().min(1)).optional(),
+}).strict()
+.refine((data) => {
+  if (data.type === "mcq" && (!data.options || data.options.length < 2)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "MCQ questions must have at least 2 options",
+  path: ["options"]
+})
+.refine((data) => {
+  // For MCQ, correct_answer must be one of the options
+  if (data.type === "mcq" && data.options && data.correct_answer) {
+    return data.options.includes(data.correct_answer);
+  }
+  return true;
+}, {
+  message: "Correct answer must be one of the provided options",
+  path: ["correct_answer"]
 });
 
-type QuestionFormValues = z.infer<typeof questionSchema>;
+const questionsArraySchema = z.object({
+  questions: z.array(singleQuestionSchema).min(1, "At least one question is required").max(20, "Cannot create more than 20 questions at once")
+});
 
-// Type for question from API
+type QuestionsFormValues = z.infer<typeof questionsArraySchema>;
+
 interface Question {
   _id: string;
   text: string;
-  type: 'mcq' | 'coding' | 'essay' | 'voice' | 'case_study';
+  type: 'mcq' | 'coding' | 'essay';
   options?: string[];
-  correct_answers?: any[];
+  correct_answers: string[]; // Backend still uses array
   explanation?: string;
-  is_must_ask?: boolean;
-  max_score?: number;
-  attachments?: string[];
+  is_must_ask: boolean;
+  max_score: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string[];
-  job_tags?: string[];
-  stage?: string;
-  createdBy: string;
+  createdBy?: {
+    name: string;
+    role: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
+
+// QuestionOptionsField component with proper typing
+// QuestionOptionsField component with proper typing
+const QuestionOptionsField = ({ questionIndex, form }: { 
+  questionIndex: number, 
+  form: UseFormReturn<QuestionsFormValues>
+}) => {
+  const watchedType = form.watch(`questions.${questionIndex}.type` as const);
+  
+  // Use manual state management for string arrays instead of useFieldArray
+  const currentOptions = form.watch(`questions.${questionIndex}.options`) || [];
+  
+  const addOption = () => {
+    const newOptions = [...currentOptions, ''];
+    form.setValue(`questions.${questionIndex}.options`, newOptions);
+  };
+
+  const removeOption = (optionIndex: number) => {
+    const newOptions = currentOptions.filter((_, index) => index !== optionIndex);
+    form.setValue(`questions.${questionIndex}.options`, newOptions);
+  };
+
+  const updateOption = (optionIndex: number, value: string) => {
+    const newOptions = [...currentOptions];
+    newOptions[optionIndex] = value;
+    form.setValue(`questions.${questionIndex}.options`, newOptions);
+  };
+
+  if (watchedType !== 'mcq') {
+    return null;
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-2">
+        <Label>Answer Options</Label>
+        <Button 
+          type="button" 
+          size="sm" 
+          variant="outline" 
+          onClick={addOption}
+        >
+          <Plus className="w-4 h-4 mr-1" /> Add Option
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {currentOptions.map((option, optionIndex) => (
+          <div key={optionIndex} className="flex gap-2 items-center">
+            <Input
+              value={option}
+              onChange={(e) => updateOption(optionIndex, e.target.value)}
+              placeholder={`Option ${optionIndex + 1}`}
+              className="flex-1"
+            />
+            {currentOptions.length > 2 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => removeOption(optionIndex)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Correct Answer Field - different for MCQ vs others
+const CorrectAnswerField = ({ questionIndex, form }: { 
+  questionIndex: number, 
+  form: UseFormReturn<QuestionsFormValues>
+}) => {
+  const watchedType = form.watch(`questions.${questionIndex}.type` as const);
+  const watchedOptions = form.watch(`questions.${questionIndex}.options`);
+
+  if (watchedType === 'mcq') {
+    // For MCQ: dropdown to select from options
+    return (
+      <div>
+        <Label htmlFor={`questions.${questionIndex}.correct_answer`}>Correct Answer</Label>
+        <Controller
+          name={`questions.${questionIndex}.correct_answer` as const}
+          control={form.control}
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value || ''}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select correct answer from options" />
+              </SelectTrigger>
+              <SelectContent>
+                {watchedOptions?.filter(Boolean).map((option, index) => (
+                  <SelectItem key={index} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        {form.formState.errors.questions?.[questionIndex]?.correct_answer && (
+          <p className="text-red-600 text-sm mt-1">
+            {form.formState.errors.questions[questionIndex].correct_answer?.message}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // For coding/essay: simple text input
+  return (
+    <div>
+      <Label htmlFor={`questions.${questionIndex}.correct_answer`}>Correct Answer/Expected Response</Label>
+      <Textarea
+        {...form.register(`questions.${questionIndex}.correct_answer` as const)}
+        rows={3}
+        placeholder="Enter the correct answer or expected response..."
+      />
+      {form.formState.errors.questions?.[questionIndex]?.correct_answer && (
+        <p className="text-red-600 text-sm mt-1">
+          {form.formState.errors.questions[questionIndex].correct_answer?.message}
+        </p>
+      )}
+    </div>
+  );
+};
+
 
 const InvigilatorQuestionsManagement = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -70,36 +223,36 @@ const InvigilatorQuestionsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
-  const [showOptions, setShowOptions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    watch,
-    formState: { errors },
-  } = useForm<QuestionFormValues>({
-    resolver: zodResolver(questionSchema),
+  // Tag mode states
+  const [useSameTagsForAll, setUseSameTagsForAll] = useState(false);
+  const [globalTags, setGlobalTags] = useState('');
+
+  const form = useForm<QuestionsFormValues>({
+    resolver: zodResolver(questionsArraySchema),
     defaultValues: {
-      type: 'mcq',
-      is_must_ask: false,
-      max_score: 1,
+      questions: [
+        {
+          text: '',
+          type: 'mcq' as const,
+          options: ['', ''],
+          correct_answer: '',
+          explanation: '',
+          is_must_ask: false,
+          max_score: 1,
+          difficulty: undefined,
+          tags: []
+        }
+      ]
     }
   });
 
-  const { fields: optionFields, append: appendOption, remove: removeOption } = useFieldArray({
-    control,
-    name: 'options',
+  const { fields: questionFields, append: appendQuestion, remove: removeQuestion } = useFieldArray({
+    control: form.control,
+    name: "questions"
   });
 
-  const watchType = watch('type');
-
-  useEffect(() => {
-    setShowOptions(watchType === 'mcq');
-  }, [watchType]);
-
-  // Fetch all questions
   const fetchQuestions = async () => {
     try {
       setLoading(true);
@@ -118,15 +271,13 @@ const InvigilatorQuestionsManagement = () => {
     fetchQuestions();
   }, []);
 
-  // Filter questions based on search, type, and difficulty
   useEffect(() => {
     let filtered = questions;
 
     if (searchTerm) {
       filtered = filtered.filter(q => 
         q.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (q.tags && q.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))) ||
-        (q.job_tags && q.job_tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+        (q.tags && q.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       );
     }
 
@@ -141,76 +292,118 @@ const InvigilatorQuestionsManagement = () => {
     setFilteredQuestions(filtered);
   }, [questions, searchTerm, typeFilter, difficultyFilter]);
 
-  // Open dialog for creating new question
   const openCreateDialog = () => {
     setEditingQuestion(null);
-    reset({
-      text: '',
-      type: 'mcq',
-      options: [],
-      is_must_ask: false,
-      max_score: 1,
-      tags: '',
-      job_tags: '',
-      stage: '',
-      explanation: '',
+    setUseSameTagsForAll(false);
+    setGlobalTags('');
+    form.reset({
+      questions: [
+        {
+          text: '',
+          type: 'mcq',
+          options: ['', ''],
+          correct_answer: '',
+          explanation: '',
+          is_must_ask: false,
+          max_score: 1,
+          difficulty: undefined,
+          tags: []
+        }
+      ]
     });
     setDialogOpen(true);
   };
 
-  // Open dialog for editing existing question
   const openEditDialog = (question: Question) => {
     setEditingQuestion(question);
-    reset({
-      text: question.text,
-      type: question.type,
-      options: question.options || [],
-      explanation: question.explanation || '',
-      is_must_ask: question.is_must_ask || false,
-      max_score: question.max_score || 1,
-      difficulty: question.difficulty,
-      tags: question.tags ? question.tags.join(', ') : '',
-      job_tags: question.job_tags ? question.job_tags.join(', ') : '',
-      stage: question.stage || '',
+    form.reset({
+      questions: [{
+        text: question.text,
+        type: question.type,
+        options: question.options || [],
+        correct_answer: question.correct_answers?.[0] || '', // Convert array to single value
+        explanation: question.explanation || '',
+        is_must_ask: question.is_must_ask,
+        max_score: question.max_score,
+        difficulty: question.difficulty,
+        tags: question.tags || []
+      }]
     });
     setDialogOpen(true);
   };
 
-  // Handle form submission for create/update
-  const onSubmit = async (data: QuestionFormValues) => {
+  const handleTypeChangeForQuestion = (questionIndex: number, value: string) => {
+    form.setValue(`questions.${questionIndex}.options`, []);
+    form.setValue(`questions.${questionIndex}.correct_answer`, '');
+    
+    if (value === 'mcq') {
+      form.setValue(`questions.${questionIndex}.options`, ['', '']);
+    }
+  };
+
+  const onSubmit = async (data: QuestionsFormValues) => {
     try {
-      const payload = {
-        text: data.text,
-        type: data.type,
-        options: data.type === 'mcq' ? data.options?.filter(Boolean) : undefined,
-        correct_answers: data.correct_answers || [],
-        explanation: data.explanation || undefined,
-        is_must_ask: data.is_must_ask,
-        max_score: data.max_score,
-        attachments: data.attachments || [],
-        difficulty: data.difficulty,
-        tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        job_tags: data.job_tags ? data.job_tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        stage: data.stage || undefined,
-      };
+      setIsSubmitting(true);
+      
+      let payload;
 
       if (editingQuestion) {
+        // Edit mode - single question
+        payload = {
+          text: data.questions[0].text,
+          type: data.questions[0].type,
+          correct_answers: [data.questions[0].correct_answer], // Convert to array for backend
+          explanation: data.questions[0].explanation || undefined,
+          is_must_ask: data.questions[0].is_must_ask,
+          max_score: data.questions[0].max_score,
+          difficulty: data.questions[0].difficulty,
+          tags: data.questions[0].tags || [],
+          ...(data.questions[0].options && data.questions[0].options.length > 0 && {
+            options: data.questions[0].options.filter(Boolean)
+          })
+        };
+
         await api.put(`/org/question/${editingQuestion._id}`, payload);
         toast.success('Question updated successfully');
       } else {
+        // Create mode - multiple questions
+        const globalTagsArray = useSameTagsForAll && globalTags 
+          ? globalTags.split(',').map(t => t.trim()).filter(Boolean)
+          : [];
+
+        payload = {
+          questions: data.questions.map(q => ({
+            text: q.text,
+            type: q.type,
+            correct_answers: [q.correct_answer], // Convert to array for backend
+            explanation: q.explanation || undefined,
+            is_must_ask: q.is_must_ask,
+            max_score: q.max_score,
+            difficulty: q.difficulty,
+            tags: useSameTagsForAll ? globalTagsArray : (q.tags || []),
+            ...(q.options && q.options.length > 0 && {
+              options: q.options.filter(Boolean)
+            })
+          }))
+        };
+
         await api.post('/org/question', payload);
-        toast.success('Question created successfully');
+        toast.success(`${payload.questions.length} question(s) created successfully`);
       }
       
       setDialogOpen(false);
       fetchQuestions();
-    } catch (error) {
-      console.error('Failed to save question:', error);
-      toast.error('Failed to save question');
+    } catch (error: unknown) {
+      console.error('Failed to save question(s):', error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Failed to save question(s)';
+      toast.error(errorMessage || 'Failed to save question(s)');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Delete question
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this question?')) return;
     
@@ -227,19 +420,15 @@ const InvigilatorQuestionsManagement = () => {
     }
   };
 
-  // Get badge color for question type
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'mcq': return 'bg-blue-100 text-blue-800';
       case 'coding': return 'bg-green-100 text-green-800';
       case 'essay': return 'bg-purple-100 text-purple-800';
-      case 'voice': return 'bg-orange-100 text-orange-800';
-      case 'case_study': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  // Get badge color for difficulty
   const getDifficultyColor = (difficulty?: string) => {
     switch (difficulty) {
       case 'easy': return 'bg-green-100 text-green-800';
@@ -251,6 +440,8 @@ const InvigilatorQuestionsManagement = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <Toaster position="bottom-right" toastOptions={{ style: { zIndex: 9999 } }} />
+      
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -258,7 +449,7 @@ const InvigilatorQuestionsManagement = () => {
           <p className="text-muted-foreground">Create and manage technical assessment questions</p>
         </div>
         <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 w-4 h-4" /> Add Question
+          <Plus className="mr-2 w-4 h-4" /> Add Questions
         </Button>
       </div>
 
@@ -303,7 +494,7 @@ const InvigilatorQuestionsManagement = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search questions, tags, or job tags..."
+                placeholder="Search questions or tags..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -318,8 +509,6 @@ const InvigilatorQuestionsManagement = () => {
                 <SelectItem value="mcq">MCQ</SelectItem>
                 <SelectItem value="coding">Coding</SelectItem>
                 <SelectItem value="essay">Essay</SelectItem>
-                <SelectItem value="voice">Voice</SelectItem>
-                <SelectItem value="case_study">Case Study</SelectItem>
               </SelectContent>
             </Select>
             <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
@@ -338,7 +527,7 @@ const InvigilatorQuestionsManagement = () => {
       </Card>
 
       {/* Questions Table */}
-      <Card>
+      <Card className='flex flex-col overflow-y-auto mb-7'>
         <CardHeader>
           <CardTitle>Questions ({filteredQuestions.length})</CardTitle>
         </CardHeader>
@@ -358,7 +547,7 @@ const InvigilatorQuestionsManagement = () => {
                     <TableHead>Score</TableHead>
                     <TableHead>Must Ask</TableHead>
                     <TableHead>Tags</TableHead>
-                    <TableHead>Stage</TableHead>
+                    <TableHead>Created By</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -408,29 +597,29 @@ const InvigilatorQuestionsManagement = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {question.tags && question.tags.length > 0 ? (
-                            question.tags.slice(0, 2).map((tag, index) => (
+                        {question.tags && question.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {question.tags.slice(0, 2).map((tag, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
                                 {tag}
                               </Badge>
-                            ))
-                          ) : (
-                            <span className="text-muted-foreground text-xs">No tags</span>
-                          )}
-                          {question.tags && question.tags.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{question.tags.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {question.stage ? (
-                          <Badge variant="outline">{question.stage}</Badge>
+                            ))}
+                            {question.tags.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{question.tags.length - 2} more
+                              </Badge>
+                            )}
+                          </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">No tags</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {question.createdBy ? 
+                        <span className='flex gap-2'>
+                        {question.createdBy.name && <Badge>{question.createdBy.name}</Badge>}
+                        {question.createdBy.role && <Badge>{question.createdBy.role}</Badge>}
+                        </span> : "-" }
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
@@ -473,201 +662,275 @@ const InvigilatorQuestionsManagement = () => {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingQuestion ? 'Edit Question' : 'Create New Question'}
+              {editingQuestion ? 'Edit Question' : 'Create Technical Questions'}
             </DialogTitle>
+            <DialogDescription>
+              {editingQuestion 
+                ? 'Modify the technical question details below.' 
+                : 'Create one or multiple technical assessment questions at once.'
+              }
+            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Question Text */}
-            <div>
-              <Label htmlFor="text" className="mb-2">Question Text</Label>
-              <Textarea 
-                id="text" 
-                {...register('text')} 
-                rows={4}
-                placeholder="Enter the technical question..."
-              />
-              {errors.text && (
-                <p className="text-red-600 text-sm mt-1">{errors.text.message}</p>
-              )}
-            </div>
-
-            {/* Type and Difficulty Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="type" className="mb-2">Question Type</Label>
-                <Controller
-                  name="type"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select question type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mcq">Multiple Choice</SelectItem>
-                        <SelectItem value="coding">Coding</SelectItem>
-                        <SelectItem value="essay">Essay</SelectItem>
-                        <SelectItem value="voice">Voice Recording</SelectItem>
-                        <SelectItem value="case_study">Case Study</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.type && (
-                  <p className="text-red-600 text-sm mt-1">{errors.type.message}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="difficulty" className="mb-2">Difficulty</Label>
-                <Controller
-                  name="difficulty"
-                  control={control}
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select difficulty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* MCQ Options - Only show for MCQ type */}
-            {showOptions && (
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <Label>Answer Options</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => appendOption('')}
-                  >
-                    <Plus className="w-4 h-4 mr-1" /> Add Option
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {optionFields.map((field, index) => (
-                    <div key={field.id} className="flex gap-2">
-                      <Input
-                        {...register(`options.${index}` as const)}
-                        placeholder={`Option ${index + 1}`}
-                        className="flex-1"
-                      />
+          <ScrollArea className="flex-1 px-1">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-1">
+              {!editingQuestion && (
+                <>
+                  {/* Header with Add Question Button */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Questions to Create</h3>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {questionFields.length} question{questionFields.length !== 1 ? 's' : ''}
+                      </Badge>
                       <Button
                         type="button"
-                        size="sm"
                         variant="outline"
-                        onClick={() => removeOption(index)}
+                        size="sm"
+                        onClick={() => appendQuestion({
+                          text: '',
+                          type: 'mcq',
+                          options: ['', ''],
+                          correct_answer: '',
+                          explanation: '',
+                          is_must_ask: false,
+                          max_score: 1,
+                          difficulty: undefined,
+                          tags: []
+                        })}
+                        disabled={questionFields.length >= 20}
                       >
-                        <X className="w-4 h-4" />
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Question
                       </Button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            {/* Score and Must Ask Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="max_score" className="mb-2">Maximum Score</Label>
-                <Input 
-                  id="max_score" 
-                  type="number"
-                  {...register('max_score', { valueAsNumber: true })} 
-                  min="1"
-                  max="100"
-                />
-                {errors.max_score && (
-                  <p className="text-red-600 text-sm mt-1">{errors.max_score.message}</p>
-                )}
+                  {/* Tag Mode Toggle */}
+                  <Card className="p-4 bg-blue-50/50 border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label className="text-base font-medium">Tag Management</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Choose how to apply tags to your questions
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="tag-mode" className="text-sm">
+                          {useSameTagsForAll ? 'Same tags for all' : 'Individual tags'}
+                        </Label>
+                        <Switch
+                          id="tag-mode"
+                          checked={useSameTagsForAll}
+                          onCheckedChange={setUseSameTagsForAll}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Global Tags Input */}
+                    {useSameTagsForAll && (
+                      <div className="mt-4">
+                        <Label htmlFor="global-tags">Global Tags (comma separated)</Label>
+                        <Input
+                          id="global-tags"
+                          value={globalTags}
+                          onChange={(e) => setGlobalTags(e.target.value)}
+                          placeholder="e.g. javascript, algorithms, data-structures"
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          These tags will be applied to all questions
+                        </p>
+                      </div>
+                    )}
+                  </Card>
+                </>
+              )}
+
+              {/* Questions */}
+              <div className="space-y-6">
+                {questionFields.map((field, questionIndex) => (
+                  <Card key={field.id} className="p-4 relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-medium">
+                        {editingQuestion ? 'Edit Question' : `Question ${questionIndex + 1}`}
+                      </h4>
+                      {!editingQuestion && questionFields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeQuestion(questionIndex)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Question Text */}
+                      <div>
+                        <Label htmlFor={`questions.${questionIndex}.text`}>Question Text</Label>
+                        <Textarea 
+                          {...form.register(`questions.${questionIndex}.text`)}
+                          rows={3}
+                          placeholder="Enter the technical question..."
+                        />
+                        {form.formState.errors.questions?.[questionIndex]?.text && (
+                          <p className="text-red-600 text-sm mt-1">
+                            {form.formState.errors.questions[questionIndex].text?.message}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Type and Difficulty Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor={`questions.${questionIndex}.type`}>Question Type</Label>
+                          <Controller
+                            name={`questions.${questionIndex}.type`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select 
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  handleTypeChangeForQuestion(questionIndex, value);
+                                }} 
+                                value={field.value}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="mcq">Multiple Choice</SelectItem>
+                                  <SelectItem value="coding">Coding</SelectItem>
+                                  <SelectItem value="essay">Essay</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={`questions.${questionIndex}.difficulty`}>Difficulty</Label>
+                          <Controller
+                            name={`questions.${questionIndex}.difficulty`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select onValueChange={field.onChange} value={field.value || ''}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select difficulty" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="easy">Easy</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="hard">Hard</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor={`questions.${questionIndex}.max_score`}>Max Score</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            {...form.register(`questions.${questionIndex}.max_score`, { valueAsNumber: true })}
+                            placeholder="Score"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Options for MCQ */}
+                      <QuestionOptionsField 
+                        questionIndex={questionIndex}
+                        form={form}
+                      />
+
+                      {/* Correct Answer - different for MCQ vs others */}
+                      <CorrectAnswerField 
+                        questionIndex={questionIndex}
+                        form={form}
+                      />
+
+                      {/* Must Ask Switch */}
+                      <div className="flex items-center space-x-2">
+                        <Controller
+                          name={`questions.${questionIndex}.is_must_ask`}
+                          control={form.control}
+                          render={({ field }) => (
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          )}
+                        />
+                        <Label>Must Ask Question</Label>
+                      </div>
+
+                      {/* Individual Tags */}
+                      {(!useSameTagsForAll || editingQuestion) && (
+                        <div>
+                          <Label htmlFor={`questions.${questionIndex}.tags`}>
+                            Tags (comma separated)
+                          </Label>
+                          <Controller
+                            name={`questions.${questionIndex}.tags`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Input
+                                value={Array.isArray(field.value) ? field.value.join(', ') : ''}
+                                onChange={(e) => {
+                                  const tagsArray = e.target.value
+                                    .split(',')
+                                    .map(tag => tag.trim())
+                                    .filter(Boolean);
+                                  field.onChange(tagsArray);
+                                }}
+                                placeholder="e.g. javascript, algorithms, data-structures"
+                              />
+                            )}
+                          />
+                        </div>
+                      )}
+
+                      {/* Explanation */}
+                      <div>
+                        <Label htmlFor={`questions.${questionIndex}.explanation`}>
+                          Explanation (Optional)
+                        </Label>
+                        <Textarea
+                          {...form.register(`questions.${questionIndex}.explanation`)}
+                          rows={2}
+                          placeholder="Provide explanation or reasoning..."
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
 
-              <div className="flex items-center space-x-2 pt-6">
-                <Controller
-                  name="is_must_ask"
-                  control={control}
-                  render={({ field }) => (
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {editingQuestion ? 'Updating...' : `Creating ${questionFields.length} question${questionFields.length !== 1 ? 's' : ''}...`}
+                    </>
+                  ) : (
+                    editingQuestion ? 'Update Question' : `Create ${questionFields.length} Question${questionFields.length !== 1 ? 's' : ''}`
                   )}
-                />
-                <Label>Must Ask Question</Label>
-              </div>
-            </div>
-
-            {/* Tags Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="tags" className="mb-2">Technical Tags</Label>
-                <Input 
-                  id="tags" 
-                  {...register('tags')} 
-                  placeholder="e.g. javascript, algorithms, data-structures"
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Comma-separated technical skills or topics
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="job_tags" className="mb-2">Job Role Tags</Label>
-                <Input 
-                  id="job_tags" 
-                  {...register('job_tags')} 
-                  placeholder="e.g. frontend-developer, backend-developer"
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Comma-separated job roles or positions
-                </p>
-              </div>
-            </div>
-
-            {/* Stage and Explanation Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="stage" className="mb-2">Assessment Stage</Label>
-                <Input 
-                  id="stage" 
-                  {...register('stage')} 
-                  placeholder="e.g. l1, l2, technical_interview"
-                />
-              </div>
-            </div>
-
-            {/* Explanation */}
-            <div>
-              <Label htmlFor="explanation" className="mb-2">Explanation (Optional)</Label>
-              <Textarea 
-                id="explanation" 
-                {...register('explanation')} 
-                rows={3}
-                placeholder="Provide explanation or reasoning for the correct answer..."
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editingQuestion ? 'Update Question' : 'Create Question'}
-              </Button>
-            </DialogFooter>
-          </form>
+                </Button>
+              </DialogFooter>
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,22 +1,7 @@
 import { useAppSelector } from "@/hooks/useAuth"
 
-type JobDescription = {
-  time: string;
-  country: string;
-  location: string;
-  expInYears: string;
-  salary: string;
-  jobId: string;
-};
-
-type Job = {
-  _id: string;
-  name: string;
-  description: JobDescription;
-};
-
 const JobList = () => {
-  const role = useAppSelector((state) => state.auth.user?.applied_job) as Job | undefined;
+  const role = useAppSelector((state) => state.auth.user?.applied_job);
 
   return (
     <div className="w-full bg-muted/50 rounded-xl px-4 py-6">

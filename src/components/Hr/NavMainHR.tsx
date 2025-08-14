@@ -1,7 +1,7 @@
 // src/components/nav-main-hr.tsx
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/app/store";
-import { setCurrentHRPage } from "@/features/Org/View/hrViewSlice";
+import { setCurrentHRPage } from "@/features/Org/View/HrViewSlice";
 
 import {
   SidebarGroup,
