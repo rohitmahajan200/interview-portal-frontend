@@ -13,43 +13,40 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
-import toast, {Toaster} from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
-// Validation Schemas
-const questionnaireSchema = z.object({
+// Replace the existing schemas with these updated ones
+const assessmentSchema = z.object({
   candidates: z.array(z.string().length(24, 'Invalid candidate ID')).min(1, 'Select at least one candidate'),
   assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
-  days_to_complete: z.number().int().min(1).max(30, 'Days must be between 1-30')
+  job: z.string().length(24, 'Invalid job ID').optional(),
+  days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional()
 });
 
-const questionnaireUpdateSchema = z.object({
+const assessmentUpdateSchema = z.object({
   assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
-  due_at: z.string().min(1, 'Due date is required'),
+  days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional(),
 });
 
-type CreateFormData = z.infer<typeof questionnaireSchema>;
-type EditFormData = z.infer<typeof questionnaireUpdateSchema>;
+
+type CreateFormData = z.infer<typeof assessmentSchema>;
+type EditFormData = z.infer<typeof assessmentUpdateSchema>;
 
 // Types
-interface Question {
+interface TechnicalQuestion {
   _id: string;
   text: string;
-  type: 'mcq' | 'coding' | 'essay' | 'voice' | 'case_study';
+  type: 'mcq' | 'coding' | 'essay';
   options?: string[];
-  correct_answers?: any[];
+  correct_answers: string[];
   explanation?: string;
-  is_must_ask?: boolean;
-  max_score?: number;
-  attachments?: string[];
+  is_must_ask: boolean;
+  max_score: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string[];
-  job_tags?: string[];
-  stage?: string;
   createdBy: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface Candidate {
@@ -57,42 +54,63 @@ interface Candidate {
   first_name: string;
   last_name: string;
   email: string;
+  phone?: string;
   profile_photo_url?: {
     url: string;
     publicId: string;
   };
-  hrQuestionnaire: string[]
+  applied_job?: {
+    _id: string;
+    name: string;
+    description: {
+      time: string;
+      country: string;
+      location: string;
+      expInYears: string;
+      salary: string;
+      jobId: string;
+    };
+  };
+}
+
+interface Job {
+  _id: string;
+  title: string;
+  department: string;
+  location?: string;
+  description?: string;
 }
 
 interface Assessment {
   _id: string;
-  candidate: string;
-  job: string;
-  question_bank: string;
-  questions_by_stage: {
-    [stageName: string]: string[];
+  candidate: Candidate;
+  job?: Job;
+  questions: TechnicalQuestion[];
+  assigned_by: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
   };
   assigned_at: string;
   due_at?: string;
   started_at?: string;
-  access_token?: string;
   completed_at?: string;
   status: 'pending' | 'started' | 'completed' | 'expired';
   createdAt: string;
   updatedAt: string;
 }
 
-
-const InvigilatorQuestionnaireBuilder = () => {
+const AssessmentManagement = () => {
   // State
-  const [assessment, setAssessment] = useState<Assessment[]>([]);
-  const [filteredAssessment, setFilteredAssessment] = useState<Assessment[]>([]);
-    // Add these state variables
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [filteredAssessments, setFilteredAssessments] = useState<Assessment[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState<string>('');
+  const [selectedJobForAutoSelect, setSelectedJobForAutoSelect] = useState<string>('');
 
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<TechnicalQuestion[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -107,6 +125,35 @@ const InvigilatorQuestionnaireBuilder = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
+  // Helper functions - Following HR questionnaire pattern
+  const getUniqueJobs = () => {
+    const jobMap = new Map();
+    getAvailableCandidates().forEach(candidate => {
+      if (candidate.applied_job && candidate.applied_job._id) {
+        jobMap.set(candidate.applied_job._id, candidate.applied_job);
+      }
+    });
+    return Array.from(jobMap.values());
+  };
+
+  const selectCandidatesByJob = (jobId: string, field: { onChange: (value: string[]) => void }) => {
+    if (!jobId) {
+      field.onChange([]);
+      return;
+    }
+    
+    const candidatesForJob = getAvailableCandidates()
+      .filter(candidate => candidate.applied_job?._id === jobId)
+      .map(candidate => candidate._id);
+    
+    field.onChange(candidatesForJob);
+    toast.success(`Selected ${candidatesForJob.length} candidates for this job`);
+  };
+
+  const clearJobSelection = () => {
+    setSelectedJobForAutoSelect('');
+  };
+
   // Helper function to extract unique tags
   const getUniqueTags = () => {
     const tagSet = new Set<string>();
@@ -117,7 +164,7 @@ const InvigilatorQuestionnaireBuilder = () => {
   };
 
   // Helper function to toggle tag selection
-  const toggleTagSelection = (tag: string, field: any) => {
+  const toggleTagSelection = (tag: string, field: { value: string[]; onChange: (value: string[]) => void }) => {
     const newSelectedTags = new Set(selectedTags);
     const currentSelectedQuestions = new Set(field.value || []);
     
@@ -143,22 +190,23 @@ const InvigilatorQuestionnaireBuilder = () => {
     field.onChange(Array.from(currentSelectedQuestions));
   };
 
-  // Create Form
+  // Update createForm defaultValues
   const createForm = useForm<CreateFormData>({
-    resolver: zodResolver(questionnaireSchema),
+    resolver: zodResolver(assessmentSchema),
     defaultValues: {
       candidates: [],
       assigned_questions: [],
-      days_to_complete: 7,
+      job: undefined,
+      days_to_complete: 7, // Default to 7 days
     }
   });
 
-  // Edit Form
+  // Update editForm defaultValues  
   const editForm = useForm<EditFormData>({
-    resolver: zodResolver(questionnaireUpdateSchema),
+    resolver: zodResolver(assessmentUpdateSchema),
     defaultValues: {
       assigned_questions: [],
-      due_at: '',
+      days_to_complete: 7, // Default to 7 days
     }
   });
 
@@ -168,19 +216,19 @@ const InvigilatorQuestionnaireBuilder = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [AssessmentRes, questionsRes, candidatesRes] = await Promise.all([
+      const [assessmentsRes, questionsRes, candidatesRes] = await Promise.all([
         api.get('/org/assessment'),
         api.get('/org/question'),
         api.get('/org/candidates'),
       ]);
       
-      setAssessment(AssessmentRes.data.data || []);
-      setFilteredAssessment(AssessmentRes.data.data || []);
+      setAssessments(assessmentsRes.data.data || []);
+      setFilteredAssessments(assessmentsRes.data.data || []);
       setQuestions(questionsRes.data.data || []);
       setCandidates(candidatesRes.data.data || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      toast.error('Failed to load data', );
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -190,77 +238,89 @@ const InvigilatorQuestionnaireBuilder = () => {
     fetchAllData();
   }, []);
 
-  // Filter questionnaires
+  // Filter assessments
   useEffect(() => {
-    let filtered = assessment;
+    let filtered = assessments;
 
     if (searchTerm) {
-      filtered = filtered.filter(q =>
-        q.candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        q.candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(a =>
+        a.candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(q => q.status === statusFilter);
+      filtered = filtered.filter(a => a.status === statusFilter);
     }
 
-    setFilteredAssessment(filtered);
-  }, [assessment, searchTerm, statusFilter]);
+    setFilteredAssessments(filtered);
+  }, [assessments, searchTerm, statusFilter]);
 
-  // Dialog handlers
   const openCreateDialog = () => {
     setEditingAssessment(null);
     setSelectedTags(new Set());
+    setSelectedJobForAutoSelect('');
     createForm.reset({ 
       candidates: [], 
       assigned_questions: [], 
-      days_to_complete: 7 
+      job: undefined,
+      days_to_complete: 7 // Changed from due_at to days_to_complete with default value
     });
     setDialogOpen(true);
   };
 
+
+  // Replace the openEditDialog function
   const openEditDialog = (assessment: Assessment) => {
     setEditingAssessment(assessment);
     setSelectedTags(new Set());
     
-    // Format the due date for the input
-    const dueDate = new Date(assessment.due_at);
-    const formattedDate = dueDate.toISOString().split('T')[0];
+    // Calculate days from due_at if it exists
+    const daysToComplete = assessment.due_at ? 
+      Math.ceil((new Date(assessment.due_at).getTime() - new Date(assessment.assigned_at).getTime()) / (1000 * 60 * 60 * 24)) : 7;
     
     editForm.reset({
-      assigned_questions: assessment.assigned_questions.map(q => q._id),
-      due_at: formattedDate,
+      assigned_questions: assessment.questions.map(q => q._id),
+      days_to_complete: Math.max(1, daysToComplete), // Ensure minimum 1 day
     });
     setDialogOpen(true);
   };
+
 
   const openViewDialog = (assessment: Assessment) => {
     setSelectedAssessment(assessment);
     setViewDialogOpen(true);
   };
 
+  // Make sure closeDialog is also updated:
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingAssessment(null);
     setSelectedTags(new Set());
-    createForm.reset();
+    setSelectedJobForAutoSelect('');
+    createForm.reset({
+      candidates: [], 
+      assigned_questions: [], 
+      job: undefined,
+      days_to_complete: 7 // Changed from due_at to days_to_complete
+    });
     editForm.reset();
   };
+
 
   const closeViewDialog = () => {
     setViewDialogOpen(false);
     setSelectedAssessment(null);
   };
-  // Function to open delete confirmation dialog
+
+  // Delete handlers
   const openDeleteDialog = (id: string, candidateName: string) => {
     setDeleteTargetId(id);
     setDeleteTargetName(candidateName);
     setDeleteDialogOpen(true);
   };
 
-  // Function to handle confirmed deletion
   const handleDeleteConfirmed = async () => {
     if (!deleteTargetId) return;
     
@@ -268,16 +328,15 @@ const InvigilatorQuestionnaireBuilder = () => {
       setDeleteLoadingId(deleteTargetId);
       await api.delete(`/org/assessment/${deleteTargetId}`);
       
-      toast.success('Questionnaire deleted successfully');
+      toast.success('Assessment deleted successfully');
       setDeleteDialogOpen(false);
       fetchAllData();
-    } catch (error: any) {
-      console.error('Failed to delete questionnaire:', error);
-      toast.error(
-        error?.response?.data?.message || 
-        error?.message || 
-        'Failed to delete questionnaire'
-      );
+    } catch (error: unknown) {
+      console.error('Failed to delete assessment:', error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Failed to delete assessment';
+      toast.error(errorMessage || 'Failed to delete assessment');
     } finally {
       setDeleteLoadingId(null);
       setDeleteTargetId(null);
@@ -285,86 +344,64 @@ const InvigilatorQuestionnaireBuilder = () => {
     }
   };
 
-  // Function to cancel deletion
   const handleDeleteCancelled = () => {
     setDeleteDialogOpen(false);
     setDeleteTargetId(null);
     setDeleteTargetName('');
   };
 
-  // Submit handlers
- const onCreateSubmit = async (data: CreateFormData) => {
-  try {
-    setSubmitting(true);
-    console.log("data on submit===>", data);
-    
-    // Calculate due date string
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + data.days_to_complete);
-    
-    // Create questions_by_stage structure (stage_name -> question_ids)
-    const questions_by_stage = {
-      "general": data.assigned_questions // or use specific stage names
-    };
-    
-    // Send individual requests for each candidate (matching your schema)
-    const assignmentPromises = data.candidates.map(async (candidateId) => {
-      return api.post('/org/assessment/assign', {
-        candidate_id: candidateId,
-        due_at: dueDate.toISOString(),
-        questions_by_stage: questions_by_stage
-      });
-    });
-    
-    const responses = await Promise.all(assignmentPromises);
-    
-    // Check results
-    const successful = responses.filter(res => res.data.success);
-    const failed = responses.filter(res => !res.data.success);
-    
-    if (successful.length > 0) {
-      toast.success(`Questionnaire assigned to ${successful.length} candidates successfully`);
-    }
-    
-    if (failed.length > 0) {
-      toast.error(`Failed to assign to ${failed.length} candidates`);
-    }
-    
-    closeDialog();
-    fetchAllData();
-  } catch (error: any) {
-    console.error('Failed to create questionnaire:', error);
-    toast.error(
-      error?.response?.data?.message || 
-      error?.message || 
-      'Failed to create questionnaire'
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+  // Update onCreateSubmit function
+  const onCreateSubmit = async (data: CreateFormData) => {
+    try {
+      setSubmitting(true);
+      
+      // Convert to backend format: bulk assessments array with days_to_complete
+      const assessments = data.candidates.map(candidateId => ({
+        candidate: candidateId,
+        questions: data.assigned_questions,
+        job: data.job || undefined,
+        days_to_complete: data.days_to_complete || undefined
+      }));
 
+      const response = await api.post('/org/assessment', { assessments });
+      
+      toast.success(`${assessments.length} assessment(s) created successfully`);
+      closeDialog();
+      fetchAllData();
+    } catch (error: unknown) {
+      console.error('Failed to create assessments:', error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Failed to create assessments';
+      toast.error(errorMessage || 'Failed to create assessments');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
+  // Update onEditSubmit function
   const onEditSubmit = async (data: EditFormData) => {
     if (!editingAssessment) return;
     
     try {
       setSubmitting(true);
-      await api.put(`/org/hr-questionnaires/${editingAssessment._id}`, {
-        assigned_questions: data.assigned_questions,
-        due_at: new Date(data.due_at).toISOString(),
-      });
       
-      toast.success('Questionnaire updated successfully');
+      const payload = {
+        questions: data.assigned_questions,
+        days_to_complete: data.days_to_complete || undefined,
+      };
+      
+      await api.put(`/org/assessment/${editingAssessment._id}`, payload);
+      
+      toast.success('Assessment updated successfully');
       closeDialog();
       fetchAllData();
-    } catch (error: any) {
-      console.error('Failed to update questionnaire:', error);
-      toast.error(
-        error?.response?.data?.message || 
-        error?.message || 
-        'Failed to update questionnaire'
-      );
+    } catch (error: unknown) {
+      console.error('Failed to update assessment:', error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Failed to update assessment';
+      toast.error(errorMessage || 'Failed to update assessment');
     } finally {
       setSubmitting(false);
     }
@@ -375,7 +412,8 @@ const InvigilatorQuestionnaireBuilder = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'submitted': return 'bg-green-100 text-green-800';
+      case 'started': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
       case 'expired': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -390,45 +428,47 @@ const InvigilatorQuestionnaireBuilder = () => {
     });
   };
 
-  // Get available candidates (those without questionnaires)
+  // Get available candidates (those without assessments)
   const getAvailableCandidates = () => {
     return candidates.filter(candidate => 
-      !candidate.hrQuestionnaire || candidate.hrQuestionnaire.length === 0
+      !assessments.some(assessment => assessment.candidate._id === candidate._id)
     );
   };
 
   // Statistics
   const stats = {
-    total: assessment.length,
-    pending: assessment.filter(q => q.status === 'pending').length,
-    submitted: assessment.filter(q => q.status === 'completed').length,
-    expired: assessment.filter(q => q.status === 'expired').length,
+    total: assessments.length,
+    pending: assessments.filter(a => a.status === 'pending').length,
+    started: assessments.filter(a => a.status === 'started').length,
+    completed: assessments.filter(a => a.status === 'completed').length,
+    expired: assessments.filter(a => a.status === 'expired').length,
   };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <Toaster position="bottom-right" />
+      
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Questionnaire Builder</h1>
+          <h1 className="text-3xl font-bold">Assessment Management</h1>
           <p className="text-muted-foreground">
-            Assign and manage Assessment for candidates
+            Assign and manage technical assessments for candidates
           </p>
         </div>
         <Button onClick={openCreateDialog} disabled={getAvailableCandidates().length === 0}>
-          <Plus className="mr-2 w-4 h-4" /> Assign Questionnaire
+          <Plus className="mr-2 w-4 h-4" /> Assign Assessment
         </Button>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-2xl font-bold">{stats.total}</div>
-                <div className="text-sm text-muted-foreground">Total Questionnaires</div>
+                <div className="text-sm text-muted-foreground">Total Assessments</div>
               </div>
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -451,8 +491,20 @@ const InvigilatorQuestionnaireBuilder = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-green-600">{stats.submitted}</div>
-                <div className="text-sm text-muted-foreground">Submitted</div>
+                <div className="text-2xl font-bold text-blue-600">{stats.started}</div>
+                <div className="text-sm text-muted-foreground">Started</div>
+              </div>
+              <Clock className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+                <div className="text-sm text-muted-foreground">Completed</div>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
@@ -492,7 +544,8 @@ const InvigilatorQuestionnaireBuilder = () => {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="submitted">submitted</SelectItem>
+                <SelectItem value="started">Started</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
               </SelectContent>
             </Select>
@@ -500,10 +553,10 @@ const InvigilatorQuestionnaireBuilder = () => {
         </CardContent>
       </Card>
 
-      {/* Questionnaires Table */}
-      <Card>
+      {/* Assessments Table */}
+      <Card className='flex flex-col overflow-y-auto mb-7'>
         <CardHeader>
-          <CardTitle>Questionnaires ({filteredAssessment.length})</CardTitle>
+          <CardTitle>Assessments ({filteredAssessments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -516,6 +569,7 @@ const InvigilatorQuestionnaireBuilder = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
+                    <TableHead>Job</TableHead>
                     <TableHead>Questions</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Due Date</TableHead>
@@ -525,7 +579,7 @@ const InvigilatorQuestionnaireBuilder = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAssessment.map((assessment) => (
+                  {filteredAssessments.map((assessment) => (
                     <TableRow key={assessment._id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -540,21 +594,31 @@ const InvigilatorQuestionnaireBuilder = () => {
                               {assessment.candidate.first_name} {assessment.candidate.last_name}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {assessment.candidate?.email}
+                              {assessment.candidate.email}
                             </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
+                        {assessment.job ? (
+                          <div>
+                            <div className="font-medium">{assessment.job.title}</div>
+                            <div className="text-sm text-muted-foreground">{assessment.job.department}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">No job assigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {(assessment.assigned_questions || []).slice(0, 2).map((question) => (
+                          {assessment.questions.slice(0, 2).map((question) => (
                             <Badge key={question._id} variant="outline" className="text-xs">
-                              {question.input_type.toUpperCase()}
+                              {question.type.toUpperCase()}
                             </Badge>
                           ))}
-                          {(assessment.assigned_questions?.length || 0) > 2 && (
+                          {assessment.questions.length > 2 && (
                             <Badge variant="outline" className="text-xs">
-                              +{assessment.assigned_questions.length - 2} more
+                              +{assessment.questions.length - 2} more
                             </Badge>
                           )}
                         </div>
@@ -565,10 +629,13 @@ const InvigilatorQuestionnaireBuilder = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {formatDate(assessment.due_at)}
+                        {assessment.due_at ? formatDate(assessment.due_at) : 'No due date'}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {assessment.assigned_by?.name}
+                        <div>
+                          <div className="font-medium">{assessment.assigned_by.name}</div>
+                          <div className="text-muted-foreground">{assessment.assigned_by.role}</div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDate(assessment.createdAt)}
@@ -590,17 +657,16 @@ const InvigilatorQuestionnaireBuilder = () => {
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => openDeleteDialog(
-                            assessment._id, 
-                            `${assessment.candidate.first_name} ${assessment.candidate.last_name}`
-                          )}
-                          disabled={deleteLoadingId === assessment._id}
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
-
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => openDeleteDialog(
+                              assessment._id, 
+                              `${assessment.candidate.first_name} ${assessment.candidate.last_name}`
+                            )}
+                            disabled={deleteLoadingId === assessment._id}
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -608,12 +674,12 @@ const InvigilatorQuestionnaireBuilder = () => {
                 </TableBody>
               </Table>
 
-              {filteredAssessment.length === 0 && !loading && (
+              {filteredAssessments.length === 0 && !loading && (
                 <div className="text-center py-10">
                   <p className="text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' 
-                      ? 'No questionnaires match your filters.' 
-                      : 'No questionnaires found. Create your first questionnaire!'
+                    {searchTerm || statusFilter !== 'all'
+                      ? 'No assessments match your filters.' 
+                      : 'No assessments found. Create your first assessment!'
                     }
                   </p>
                 </div>
@@ -628,12 +694,12 @@ const InvigilatorQuestionnaireBuilder = () => {
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
             <DialogTitle>
-              {isEditing ? 'Edit Questionnaire' : 'Assign New Questionnaire'}
+              {isEditing ? 'Edit Assessment' : 'Assign New Assessment'}
             </DialogTitle>
             <DialogDescription>
               {isEditing 
-                ? 'Update the questionnaire details and questions'
-                : 'Select candidates and assign questions to create new questionnaires'
+                ? 'Update the assessment details and questions'
+                : 'Select candidates and assign technical questions to create new assessments'
               }
             </DialogDescription>
           </DialogHeader>
@@ -646,11 +712,84 @@ const InvigilatorQuestionnaireBuilder = () => {
                   {/* Candidates Selection */}
                   <div className="space-y-3">
                     <Label>Select Candidates ({getAvailableCandidates().length} available)</Label>
+                    
+                    {/* Job Auto-Select Section - Following HR questionnaire pattern */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <Label className="text-sm font-medium mb-2 block">Quick Select by Job Applied:</Label>
+                      <div className="flex items-center gap-2">
+                        <Controller
+                          name="candidates"
+                          control={createForm.control}
+                          render={({ field }) => (
+                            <Select 
+                              value={selectedJobForAutoSelect} 
+                              onValueChange={(jobId) => {
+                                setSelectedJobForAutoSelect(jobId);
+                                selectCandidatesByJob(jobId, field);
+                              }}
+                            >
+                              <SelectTrigger className="w-64">
+                                <SelectValue placeholder="Select a job to auto-select candidates" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getUniqueJobs().map((job) => {
+                                  const candidateCount = getAvailableCandidates().filter(
+                                    c => c.applied_job?._id === job._id
+                                  ).length;
+                                  return (
+                                    <SelectItem key={job._id} value={job._id}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{job.name}</span>
+                                        <Badge variant="secondary" className="ml-2 text-xs">
+                                          {candidateCount} candidates
+                                        </Badge>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        
+                        {selectedJobForAutoSelect && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              clearJobSelection();
+                              createForm.setValue('candidates', []);
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Select a job to automatically choose all candidates who applied for that position
+                      </p>
+                    </div>
+
+                    {/* Candidate Selection */}
                     <Controller
                       name="candidates"
                       control={createForm.control}
                       render={({ field }) => (
                         <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
+                          {/* Show selected job info if any */}
+                          {selectedJobForAutoSelect && (
+                            <div className="mb-3 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                <span className="text-sm text-green-700 dark:text-green-300">
+                                  Auto-selected candidates for: {getUniqueJobs().find(j => j._id === selectedJobForAutoSelect)?.name}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          
                           <div className="space-y-3">
                             {getAvailableCandidates().length === 0 ? (
                               <p className="text-muted-foreground text-center py-4">
@@ -659,8 +798,15 @@ const InvigilatorQuestionnaireBuilder = () => {
                             ) : (
                               getAvailableCandidates().map((candidate) => {
                                 const isChecked = field.value?.includes(candidate._id) || false;
+                                const isJobMatch = selectedJobForAutoSelect && candidate.applied_job?._id === selectedJobForAutoSelect;
+                                
                                 return (
-                                  <div key={candidate._id} className="flex items-start space-x-3">
+                                  <div 
+                                    key={candidate._id} 
+                                    className={`flex items-start space-x-3 p-2 rounded ${
+                                      isJobMatch ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : ''
+                                    }`}
+                                  >
                                     <Checkbox
                                       checked={isChecked}
                                       onCheckedChange={(checked) => {
@@ -672,20 +818,33 @@ const InvigilatorQuestionnaireBuilder = () => {
                                         }
                                       }}
                                     />
-                                    <div className="flex items-center space-x-3">
+                                    <div className="flex items-center space-x-3 flex-1">
                                       <Avatar className="w-8 h-8">
                                         <AvatarImage src={candidate.profile_photo_url?.url} />
                                         <AvatarFallback>
                                           {candidate.first_name[0]}{candidate.last_name[0]}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <div>
+                                      <div className="flex-1 min-w-0">
                                         <div className="font-medium">
                                           {candidate.first_name} {candidate.last_name}
                                         </div>
-                                        <div className="text-sm text-muted-foreground">
+                                        <div className="text-sm text-muted-foreground truncate">
                                           {candidate.email}
                                         </div>
+                                        {/* Show applied job info */}
+                                        {candidate.applied_job && (
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <Badge variant="outline" className="text-xs">
+                                              {candidate.applied_job.name}
+                                            </Badge>
+                                            {isJobMatch && (
+                                              <Badge variant="default" className="text-xs bg-blue-600">
+                                                ✓ Job Match
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -701,9 +860,9 @@ const InvigilatorQuestionnaireBuilder = () => {
                     )}
                   </div>
 
-                  {/* Questions Selection for Create */}
+                  {/* Questions Selection */}
                   <div className="space-y-3">
-                    <Label>Select Questions</Label>
+                    <Label>Select Technical Questions</Label>
                     
                     {/* Tag Selection */}
                     {getUniqueTags().length > 0 && (
@@ -797,6 +956,14 @@ const InvigilatorQuestionnaireBuilder = () => {
                                         <Badge variant="outline" className="text-xs">
                                           {question.type.toUpperCase()}
                                         </Badge>
+                                        {question.difficulty && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {question.difficulty.toUpperCase()}
+                                          </Badge>
+                                        )}
+                                        <Badge variant="secondary" className="text-xs">
+                                          {question.max_score} pts
+                                        </Badge>
                                         {question.tags?.map((tag) => (
                                           <Badge key={tag} variant="secondary" className="text-xs">
                                             {tag}
@@ -823,18 +990,36 @@ const InvigilatorQuestionnaireBuilder = () => {
 
                   {/* Days to Complete */}
                   <div className="space-y-2">
-                    <Label htmlFor="days_to_complete">Days to Complete</Label>
-                    <Input
-                      type="number"
-                      {...createForm.register('days_to_complete', { valueAsNumber: true })}
-                      min={1}
-                      max={30}
-                      className="w-32"
-                    />
+                    <Label htmlFor="days_to_complete">Days to Complete (Optional)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        {...createForm.register('days_to_complete', { valueAsNumber: true })}
+                        min={1}
+                        max={30}
+                        placeholder="7"
+                        className="w-32"
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        {createForm.watch('days_to_complete') ? 
+                          `Due: ${new Date(Date.now() + ((createForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000))
+                            .toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric'
+                            })}` 
+                          : 'No deadline'
+                        }
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Number of days from assignment date for completion (1-30 days)
+                    </p>
                     {createForm.formState.errors.days_to_complete && (
                       <p className="text-red-600 text-sm">{createForm.formState.errors.days_to_complete.message}</p>
                     )}
                   </div>
+
                 </form>
               )}
 
@@ -859,6 +1044,11 @@ const InvigilatorQuestionnaireBuilder = () => {
                           <div className="text-sm text-muted-foreground">
                             {editingAssessment.candidate.email}
                           </div>
+                          {editingAssessment.job && (
+                            <div className="text-sm text-muted-foreground">
+                              Job: {editingAssessment.job.title}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -866,161 +1056,159 @@ const InvigilatorQuestionnaireBuilder = () => {
 
                   {/* Questions Selection for Edit */}
                   <div className="space-y-3">
-  <Label>Update Questions</Label>
-  
-  {/* Tag Selection Section */}
-  {getUniqueTags().length > 0 && (
-    <div className="p-3 bg-gray-50 rounded-lg">
-      <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
-      <div className="flex flex-wrap gap-2">
-        {getUniqueTags().map((tag) => (
-          <Controller
-            key={tag}
-            name="assigned_questions"
-            control={editForm.control}
-            render={({ field }) => {
-              const isTagSelected = selectedTags.has(tag);
-              return (
-                <Button
-                  type="button"
-                  variant={isTagSelected ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleTagSelection(tag, field)}
-                  className="text-xs flex-shrink-0"
-                >
-                  {isTagSelected && "✓ "}{tag}
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {questions.filter(q => q.tags?.includes(tag)).length}
-                  </Badge>
-                </Button>
-              );
-            }}
-          />
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground mt-1">
-        Click tags to select/deselect all questions with that tag
-      </p>
-    </div>
-  )}
+                    <Label>Update Questions</Label>
+                    
+                    {/* Tag Selection */}
+                    {getUniqueTags().length > 0 && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {getUniqueTags().map((tag) => (
+                            <Controller
+                              key={tag}
+                              name="assigned_questions"
+                              control={editForm.control}
+                              render={({ field }) => {
+                                const isTagSelected = selectedTags.has(tag);
+                                return (
+                                  <Button
+                                    type="button"
+                                    variant={isTagSelected ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => toggleTagSelection(tag, field)}
+                                    className="text-xs"
+                                  >
+                                    {isTagSelected && "✓ "}{tag}
+                                    <Badge variant="secondary" className="ml-1 text-xs">
+                                      {questions.filter(q => q.tags?.includes(tag)).length}
+                                    </Badge>
+                                  </Button>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-  {/* Individual Question Selection */}
-  <Controller
-    name="assigned_questions"
-    control={editForm.control}
-    render={({ field }) => (
-      <div className="border rounded-lg">
-        {/* Select All/None Actions - Fixed Header */}
-        <div className="flex justify-between items-center p-3 border-b bg-white">
-          <span className="text-sm font-medium">Individual Questions:</span>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                field.onChange(questions.map(q => q._id));
-                setSelectedTags(new Set(getUniqueTags()));
-              }}
-              className="text-xs"
-            >
-              Select All
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                field.onChange([]);
-                setSelectedTags(new Set());
-              }}
-              className="text-xs"
-            >
-              Clear All
-            </Button>
-          </div>
-        </div>
+                    {/* Individual Questions */}
+                    <Controller
+                      name="assigned_questions"
+                      control={editForm.control}
+                      render={({ field }) => (
+                        <div className="border rounded-lg">
+                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
+                            <span className="text-sm font-medium">Select Questions:</span>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange(questions.map(q => q._id));
+                                  setSelectedTags(new Set(getUniqueTags()));
+                                }}
+                                className="text-xs"
+                              >
+                                Select All
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange([]);
+                                  setSelectedTags(new Set());
+                                }}
+                                className="text-xs"
+                              >
+                                Clear All
+                              </Button>
+                            </div>
+                          </div>
 
-        {/* Scrollable Questions List */}
-        <div className="p-4 max-h-64 overflow-y-auto space-y-3">
-          {questions.map((question) => {
-            const isChecked = field.value?.includes(question._id) || false;
-            return (
-              <div key={question._id} className="flex items-start space-x-3">
-                <Checkbox
-                  checked={isChecked}
-                  onCheckedChange={(checked) => {
-                    const currentValue = field.value || [];
-                    if (checked) {
-                      field.onChange([...currentValue, question._id]);
-                    } else {
-                      field.onChange(currentValue.filter((id: string) => id !== question._id));
-                      // Update selected tags if this was the last question of a tag
-                      const newSelectedTags = new Set(selectedTags);
-                      question.tags?.forEach(tag => {
-                        const otherQuestionsWithTag = questions.filter(q => 
-                          q._id !== question._id && 
-                          q.tags?.includes(tag) && 
-                          currentValue.includes(q._id)
-                        );
-                        if (otherQuestionsWithTag.length === 0) {
-                          newSelectedTags.delete(tag);
-                        }
-                      });
-                      setSelectedTags(newSelectedTags);
-                    }
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium break-words">{question.text}</p>
-                  <div className="flex items-center flex-wrap gap-1 mt-1">
-                    <Badge variant="outline" className="text-xs">
-                      {question.type.toUpperCase()}
-                    </Badge>
-                    {question.tags && question.tags.map((tag) => (
-                      <Badge 
-                        key={tag} 
-                        variant={selectedTags.has(tag) ? "default" : "secondary"} 
-                        className="text-xs"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        {/* Selection Summary */}
-        <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-          Selected: {field.value?.length || 0} of {questions.length} questions
-          {selectedTags.size > 0 && (
-            <span className="ml-2">
-              | Tags: {Array.from(selectedTags).join(', ')}
-            </span>
-          )}
-        </div>
-      </div>
-    )}
-  />
-  {editForm.formState.errors.assigned_questions && (
-    <p className="text-red-600 text-sm mt-1">{editForm.formState.errors.assigned_questions.message}</p>
-  )}
-</div>
+                          <div className="max-h-64 overflow-y-auto">
+                            <div className="p-4 space-y-3">
+                              {questions.map((question) => {
+                                const isChecked = field.value?.includes(question._id) || false;
+                                return (
+                                  <div key={question._id} className="flex items-start space-x-3">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        const currentValue = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentValue, question._id]);
+                                        } else {
+                                          field.onChange(currentValue.filter((id: string) => id !== question._id));
+                                        }
+                                      }}
+                                    />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium">{question.text}</p>
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        <Badge variant="outline" className="text-xs">
+                                          {question.type.toUpperCase()}
+                                        </Badge>
+                                        {question.difficulty && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {question.difficulty.toUpperCase()}
+                                          </Badge>
+                                        )}
+                                        <Badge variant="secondary" className="text-xs">
+                                          {question.max_score} pts
+                                        </Badge>
+                                        {question.tags?.map((tag) => (
+                                          <Badge key={tag} variant="secondary" className="text-xs">
+                                            {tag}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
 
-
-                  {/* Due Date */}
-                  <div className="space-y-2">
-                    <Label htmlFor="due_at">Due Date</Label>
-                    <Input
-                      type="date"
-                      {...editForm.register('due_at')}
-                      className="w-48"
+                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
+                            Selected: {field.value?.length || 0} of {questions.length} questions
+                          </div>
+                        </div>
+                      )}
                     />
-                    {editForm.formState.errors.due_at && (
-                      <p className="text-red-600 text-sm">{editForm.formState.errors.due_at.message}</p>
+                    {editForm.formState.errors.assigned_questions && (
+                      <p className="text-red-600 text-sm">{editForm.formState.errors.assigned_questions.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="days_to_complete">Days to Complete</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        {...editForm.register('days_to_complete', { valueAsNumber: true })}
+                        min={1}
+                        max={30}
+                        placeholder="7"
+                        className="w-32"
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        {editForm.watch('days_to_complete') ? 
+                          `Due: ${new Date(Date.now() + ((editForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000))
+                            .toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric'
+                            })}` 
+                          : 'No deadline'
+                        }
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Number of days from assignment date for completion (1-30 days)
+                    </p>
+                    {editForm.formState.errors.days_to_complete && (
+                      <p className="text-red-600 text-sm">{editForm.formState.errors.days_to_complete.message}</p>
                     )}
                   </div>
                 </form>
@@ -1037,7 +1225,7 @@ const InvigilatorQuestionnaireBuilder = () => {
               disabled={submitting}
             >
               {submitting && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
-              {isEditing ? 'Update Questionnaire' : 'Assign Questionnaire'}
+              {isEditing ? 'Update Assessment' : 'Assign Assessment'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1047,9 +1235,9 @@ const InvigilatorQuestionnaireBuilder = () => {
       <Dialog open={viewDialogOpen} onOpenChange={closeViewDialog}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Questionnaire Details</DialogTitle>
+            <DialogTitle>Assessment Details</DialogTitle>
             <DialogDescription>
-              Complete details of the assigned questionnaire
+              Complete details of the technical assessment
             </DialogDescription>
           </DialogHeader>
 
@@ -1080,14 +1268,32 @@ const InvigilatorQuestionnaireBuilder = () => {
                   </CardContent>
                 </Card>
 
+                {/* Job Information */}
+                {selectedAssessment.job && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Job Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div>
+                        <h3 className="font-semibold">{selectedAssessment.job.title}</h3>
+                        <p className="text-sm text-muted-foreground">{selectedAssessment.job.department}</p>
+                        {selectedAssessment.job.location && (
+                          <p className="text-xs text-muted-foreground">{selectedAssessment.job.location}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Questions */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Assigned Questions ({selectedAssessment.questions_by_stage.length})</CardTitle>
+                    <CardTitle>Technical Questions ({selectedAssessment.questions.length})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {selectedAssessment.questions_by_stage.map((question, index) => (
+                      {selectedAssessment.questions.map((question, index) => (
                         <div key={question._id} className="border rounded-lg p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -1096,8 +1302,21 @@ const InvigilatorQuestionnaireBuilder = () => {
                               </p>
                               <div className="flex flex-wrap gap-2">
                                 <Badge variant="outline">
-                                  {question.input_type.toUpperCase()}
+                                  {question.type.toUpperCase()}
                                 </Badge>
+                                {question.difficulty && (
+                                  <Badge variant="secondary">
+                                    {question.difficulty.toUpperCase()}
+                                  </Badge>
+                                )}
+                                <Badge variant="secondary">
+                                  {question.max_score} points
+                                </Badge>
+                                {question.is_must_ask && (
+                                  <Badge variant="destructive">
+                                    REQUIRED
+                                  </Badge>
+                                )}
                                 {question.tags?.map((tag) => (
                                   <Badge key={tag} variant="secondary" className="text-xs">
                                     {tag}
@@ -1112,8 +1331,8 @@ const InvigilatorQuestionnaireBuilder = () => {
                   </CardContent>
                 </Card>
 
-                {/* Questionnaire Details */}
-                <div className="grid grid-cols-3 gap-4">
+                {/* Assessment Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card>
                     <CardHeader>
                       <CardTitle>Status</CardTitle>
@@ -1130,7 +1349,7 @@ const InvigilatorQuestionnaireBuilder = () => {
                       <CardTitle>Due Date</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p>{formatDate(selectedAssessment.due_at)}</p>
+                      <p>{selectedAssessment.due_at ? formatDate(selectedAssessment.due_at) : 'No due date'}</p>
                     </CardContent>
                   </Card>
 
@@ -1141,7 +1360,18 @@ const InvigilatorQuestionnaireBuilder = () => {
                     <CardContent>
                       <p className="font-medium">{selectedAssessment.assigned_by.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {selectedAssessment.assigned_by.email}
+                        {selectedAssessment.assigned_by.role}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Total Score</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">
+                        {selectedAssessment.questions.reduce((total, q) => total + q.max_score, 0)} pts
                       </p>
                     </CardContent>
                   </Card>
@@ -1151,10 +1381,10 @@ const InvigilatorQuestionnaireBuilder = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Created At</CardTitle>
+                      <CardTitle>Assigned At</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p>{formatDate(selectedAssessment.createdAt)}</p>
+                      <p>{formatDate(selectedAssessment.assigned_at)}</p>
                     </CardContent>
                   </Card>
 
@@ -1183,7 +1413,7 @@ const InvigilatorQuestionnaireBuilder = () => {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the questionnaire assigned to{' '}
+              Are you sure you want to delete the assessment assigned to{' '}
               <span className="font-semibold">{deleteTargetName}</span>?
             </DialogDescription>
           </DialogHeader>
@@ -1192,7 +1422,7 @@ const InvigilatorQuestionnaireBuilder = () => {
             <div className="flex items-start space-x-2">
               <div className="text-yellow-600 text-sm">⚠️</div>
               <div className="text-sm text-yellow-800">
-                This action cannot be undone. The questionnaire will be permanently removed 
+                This action cannot be undone. The assessment will be permanently removed 
                 from the candidate's record.
               </div>
             </div>
@@ -1219,15 +1449,14 @@ const InvigilatorQuestionnaireBuilder = () => {
                   Deleting...
                 </>
               ) : (
-                'Delete Questionnaire'
+                'Delete Assessment'
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };
 
-export default InvigilatorQuestionnaireBuilder;
+export default AssessmentManagement;

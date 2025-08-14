@@ -89,7 +89,16 @@ export interface DocumentItem {
 export interface JobItem {
   _id: string;
   name: string;
-  description?: string;
+  description?: JobDescription;
 }
+
+type JobDescription = {
+  time: string;
+  country: string;
+  location: string;
+  expInYears: string;
+  salary: string;
+  jobId: string;
+};
 
 

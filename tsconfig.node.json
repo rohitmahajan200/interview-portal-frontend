@@ -18,7 +18,6 @@
     "noUnusedLocals": false,                    // Changed: Allow unused variables
     "noUnusedParameters": false,                // Changed: Allow unused parameters
     "noImplicitAny": false,                     // Added: Allow implicit any
-    "suppressImplicitAnyIndexErrors": true,     // Added: Suppress index signature errors
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
