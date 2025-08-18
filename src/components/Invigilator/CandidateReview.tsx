@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, Clock, Eye, FileText, User, Mail, Code, PenTool, CheckCircle, Brain } from 'lucide-react';
+import { Calendar, Clock, Eye, FileText, User, Mail, Code, PenTool, CheckCircle, Brain, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -83,6 +83,8 @@ interface AssessmentDetail {
       url: string;
       publicId: string;
     };
+    current_stage?: string; // ✅ Added for stage updates
+    status?: string; // ✅ Added for stage updates
   };
   assessment: {
     _id: string;
@@ -113,6 +115,7 @@ const AssessmentReview = () => {
   const [statistics, setStatistics] = useState<AssessmentStatistics | null>(null);
   const [loadingActions, setLoadingActions] = useState<{[key: string]: boolean}>({});
   const [editingResponse, setEditingResponse] = useState<string | null>(null);
+  const [stageUpdateModal, setStageUpdateModal] = useState(false); // ✅ Added stage update modal state
 
   const fetchStatistics = async () => {
     try {
@@ -143,6 +146,29 @@ const AssessmentReview = () => {
       console.error('AI evaluation failed:', error);
     } finally {
       setLoadingActions(prev => ({ ...prev, [`ai_${responseId}`]: false }));
+    }
+  };
+
+  // ✅ Added stage update function
+  const updateCandidateStage = async (candidateId: string, newStage: string, remarks?: string) => {
+    setLoadingActions(prev => ({ ...prev, [`stage_${candidateId}`]: true }));
+    try {
+      await api.patch(`/org/candidates/${candidateId}/update-stage`, {
+        newStage,
+        remarks
+      });
+      
+      await Promise.all([
+        fetchAssessmentDetail(selectedAssessment!._id),
+        fetchAssessmentsList()
+      ]);
+      
+      setStageUpdateModal(false);
+      console.log('Stage updated successfully');
+    } catch (error) {
+      console.error('Failed to update stage:', error);
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [`stage_${candidateId}`]: false }));
     }
   };
 
@@ -180,6 +206,7 @@ const AssessmentReview = () => {
     setIsDialogOpen(false);
     setSelectedAssessment(null);
     setEditingResponse(null);
+    setStageUpdateModal(false); // ✅ Reset stage modal state
   };
 
   const formatDate = (dateString: string) => {
@@ -357,7 +384,6 @@ const AssessmentReview = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {/* ✅ Updated: Show "Not evaluated" if ai_score is undefined */}
                         {item.ai_score !== undefined ? (
                           <span className="font-medium">{item.total_score}</span>
                         ) : (
@@ -374,7 +400,6 @@ const AssessmentReview = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {/* ✅ Show AI Evaluation button if not evaluated */}
                           {item.ai_score === undefined && (
                             <Button
                               size="sm"
@@ -464,7 +489,13 @@ const AssessmentReview = () => {
                                   {selectedAssessment.status}
                                 </Badge>
                               </div>
-                              {/* ✅ Updated: Show evaluation status */}
+                              {/* ✅ Added current stage display */}
+                              {selectedAssessment.candidate.current_stage && (
+                                <div>
+                                  <span className="font-medium">Current Stage: </span>
+                                  <Badge variant="outline">{selectedAssessment.candidate.current_stage}</Badge>
+                                </div>
+                              )}
                               <div>
                                 <span className="font-medium">Evaluation: </span>
                                 {selectedAssessment.ai_score !== undefined ? (
@@ -581,7 +612,6 @@ const AssessmentReview = () => {
               {/* Fixed Footer */}
               <div className="flex justify-between pt-4 border-t flex-shrink-0 bg-background">
                 <div className="flex gap-2">
-                  {/* ✅ Updated: Show evaluation button if ai_score is undefined */}
                   {selectedAssessment && selectedAssessment.ai_score === undefined && (
                     <Button
                       variant="outline"
@@ -603,6 +633,16 @@ const AssessmentReview = () => {
                   <Button variant="outline" onClick={closeAssessmentDialog}>
                     Close
                   </Button>
+                  {/* ✅ Added Update Stage button - only show if AI evaluated */}
+                  {selectedAssessment && selectedAssessment.ai_score !== undefined && (
+                    <Button 
+                      onClick={() => setStageUpdateModal(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      Update Stage
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
@@ -611,6 +651,66 @@ const AssessmentReview = () => {
               <p className="text-muted-foreground">No assessment details found</p>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ Added Stage Update Modal */}
+      <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Candidate Stage</DialogTitle>
+            <DialogDescription>
+              Move {selectedAssessment?.candidate.name} to the next stage of the hiring process
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target as HTMLFormElement);
+            const newStage = formData.get('stage') as string;
+            const remarks = formData.get('remarks') as string;
+            
+            if (selectedAssessment) {
+              updateCandidateStage(selectedAssessment.candidate._id, newStage, remarks);
+            }
+          }}>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">New Stage</label>
+                <select name="stage" className="w-full p-2 border rounded mt-1" required>
+                  <option value="">Select Stage</option>
+                  <option value="assessment">Assessment</option>
+                  <option value="tech">Technical Interview</option>
+                  <option value="manager">Manager Review</option>
+                  <option value="feedback">Final Feedback</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Remarks</label>
+                <textarea
+                  name="remarks"
+                  placeholder="Add transition remarks..."
+                  className="w-full p-2 border rounded mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button type="button" variant="outline" onClick={() => setStageUpdateModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={!!selectedAssessment && !!loadingActions[`stage_${selectedAssessment.candidate._id}`]}
+              >
+                {selectedAssessment && loadingActions[`stage_${selectedAssessment.candidate._id}`] && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                )}
+                Update Stage
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
