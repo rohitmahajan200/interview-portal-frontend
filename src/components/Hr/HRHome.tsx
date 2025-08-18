@@ -21,7 +21,21 @@ import { ScrollArea } from '@radix-ui/react-scroll-area';
 import { Label } from '@radix-ui/react-label';
 import { Textarea } from '../ui/textarea';
 
-type StageHistory = { _id: string; from_stage: string; to_stage: string; changed_by: { _id: string; name: string; email: string}; remarks: string; changed_at: string }
+type StageHistory = { 
+  _id: string; 
+  from_stage?: string; // Make optional since first entry doesn't have from_stage
+  to_stage: string; 
+  changed_by?: { // Make optional since registration doesn't have changed_by
+    _id: string; 
+    name: string; 
+    email?: string; // Make optional since your response doesn't include email
+    role: string; // Add role field
+  }; 
+  action: string; // Add action field
+  remarks: string; 
+  changed_at: string;
+}
+
 interface Question {
   _id: string;
   question: string;
@@ -49,6 +63,7 @@ type Candidate = {
     publicId: string;
   };
   applied_job: {
+    _id: string; // Add _id field
     name: string;
     description: {
       location: string;
@@ -56,19 +71,59 @@ type Candidate = {
       time: string;
       expInYears: string;
       salary: string;
+      jobId: string; // Add jobId field
     };
   };
-  current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback" | "shortlisted";
+  current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback";
   status: "active" | "inactive" | "withdrawn" | "rejected" | "hired" | "deleted";
   email_verified: boolean;
+  flagged_for_deletion: boolean; // Add this field
   registration_date: string;
   last_login?: string;
   createdAt: string;
   updatedAt: string;
+  __v: number; // Add version field
   documents?: { _id: string; document_type: string; document_url: string }[];
-  hrQuestionnaire?: { _id: string; status: string }[];
-  assessments?: { _id: string; status: string }[];
-  interviews?: { _id: string; status: string }[];
+  hrQuestionnaire?: { 
+    _id: string; 
+    status: string;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+  }[];
+  assessments?: { 
+    _id: string; 
+    status: string;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+  }[];
+  interviews?: { 
+    _id: string; 
+    title: string;
+    status: string;
+    type: string;
+    meeting_link?: string;
+    platform?: string;
+    description?: string;
+    interviewers: {
+      _id: string;
+      name: string;
+      role: string;
+    }[];
+    scheduled_by: {
+      _id: string;
+      name: string;
+      email: string;
+      role: string;
+    };
+  }[];
   stage_history?: StageHistory[];
   default_hr_responses?: Array<{
     _id: string;
@@ -957,20 +1012,38 @@ const fetchAllData = async () => {
 
 
 
-              {/* HR Questionnaire Status */}
+              {/* HR Questionnaire Status - Updated */}
               {selectedCandidate.hrQuestionnaire && selectedCandidate.hrQuestionnaire.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>HR Questionnaire</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {selectedCandidate.hrQuestionnaire.map((questionnaire: { _id: string; status: string }) => (
-                        <div key={questionnaire._id} className="flex items-center justify-between">
-                          <span>Questionnaire Status:</span>
-                          <Badge className={questionnaire.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}>
-                            {questionnaire.status.toUpperCase()}
-                          </Badge>
+                    <div className="space-y-4">
+                      {selectedCandidate.hrQuestionnaire.map((questionnaire) => (
+                        <div key={questionnaire._id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-medium">Questionnaire</span>
+                            <Badge className={
+                              questionnaire.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                              questionnaire.status === 'submitted' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {questionnaire.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Assigned by:</span>
+                              <div className="font-medium">{questionnaire.assigned_by.name}</div>
+                              <div className="text-xs text-gray-500">{questionnaire.assigned_by.role}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Due date:</span>
+                              <div className="font-medium">{formatDate(questionnaire.due_at)}</div>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -978,47 +1051,148 @@ const fetchAllData = async () => {
                 </Card>
               )}
 
-              {/* Assessments Status */}
+
+              {/* Assessments Status - Updated */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Assessments</CardTitle>
+                  <CardTitle>Technical Assessments</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {selectedCandidate.assessments && selectedCandidate.assessments.length > 0 ? (
-                    <div className="space-y-2">
-                      {selectedCandidate.assessments.map((assessment: { _id: string; status: string }) => (
-                        <div key={assessment._id} className="flex items-center justify-between">
-                          <span>Assessment Status:</span>
-                          <Badge>{assessment.status.toUpperCase()}</Badge>
+                    <div className="space-y-4">
+                      {selectedCandidate.assessments.map((assessment) => (
+                        <div key={assessment._id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-medium">Technical Assessment</span>
+                            <Badge className={
+                              assessment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                              assessment.status === 'started' ? 'bg-blue-100 text-blue-800' :
+                              assessment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {assessment.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Assigned by:</span>
+                              <div className="font-medium">{assessment.assigned_by.name}</div>
+                              <div className="text-xs text-gray-500">{assessment.assigned_by.role}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Due date:</span>
+                              <div className="font-medium">{formatDate(assessment.due_at)}</div>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">No assessments assigned yet</p>
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No technical assessments assigned yet</p>
+                      <Button 
+                        className="mt-4" 
+                        variant="outline"
+                        onClick={() => {
+                          setDialogOpen(false);
+                          // Add your assessment assignment logic here
+                        }}
+                      >
+                        Assign Technical Assessment
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Interviews Status */}
+              {/* Interviews Status - Updated */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Interviews</CardTitle>
+                  <CardTitle>Scheduled Interviews</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {selectedCandidate.interviews && selectedCandidate.interviews.length > 0 ? (
-                    <div className="space-y-2">
-                      {selectedCandidate.interviews.map((interview: { _id: string; status: string }) => (
-                        <div key={interview._id} className="flex items-center justify-between">
-                          <span>Interview Status:</span>
-                          <Badge>{interview.status.toUpperCase()}</Badge>
+                    <div className="space-y-4">
+                      {selectedCandidate.interviews.map((interview) => (
+                        <div key={interview._id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h4 className="font-medium">{interview.title}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {interview.type.toUpperCase()}
+                                </Badge>
+                                {interview.platform && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {interview.platform}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <Badge className={
+                              interview.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : 
+                              'bg-green-100 text-green-800'
+                            }>
+                              {interview.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          {interview.description && (
+                            <p className="text-sm text-gray-600 mb-3">{interview.description}</p>
+                          )}
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Interviewers:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {interview.interviewers.map((interviewer) => (
+                                  <Badge key={interviewer._id} variant="outline" className="text-xs">
+                                    {interviewer.name} ({interviewer.role})
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Scheduled by:</span>
+                              <div className="font-medium">{interview.scheduled_by.name}</div>
+                              <div className="text-xs text-gray-500">{interview.scheduled_by.role}</div>
+                            </div>
+                          </div>
+                          
+                          {interview.meeting_link && (
+                            <div className="mt-3 pt-3 border-t">
+                              <span className="text-gray-600 text-sm">Meeting Link:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(interview.meeting_link, '_blank')}
+                                  className="text-xs"
+                                >
+                                  Join Meeting
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">No interviews scheduled yet</p>
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No interviews scheduled yet</p>
+                      <Button 
+                        className="mt-4" 
+                        variant="outline"
+                        onClick={() => handleAssignInterview(selectedCandidate)}
+                      >
+                        Schedule Interview
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
+
 
               {/* Stage History */}
               {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (

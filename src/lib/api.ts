@@ -1,10 +1,16 @@
 import axios from "axios";
 
 let isRefreshing = false;
-let failedQueue: (() => void)[] = [];
+let failedQueue: Array<{resolve: (value?: any) => void, reject: (error?: any) => void}> = [];
 
-const processQueue = () => {
-  failedQueue.forEach((cb) => cb());
+const processQueue = (error?: any) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve();
+    }
+  });
   failedQueue = [];
 };
 
@@ -42,9 +48,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          failedQueue.push(() => {
-            api(originalRequest).then(resolve).catch(reject);
-          });
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          return api(originalRequest);
+        }).catch((err) => {
+          return Promise.reject(err);
         });
       }
 
@@ -62,12 +70,13 @@ api.interceptors.response.use(
           },
         });
 
-        processQueue();
+        processQueue(); // ✅ Success: no error parameter
         return api(originalRequest);
       } catch (err) {
-        processQueue(err);
+        processQueue(err); // ✅ Error: pass the error
         const authType = getAuthType();
         window.location.href = getLoginPath(authType);
+        return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }

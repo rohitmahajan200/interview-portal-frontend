@@ -65,7 +65,7 @@ const Profile = () => {
           <p><strong>Gender:</strong> {user.gender}</p>
           <p><strong>Address:</strong> {user.address ?? "N/A"}</p>
           {user.portfolio_url !== "" && user.portfolio_url !== undefined && <p><strong>Portfolio:</strong> {user.portfolio_url ?? "N/A"}</p>}
-          <p><strong>Role:</strong> {user.applied_role?.name ?? "N/A"}</p>
+          <p><strong>Role:</strong> {user.applied_job?.name ?? "N/A"}</p>
           <p><strong>Stage:</strong> {user.current_stage ?? "N/A"}</p>
           <p><strong>Email Verified:</strong> {user.email_verified ? "Yes" : "No"}</p>
           <p>
