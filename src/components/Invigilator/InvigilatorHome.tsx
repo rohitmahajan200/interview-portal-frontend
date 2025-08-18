@@ -50,7 +50,6 @@ type FrontendAssessmentStatus = "attempted" | "assigned" | "not-assigned";
 const assessmentCreateSchema = z.object({
   assessments: z.array(z.object({
     candidate: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid candidate ID format"),
-    job: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid job ID format").optional(),
     questions: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid question ID format"))
       .min(1, "At least one question is required")
       .max(50, "Cannot assign more than 50 questions"),
@@ -309,7 +308,6 @@ const InvigilatorHome = () => {
     assignmentForm.reset({
       assessments: [{
         candidate: candidate._id,
-        job: candidate.applied_job?._id,
         questions: [],
         days_to_complete: 7
       }]

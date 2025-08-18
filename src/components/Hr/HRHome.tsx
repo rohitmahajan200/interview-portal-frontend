@@ -14,40 +14,75 @@ import { Eye, Search, Users, UserCheck, UserX, Calendar, FileText } from "lucide
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
 import { useDispatch } from 'react-redux';
+import z from 'zod';
 import { setCurrentHRPage } from '@/features/Org/View/HrViewSlice';
 import { setPreSelectedCandidate } from '@/features/Org/HR/interviewSchedulingSlice';
 import { DialogDescription } from '@radix-ui/react-dialog';
 import { ScrollArea } from '@radix-ui/react-scroll-area';
 import { Label } from '@radix-ui/react-label';
 import { Textarea } from '../ui/textarea';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 type StageHistory = { 
   _id: string; 
-  from_stage?: string; // Make optional since first entry doesn't have from_stage
+  from_stage?: string;
   to_stage: string; 
-  changed_by?: { // Make optional since registration doesn't have changed_by
+  changed_by?: {
     _id: string; 
     name: string; 
-    email?: string; // Make optional since your response doesn't include email
-    role: string; // Add role field
+    email?: string;
+    role: string;
   }; 
-  action: string; // Add action field
+  action: string;
   remarks: string; 
   changed_at: string;
 }
 
-interface Question {
+type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
+
+// Zod Schema for technical assessment assignment
+const assessmentCreateSchema = z.object({
+  assessments: z.array(z.object({
+    candidate: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid candidate ID format"),
+    questions: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid question ID format"))
+      .min(1, "At least one question is required")
+      .max(50, "Cannot assign more than 50 questions"),
+    days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional()
+  })).min(1, "At least one assessment is required")
+});
+
+type AssessmentFormData = z.infer<typeof assessmentCreateSchema>;
+
+// HR Question Interface (for questionnaires)
+interface HRQuestion {
   _id: string;
   question: string;
   input_type: string;
   tags?: string[];
-  // Add other properties as needed
 }
 
-interface SingleCandidateFormData {
+// Technical Question Interface (for assessments)
+interface TechnicalQuestion {
+  _id: string;
+  text: string;
+  type: 'mcq' | 'coding' | 'essay';
+  options?: string[];
+  correct_answers?: string[];
+  explanation?: string;
+  is_must_ask?: boolean;
+  max_score?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  tags?: string[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface HRQuestionnaireFormData {
   assigned_questions: string[];
   days_to_complete: number;
 }
+
 type Candidate = {
   _id: string;
   first_name: string;
@@ -63,7 +98,7 @@ type Candidate = {
     publicId: string;
   };
   applied_job: {
-    _id: string; // Add _id field
+    _id: string;
     name: string;
     description: {
       location: string;
@@ -71,18 +106,18 @@ type Candidate = {
       time: string;
       expInYears: string;
       salary: string;
-      jobId: string; // Add jobId field
+      jobId: string;
     };
   };
   current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback";
   status: "active" | "inactive" | "withdrawn" | "rejected" | "hired" | "deleted";
   email_verified: boolean;
-  flagged_for_deletion: boolean; // Add this field
+  flagged_for_deletion: boolean;
   registration_date: string;
   last_login?: string;
   createdAt: string;
   updatedAt: string;
-  __v: number; // Add version field
+  __v: number;
   documents?: { _id: string; document_type: string; document_url: string }[];
   hrQuestionnaire?: { 
     _id: string; 
@@ -134,39 +169,298 @@ type Candidate = {
 };
 
 const HRHome = () => {
+  // Basic state
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-  const [submitting, setSubmitting] = useState(false);
   const [loadingCandidate, setLoadingCandidate] = useState(false);
   const [stageFilter, setStageFilter] = useState<string>("all");
-  const [assignQuestionnaireOpen, setAssignQuestionnaireOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  // Add these state variables to your component
+  const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
+  const dispatch = useDispatch();
+
+  // HR Questionnaire States
+  const [hrQuestions, setHrQuestions] = useState<HRQuestion[]>([]);
+  const [assignHRQuestionnaireOpen, setAssignHRQuestionnaireOpen] = useState(false);
+  const [targetCandidateForHR, setTargetCandidateForHR] = useState<Candidate | null>(null);
+  const [selectedHRTags, setSelectedHRTags] = useState<Set<string>>(new Set());
+  const [submittingHR, setSubmittingHR] = useState(false);
+
+  // Technical Assessment States
+  const [technicalQuestions, setTechnicalQuestions] = useState<TechnicalQuestion[]>([]);
+  const [assignAssessmentOpen, setAssignAssessmentOpen] = useState(false);
+  const [targetCandidateForAssessment, setTargetCandidateForAssessment] = useState<Candidate | null>(null);
+  const [selectedAssessmentTags, setSelectedAssessmentTags] = useState<Set<string>>(new Set());
+  const [submittingAssessment, setSubmittingAssessment] = useState(false);
+
+  // Action States
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [candidateToReject, setCandidateToReject] = useState<Candidate | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
+  const [stageUpdateModal, setStageUpdateModal] = useState(false);
+  const [stageUpdateReason, setStageUpdateReason] = useState("");
+  const [selectedNewStage, setSelectedNewStage] = useState("");
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
-  // Add these state variables to your component
-  const [targetCandidate, setTargetCandidate] = useState<Candidate | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
-  const dispatch = useDispatch();
+  // Forms
+  const hrQuestionnaireForm = useForm<HRQuestionnaireFormData>({
+    defaultValues: {
+      assigned_questions: [],
+      days_to_complete: 7,
+    },
+  });
+
+  const assessmentForm = useForm<AssessmentFormData>({
+    resolver: zodResolver(assessmentCreateSchema),
+    defaultValues: {
+      assessments: []
+    },
+  });
+
+  // Technical Assessment Helpers
+  const allowedQuestionTypes = ['mcq', 'coding', 'essay'];
+
+  const getFilteredTechnicalQuestions = (): TechnicalQuestion[] => {
+    return technicalQuestions.filter(question => allowedQuestionTypes.includes(question.type));
+  };
+
+  const getUniqueTechnicalTags = (): string[] => {
+    const filteredQuestions = getFilteredTechnicalQuestions();
+    if (!filteredQuestions) return [];
+    const tagsSet = new Set<string>();
+    filteredQuestions.forEach((question) => {
+      question.tags?.forEach((tag: string) => tagsSet.add(tag));
+    });
+    return Array.from(tagsSet);
+  };
+
+  // HR Questions Helpers
+  const getUniqueHRTags = (): string[] => {
+    if (!hrQuestions) return [];
+    const tagsSet = new Set<string>();
+    hrQuestions.forEach((q) => {
+      q.tags?.forEach((tag: string) => tagsSet.add(tag));
+    });
+    return Array.from(tagsSet);
+  };
+
+  // Toggle Functions
+  const toggleHRTagSelection = (tag: string, field: { value: string[]; onChange: (value: string[]) => void }) => {
+    const newSelectedTags = new Set(selectedHRTags);
+    if (selectedHRTags.has(tag)) {
+      newSelectedTags.delete(tag);
+      const updatedQuestions = field.value.filter((qid: string) =>
+        !hrQuestions.find((q) => q._id === qid)?.tags?.includes(tag)
+      );
+      field.onChange(updatedQuestions);
+    } else {
+      newSelectedTags.add(tag);
+      const questionsToAdd = hrQuestions
+        .filter((q) => q.tags?.includes(tag) && !field.value.includes(q._id))
+        .map((q) => q._id);
+      field.onChange([...field.value, ...questionsToAdd]);
+    }
+    setSelectedHRTags(newSelectedTags);
+  };
+
+  const toggleAssessmentTagSelection = (tag: string, field: { value: string[]; onChange: (value: string[]) => void }) => {
+    const filteredQuestions = getFilteredTechnicalQuestions();
+    const newSelectedTags = new Set(selectedAssessmentTags);
+    if (selectedAssessmentTags.has(tag)) {
+      newSelectedTags.delete(tag);
+      const updatedQuestions = field.value.filter((qid: string) =>
+        !filteredQuestions.find((q) => q._id === qid)?.tags?.includes(tag)
+      );
+      field.onChange(updatedQuestions);
+    } else {
+      newSelectedTags.add(tag);
+      const questionsToAdd = filteredQuestions
+        .filter((q) => q.tags?.includes(tag) && !field.value.includes(q._id))
+        .map((q) => q._id);
+      field.onChange([...field.value, ...questionsToAdd]);
+    }
+    setSelectedAssessmentTags(newSelectedTags);
+  };
+
+  // Data Fetching
+  const fetchAllData = async () => {
+    try {
+      // Fetch HR questions
+      const hrQuestionsResponse = await api.get('/org/hr-questions');
+      setHrQuestions(hrQuestionsResponse.data.data || []);
+      
+      // Fetch technical questions
+      const techQuestionsResponse = await api.get('/org/question');
+      const techQuestionsData = techQuestionsResponse.data.data || [];
+      const filteredTechQuestions = techQuestionsData.filter((q: TechnicalQuestion) => 
+        allowedQuestionTypes.includes(q.type)
+      );
+      setTechnicalQuestions(filteredTechQuestions);
+      
+      // Fetch candidates
+      const candidatesResponse = await api.get('/org/candidates');
+      setCandidates(candidatesResponse.data.data);
+      setFilteredCandidates(candidatesResponse.data.data);
+      
+      console.log(`✅ Loaded ${hrQuestionsResponse.data.data?.length || 0} HR questions`);
+      console.log(`✅ Loaded ${filteredTechQuestions.length} technical questions`);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      toast.error('Failed to reload data');
+    }
+  };
+
+  // Dialog Handlers
+  const openHRQuestionnaireDialog = (candidate: Candidate) => {
+    if (!candidate) {
+      toast.error('No candidate selected');
+      return;
+    }
+    
+    setTargetCandidateForHR(candidate);
+    setDialogOpen(false);
+    setAssignHRQuestionnaireOpen(true);
+    hrQuestionnaireForm.reset({
+      assigned_questions: [],
+      days_to_complete: 7,
+    });
+    setSelectedHRTags(new Set());
+  };
+
+  const closeHRQuestionnaireDialog = () => {
+    setAssignHRQuestionnaireOpen(false);
+    setTargetCandidateForHR(null);
+    hrQuestionnaireForm.reset();
+    setSelectedHRTags(new Set());
+  };
+
+  const openAssessmentDialog = (candidate: Candidate) => {
+    if (!candidate) {
+      toast.error('No candidate selected');
+      return;
+    }
+    
+    setTargetCandidateForAssessment(candidate);
+    setDialogOpen(false);
+    setAssignAssessmentOpen(true);
+    
+    assessmentForm.reset({
+      assessments: [{
+        candidate: candidate._id,
+        questions: [],
+        days_to_complete: 7
+      }]
+    });
+    setSelectedAssessmentTags(new Set());
+  };
+
+  const closeAssessmentDialog = () => {
+    setAssignAssessmentOpen(false);
+    setTargetCandidateForAssessment(null);
+    assessmentForm.reset();
+    setSelectedAssessmentTags(new Set());
+  };
+
+  // Submit Handlers
+  const onHRQuestionnaireSubmit = async (data: HRQuestionnaireFormData) => {
+    if (!targetCandidateForHR) {
+      toast.error('No candidate selected');
+      return;
+    }
+
+    try {
+      setSubmittingHR(true);
+      const assignments = [{
+        candidate: targetCandidateForHR._id,
+        question_ids: data.assigned_questions,
+        days_to_complete: data.days_to_complete
+      }];
+
+      const response = await api.post('/org/hr-questionnaires/assign', { assignments });
+      
+      if (response.data.success) {
+        toast.success(`HR Questionnaire assigned to ${targetCandidateForHR.first_name} ${targetCandidateForHR.last_name}`);
+        closeHRQuestionnaireDialog();
+        fetchAllData();
+      } else {
+        toast.error(response.data.message || 'Failed to assign HR questionnaire');
+      }
+    } catch (error: any) {
+      console.error('Failed to assign HR questionnaire:', error);
+      toast.error(
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to assign HR questionnaire'
+      );
+    } finally {
+      setSubmittingHR(false);
+    }
+  };
+
+  const onAssessmentSubmit = async (data: AssessmentFormData) => {
+    if (!targetCandidateForAssessment) {
+      toast.error('No candidate selected');
+      return;
+    }
+
+    try {
+      setSubmittingAssessment(true);
+      
+      if (data.assessments[0]?.questions.length === 0) {
+        toast.error('Please select at least one question to assign');
+        return;
+      }
+      
+      const response = await api.post('/org/assessment', data);
+      
+      if (response.data.success) {
+        toast.success(`Technical Assessment assigned to ${targetCandidateForAssessment.first_name} ${targetCandidateForAssessment.last_name}`);
+        closeAssessmentDialog();
+        fetchAllData();
+      } else {
+        toast.error(response.data.message || 'Failed to assign technical assessment');
+      }
+    } catch (error: unknown) {
+      console.error('Technical assessment assignment error:', error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Failed to assign technical assessment';
+      toast.error(errorMessage || 'Failed to assign technical assessment');
+    } finally {
+      setSubmittingAssessment(false);
+    }
+  };
+
+  // Other Handlers
+  const updateCandidateStage = async (candidateId: string, newStage: string, remarks?: string) => {
+    setIsUpdatingStage(true);
+    try {
+      const response = await api.patch(`/org/candidates/${candidateId}/update-stage`, {
+        newStage,
+        remarks
+      });
+      
+      if (response.data.success) {
+        toast.success(`Candidate stage updated to ${newStage.toUpperCase()}`);
+        fetchAllData();
+        setDialogOpen(false);
+        setStageUpdateModal(false);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to update candidate stage");
+    } finally {
+      setIsUpdatingStage(false);
+    }
+  };
 
   const handleAssignInterview = (candidate: Candidate) => {
-    // Set the pre-selected candidate
     dispatch(setPreSelectedCandidate(candidate));
-    
-    // Navigate to interview scheduling
     dispatch(setCurrentHRPage('interview-scheduling'));
-    
-    // Close any open dialogs
-    setSelectedCandidate(null); // or whatever your dialog state is
+    setSelectedCandidate(null);
   };
 
   const copyToClipboard = async (url: string, docId: string, e: React.MouseEvent) => {
@@ -184,44 +478,6 @@ const HRHome = () => {
     }
   };
 
-  // Create a separate form for single candidate assignment
-  const singleCandidateForm = useForm<SingleCandidateFormData>({
-    defaultValues: {
-      assigned_questions: [],
-      days_to_complete: 7,
-    },
-  });
-
-    // Update the function to handle null candidates:
-  const openAssignQuestionnaireForCandidate = (candidate: Candidate | null) => {
-    if (!candidate) {
-      toast.error('No candidate selected');
-      return;
-    }
-    
-    setTargetCandidate(candidate);
-    setDialogOpen(false);
-    setAssignQuestionnaireOpen(true);
-    singleCandidateForm.reset({
-      assigned_questions: [],
-      days_to_complete: 7,
-    });
-    setSelectedTags(new Set());
-  };
-
-
-  // Function to close assign questionnaire dialog
-  const closeAssignQuestionnaireDialog = () => {
-    setAssignQuestionnaireOpen(false);
-    setTargetCandidate(null);
-    singleCandidateForm.reset();
-    setSelectedTags(new Set());
-  };
-  // Add this useEffect after your existing useEffect for loading candidates
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-  // Add these functions to your component
   const rejectCandidate = async (candidateId: string, reason: string) => {
     setIsRejecting(true);
     try {
@@ -231,9 +487,9 @@ const HRHome = () => {
       
       if (response.data.success) {
         toast.success("Candidate rejected successfully");
-        fetchAllData(); // Refresh the data
-        setDialogOpen(false); // Close candidate details dialog
-        setRejectDialogOpen(false); // Close rejection dialog
+        fetchAllData();
+        setDialogOpen(false);
+        setRejectDialogOpen(false);
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to reject candidate");
@@ -241,7 +497,6 @@ const HRHome = () => {
       setIsRejecting(false);
     }
   };
-
 
   const shortlistCandidate = async (candidateId: string, reason?: string) => {
     try {
@@ -251,150 +506,46 @@ const HRHome = () => {
       
       if (response.data.success) {
         toast.success("Candidate shortlisted successfully");
-        fetchAllData(); // Refresh the data
+        fetchAllData();
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to shortlist candidate");
     }
   };
 
-
-
-  // Submit handler for single candidate assignment
-  const onSingleCandidateSubmit = async (data: SingleCandidateFormData) => {
-    if (!targetCandidate) {
-      toast.error('No candidate selected');
-      return;
-    }
-
+  const fetchCandidateDetails = async (candidateId: string) => {
     try {
-      setSubmitting(true);
-      const assignments = [{
-        candidate: targetCandidate._id,
-        question_ids: data.assigned_questions,
-        days_to_complete: data.days_to_complete
-      }];
-
-      const response = await api.post('/org/hr-questionnaires/assign', { assignments });
-      
-      if (response.data.success) {
-        toast.success(`Questionnaire assigned to ${targetCandidate.first_name} ${targetCandidate.last_name}`);
-        closeAssignQuestionnaireDialog();
-        fetchAllData();
-      } else {
-        toast.error(response.data.message || 'Failed to assign questionnaire');
-      }
-    } catch (error: any) {
-      console.error('Failed to assign questionnaire:', error);
-      toast.error(
-        error?.response?.data?.message || 
-        error?.message || 
-        'Failed to assign questionnaire'
-      );
+      setLoadingCandidate(true);
+      const response = await api.get(`/org/candidates/${candidateId}`);
+      setSelectedCandidate(response.data.data);
+      setDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch candidate details:", error);
+      toast.error("Failed to load candidate details");
     } finally {
-      setSubmitting(false);
+      setLoadingCandidate(false);
     }
   };
-  // Function to get unique tags from questions
-const getUniqueTags = (): string[] => {
-  if (!questions) return [];
-  const tagsSet = new Set<string>();
-  questions.forEach((q) => {
-    q.tags?.forEach((tag: string) => tagsSet.add(tag));
-  });
-  return Array.from(tagsSet);
-};
 
-// Function to toggle tag selection
-const toggleTagSelection = (tag: string, field: any) => {
-  const newSelectedTags = new Set(selectedTags);
-  if (selectedTags.has(tag)) {
-    newSelectedTags.delete(tag);
-    // Remove all questions with this tag from field.value
-    const updatedQuestions = field.value.filter((qid: string) => 
-      !questions.find((q) => q._id === qid)?.tags?.includes(tag)
-    );
-    field.onChange(updatedQuestions);
-  } else {
-    newSelectedTags.add(tag);
-    // Add all questions with this tag to field.value
-    const questionsToAdd = questions
-      .filter((q) => q.tags?.includes(tag) && !field.value.includes(q._id))
-      .map((q) => q._id);
-    field.onChange([...field.value, ...questionsToAdd]);
-  }
-  setSelectedTags(newSelectedTags);
-};
-
-// Function to fetch all data (questions and candidates)
-const fetchAllData = async () => {
-  try {
-    // Fetch questions for questionnaire assignment
-    const questionsResponse = await api.get('/org/hr-questions');
-    setQuestions(questionsResponse.data.data || []);
-    
-    // Refetch candidates to update the table
-    const candidatesResponse = await api.get("/org/candidates");
-    setCandidates(candidatesResponse.data.data);
-    setFilteredCandidates(candidatesResponse.data.data);
-  } catch (error) {
-    console.error('Failed to fetch data:', error);
-    toast.error('Failed to reload data');
-  }
-};
-
-
-
-
-  // Fetch candidates
-  useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/org/candidates");
-        setCandidates(response.data.data);
-        setFilteredCandidates(response.data.data);
-      } catch (error) {
-        console.error("Failed to fetch candidates:", error);
-        toast.error("Failed to load candidates");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCandidates();
-  }, []);
-
-  // Filter candidates
-  useEffect(() => {
-    let filtered = candidates; // or whatever your candidates array is called
-
-    if (searchTerm) {
-      filtered = filtered.filter(candidate => 
-        candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  // Helper Functions
+  const getQuestionTypeDisplay = (type: string) => {
+    switch(type) {
+      case 'mcq': return 'MCQ';
+      case 'coding': return 'CODING';
+      case 'essay': return 'ESSAY';
+      default: return type.toUpperCase();
     }
+  };
 
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'shortlisted') {
-        filtered = filtered.filter(candidate => candidate.shortlisted === true);
-      } else if (statusFilter === 'shortlisted-only') {
-        filtered = filtered.filter(candidate => candidate.shortlisted === true);
-      } else if (statusFilter === 'not-shortlisted') {
-        filtered = filtered.filter(candidate => candidate.shortlisted === false);
-      } else {
-        // Regular status filtering
-        filtered = filtered.filter(candidate => candidate.status === statusFilter);
-      }
+  const getQuestionTypeColor = (type: string) => {
+    switch(type) {
+      case 'mcq': return 'bg-blue-50 text-blue-700';
+      case 'coding': return 'bg-green-50 text-green-700';
+      case 'essay': return 'bg-purple-50 text-purple-700';
+      default: return 'bg-gray-50 text-gray-700';
     }
+  };
 
-    setFilteredCandidates(filtered);
-  }, [candidates, searchTerm, statusFilter]);
-
-
-  // Badge color functions
   const getStageColor = (stage: string) => {
     switch (stage) {
       case "registered": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
@@ -426,26 +577,59 @@ const fetchAllData = async () => {
     });
   };
 
+  // Effects
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/org/candidates");
+        setCandidates(response.data.data);
+        setFilteredCandidates(response.data.data);
+      } catch (error) {
+        console.error("Failed to fetch candidates:", error);
+        toast.error("Failed to load candidates");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCandidates();
+  }, []);
+
+  useEffect(() => {
+    let filtered = candidates;
+
+    if (searchTerm) {
+      filtered = filtered.filter(candidate => 
+        candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'shortlisted') {
+        filtered = filtered.filter(candidate => candidate.shortlisted === true);
+      } else if (statusFilter === 'not-shortlisted') {
+        filtered = filtered.filter(candidate => candidate.shortlisted === false);
+      } else {
+        filtered = filtered.filter(candidate => candidate.status === statusFilter);
+      }
+    }
+
+    setFilteredCandidates(filtered);
+  }, [candidates, searchTerm, statusFilter]);
+
   // Statistics
   const stats = {
     total: candidates.length,
     active: candidates.filter(c => c.status === 'active').length,
     hr_stage: candidates.filter(c => c.current_stage === 'hr').length,
     pending_review: candidates.filter(c => c.current_stage === 'registered').length,
-  };
-
-  const fetchCandidateDetails = async (candidateId: string) => {
-    try {
-      setLoadingCandidate(true);
-      const response = await api.get(`/org/candidates/${candidateId}`);
-      setSelectedCandidate(response.data.data);
-      setDialogOpen(true);
-    } catch (error) {
-      console.error("Failed to fetch candidate details:", error);
-      toast.error("Failed to load candidate details");
-    } finally {
-      setLoadingCandidate(false);
-    }
   };
 
   if (loading) {
@@ -462,8 +646,6 @@ const fetchAllData = async () => {
         position="bottom-right"
         containerStyle={{ zIndex: 9999 }}
       />
-
-
 
       {/* Page Header */}
       <div>
@@ -566,7 +748,6 @@ const fetchAllData = async () => {
                 <SelectItem value="not-shortlisted">Not Shortlisted</SelectItem>
               </SelectContent>
             </Select>
-
           </div>
 
           {/* Candidates Table */}
@@ -591,7 +772,7 @@ const fetchAllData = async () => {
                         <Avatar>
                           <AvatarImage src={candidate.profile_photo_url.url} />
                           <AvatarFallback>
-                            {candidate.first_name[0]}{candidate.last_name[0]}
+                            {candidate.first_name[0]}{candidate.last_name}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -628,7 +809,6 @@ const fetchAllData = async () => {
                         )}
                       </div>
                     </TableCell>
-
                     <TableCell>
                       {formatDate(candidate.registration_date)}
                     </TableCell>
@@ -662,78 +842,95 @@ const fetchAllData = async () => {
         </CardContent>
       </Card>
 
-      {/* Candidate Details Dialog - Outside of table */}
+      {/* Candidate Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Candidate Details</DialogTitle>
-          </div>
-        </DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Candidate Details</DialogTitle>
+            </div>
+          </DialogHeader>
           {selectedCandidate && (
             <div className="space-y-6">
-              {/* Comprehensive Personal Information Card */}
+              {/* Personal Information Card */}
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <CardTitle>Personal Information</CardTitle>
                     
-                    {/* Action Buttons Group - Responsive */}
+                    {/* Action Buttons */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <>
+                      <Button
+                        onClick={() => openHRQuestionnaireDialog(selectedCandidate)}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
+                      >
+                        📋 <span className="hidden md:inline">Assign HR Questionnaire</span><span className="md:hidden">HR</span>
+                      </Button>
+                      
+                      <Button
+                        onClick={() => openAssessmentDialog(selectedCandidate)}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
+                      >
+                        🔬 <span className="hidden md:inline">Assign Assessment</span><span className="md:hidden">Tech</span>
+                      </Button>
+                      
+                      {!selectedCandidate.shortlisted && selectedCandidate.status !== 'rejected' && (
                         <Button
-                          onClick={() => openAssignQuestionnaireForCandidate(selectedCandidate)}
+                          onClick={() => shortlistCandidate(selectedCandidate._id, "Shortlisted from candidate review")}
                           variant="default"
                           size="sm"
-                          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
+                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
                         >
-                          📋 <span className="hidden md:inline">Assign Questionnaire</span><span className="md:hidden">Assign</span>
+                          ⭐ <span className="hidden md:inline">Shortlist</span>
                         </Button>
-                        
-                        {!selectedCandidate.shortlisted && selectedCandidate.status !== 'rejected' && (
-                          <Button
-                            onClick={() => shortlistCandidate(selectedCandidate._id, "Shortlisted from candidate review")}
-                            variant="default"
-                            size="sm"
-                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
-                          >
-                            ⭐ <span className="hidden md:inline">Shortlist</span>
-                          </Button>
-                        )}
-                        
-                        {selectedCandidate.status !== 'rejected' && (
-                          <Button
-                            onClick={() => {
-                              setCandidateToReject(selectedCandidate);
-                              setRejectionReason("");
-                              setRejectDialogOpen(true);
-                            }}
-                            variant="default"
-                            size="sm"
-                            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
-                          >
-                            ❌ <span className="hidden md:inline">Reject</span>
-                          </Button>
-                        )}
-                        
-                        <Button 
-                          onClick={() => handleAssignInterview(selectedCandidate)}
-                          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      )}
+                      
+                      {selectedCandidate.status !== 'rejected' && (
+                        <Button
+                          onClick={() => {
+                            setCandidateToReject(selectedCandidate);
+                            setRejectionReason("");
+                            setRejectDialogOpen(true);
+                          }}
+                          variant="default"
+                          size="sm"
+                          className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
                         >
-                          <Calendar className="h-4 w-4" />
-                          Schedule Interview
+                          ❌ <span className="hidden md:inline">Reject</span>
                         </Button>
-
-                      </>
+                      )}
+                      
+                      <Button
+                        onClick={() => {
+                          setSelectedNewStage("");
+                          setStageUpdateReason("");
+                          setStageUpdateModal(true);
+                        }}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
+                      >
+                        🔄 <span className="hidden md:inline">Update Stage</span>
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => handleAssignInterview(selectedCandidate)}
+                        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        Schedule Interview
+                      </Button>
                     </div>
-
                   </div>
                 </CardHeader>
                 
                 <CardContent className="space-y-6">
-                  {/* Top Section - Main Profile Info - Responsive */}
+                  {/* Profile Info */}
                   <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                    {/* Avatar and Basic Info */}
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 border-2 p-4 sm:p-6 rounded-xl w-full lg:w-auto">
                       <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-gray-200 dark:ring-gray-700 flex-shrink-0">
                         <AvatarImage src={selectedCandidate.profile_photo_url?.url} />
@@ -758,7 +955,7 @@ const fetchAllData = async () => {
                       </div>
                     </div>
 
-                    {/* Applied Position - Right Side - Responsive */}
+                    {/* Applied Position */}
                     <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">
                         Applied Position
@@ -786,7 +983,7 @@ const fetchAllData = async () => {
                     </div>
                   </div>
 
-                  {/* HR Responses Section - Responsive */}
+                  {/* HR Responses */}
                   {selectedCandidate.default_hr_responses && selectedCandidate.default_hr_responses.length > 0 && (
                     <div className="border-l-4 border-l-green-500 bg-green-50/50 dark:bg-green-900/10 rounded-lg p-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
@@ -852,7 +1049,7 @@ const fetchAllData = async () => {
                     </div>
                   )}
 
-                  {/* Personal Details Grid - Responsive */}
+                  {/* Personal Details Grid */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">GENDER</p>
@@ -883,7 +1080,7 @@ const fetchAllData = async () => {
                     </div>
                   </div>
 
-                  {/* Address - Responsive */}
+                  {/* Address */}
                   {selectedCandidate.address && (
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
@@ -896,9 +1093,6 @@ const fetchAllData = async () => {
                   )}
                 </CardContent>
               </Card>
-
-
-
 
               {/* Status Information */}
               <Card>
@@ -932,6 +1126,8 @@ const fetchAllData = async () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Documents */}
               {selectedCandidate.documents && selectedCandidate.documents?.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -955,7 +1151,6 @@ const fetchAllData = async () => {
                             className="group relative border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer bg-white dark:bg-gray-800"
                             onClick={() => window.open(doc.document_url, "_blank")}
                           >
-                            {/* Copy Button - NEW */}
                             <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 size="sm"
@@ -972,7 +1167,6 @@ const fetchAllData = async () => {
                               </Button>
                             </div>
 
-                            {/* Rest stays the same */}
                             <div className="h-52 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                               {isImage ? (
                                 <img
@@ -1010,9 +1204,7 @@ const fetchAllData = async () => {
                 </Card>
               )}
 
-
-
-              {/* HR Questionnaire Status - Updated */}
+              {/* HR Questionnaire Status */}
               {selectedCandidate.hrQuestionnaire && selectedCandidate.hrQuestionnaire.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -1051,8 +1243,7 @@ const fetchAllData = async () => {
                 </Card>
               )}
 
-
-              {/* Assessments Status - Updated */}
+              {/* Assessments Status */}
               <Card>
                 <CardHeader>
                   <CardTitle>Technical Assessments</CardTitle>
@@ -1094,10 +1285,7 @@ const fetchAllData = async () => {
                       <Button 
                         className="mt-4" 
                         variant="outline"
-                        onClick={() => {
-                          setDialogOpen(false);
-                          // Add your assessment assignment logic here
-                        }}
+                        onClick={() => openAssessmentDialog(selectedCandidate)}
                       >
                         Assign Technical Assessment
                       </Button>
@@ -1106,7 +1294,7 @@ const fetchAllData = async () => {
                 </CardContent>
               </Card>
 
-              {/* Interviews Status - Updated */}
+              {/* Interviews Status */}
               <Card>
                 <CardHeader>
                   <CardTitle>Scheduled Interviews</CardTitle>
@@ -1193,7 +1381,6 @@ const fetchAllData = async () => {
                 </CardContent>
               </Card>
 
-
               {/* Stage History */}
               {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
                 <Card>
@@ -1235,77 +1422,77 @@ const fetchAllData = async () => {
                   </CardContent>
                 </Card>
               )}
-
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={assignQuestionnaireOpen} onOpenChange={setAssignQuestionnaireOpen}>
+      {/* HR Questionnaire Assignment Dialog */}
+      <Dialog open={assignHRQuestionnaireOpen} onOpenChange={setAssignHRQuestionnaireOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Assign Questionnaire</DialogTitle>
+            <DialogTitle>Assign HR Questionnaire</DialogTitle>
             <DialogDescription>
-              Assign questions to {targetCandidate?.first_name} {targetCandidate?.last_name}
+              Assign HR questionnaire to {targetCandidateForHR?.first_name} {targetCandidateForHR?.last_name}
             </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6">
-              {/* Show Selected Candidate (Read-only) */}
-              {targetCandidate && (
+              {/* Show Selected Candidate */}
+              {targetCandidateForHR && (
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <Label className="text-sm font-medium mb-2 block">Assigning to:</Label>
+                  <Label className="text-sm font-medium mb-2 block">Assigning HR questionnaire to:</Label>
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-10 h-10">
-                      <AvatarImage src={targetCandidate.profile_photo_url?.url} />
+                      <AvatarImage src={targetCandidateForHR.profile_photo_url?.url} />
                       <AvatarFallback>
-                        {targetCandidate.first_name[0]}{targetCandidate.last_name[0]}
+                        {targetCandidateForHR.first_name[0]}{targetCandidateForHR.last_name}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium">
-                        {targetCandidate.first_name} {targetCandidate.last_name}
+                        {targetCandidateForHR.first_name} {targetCandidateForHR.last_name}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {targetCandidate.email}
+                        {targetCandidateForHR.email}
                       </div>
-                      <Badge className={getStageColor(targetCandidate.current_stage)} variant="outline">
-                        {targetCandidate.current_stage?.toUpperCase()}
+                      <Badge className={getStageColor(targetCandidateForHR.current_stage)} variant="outline">
+                        {targetCandidateForHR.current_stage?.toUpperCase()}
                       </Badge>
                     </div>
                   </div>
                 </div>
               )}
 
-              <form onSubmit={singleCandidateForm.handleSubmit(onSingleCandidateSubmit)} className="space-y-6">
+              <form onSubmit={hrQuestionnaireForm.handleSubmit(onHRQuestionnaireSubmit)} className="space-y-6">
                 {/* Questions Selection */}
                 <div className="space-y-3">
-                  <Label>Select Questions</Label>
+                  <Label>Select HR Questions</Label>
                   
                   {/* Tag Selection */}
-                  {getUniqueTags().length > 0 && (
+                  {getUniqueHRTags().length > 0 && (
                     <div className="p-3 bg-gray-50 rounded-lg">
                       <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
                       <div className="flex flex-wrap gap-2">
-                        {getUniqueTags().map((tag) => (
+                        {getUniqueHRTags().map((tag) => (
                           <Controller
                             key={tag}
                             name="assigned_questions"
-                            control={singleCandidateForm.control}
+                            control={hrQuestionnaireForm.control}
                             render={({ field }) => {
-                              const isTagSelected = selectedTags.has(tag);
+                              const isTagSelected = selectedHRTags.has(tag);
                               return (
                                 <Button
                                   type="button"
                                   variant={isTagSelected ? "default" : "outline"}
                                   size="sm"
-                                  onClick={() => toggleTagSelection(tag, field)}
+                                  onClick={() => toggleHRTagSelection(tag, field)}
                                   className="text-xs"
                                 >
                                   {isTagSelected && "✓ "}{tag}
                                   <Badge variant="secondary" className="ml-1 text-xs">
-                                    {questions.filter(q => q.tags?.includes(tag)).length}
+                                    {hrQuestions.filter(q => q.tags?.includes(tag)).length}
                                   </Badge>
                                 </Button>
                               );
@@ -1319,19 +1506,19 @@ const fetchAllData = async () => {
                   {/* Individual Questions */}
                   <Controller
                     name="assigned_questions"
-                    control={singleCandidateForm.control}
+                    control={hrQuestionnaireForm.control}
                     render={({ field }) => (
                       <div className="border rounded-lg">
                         <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                          <span className="text-sm font-medium">Select Questions:</span>
+                          <span className="text-sm font-medium">Select HR Questions:</span>
                           <div className="flex gap-2">
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                field.onChange(questions.map(q => q._id));
-                                setSelectedTags(new Set(getUniqueTags()));
+                                field.onChange(hrQuestions.map(q => q._id));
+                                setSelectedHRTags(new Set(getUniqueHRTags()));
                               }}
                               className="text-xs"
                             >
@@ -1343,7 +1530,7 @@ const fetchAllData = async () => {
                               size="sm"
                               onClick={() => {
                                 field.onChange([]);
-                                setSelectedTags(new Set());
+                                setSelectedHRTags(new Set());
                               }}
                               className="text-xs"
                             >
@@ -1354,7 +1541,7 @@ const fetchAllData = async () => {
 
                         <div className="max-h-64 overflow-y-auto">
                           <div className="p-4 space-y-3">
-                            {questions.map((question) => {
+                            {hrQuestions.map((question) => {
                               const isChecked = field.value?.includes(question._id) || false;
                               return (
                                 <div key={question._id} className="flex items-start space-x-3">
@@ -1389,49 +1576,271 @@ const fetchAllData = async () => {
                         </div>
 
                         <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                          Selected: {field.value?.length || 0} of {questions.length} questions
+                          Selected: {field.value?.length || 0} of {hrQuestions.length} questions
                         </div>
                       </div>
                     )}
                   />
-                  {singleCandidateForm.formState.errors.assigned_questions && (
-                    <p className="text-red-600 text-sm">{singleCandidateForm.formState.errors.assigned_questions.message}</p>
-                  )}
                 </div>
 
                 {/* Days to Complete */}
                 <div className="space-y-2">
-                  <Label htmlFor="days_to_complete">Days to Complete</Label>
+                  <Label htmlFor="hr_days_to_complete">Days to Complete</Label>
                   <Input
                     type="number"
-                    {...singleCandidateForm.register('days_to_complete', { valueAsNumber: true })}
+                    {...hrQuestionnaireForm.register('days_to_complete', { valueAsNumber: true })}
                     min={1}
                     max={30}
                     className="w-32"
                     defaultValue={7}
                   />
-                  {singleCandidateForm.formState.errors.days_to_complete && (
-                    <p className="text-red-600 text-sm">{singleCandidateForm.formState.errors.days_to_complete.message}</p>
-                  )}
                 </div>
               </form>
             </div>
           </ScrollArea>
 
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={closeAssignQuestionnaireDialog}>
+            <Button type="button" variant="outline" onClick={closeHRQuestionnaireDialog}>
               Cancel
             </Button>
             <Button 
-              onClick={singleCandidateForm.handleSubmit(onSingleCandidateSubmit)}
-              disabled={submitting}
+              onClick={hrQuestionnaireForm.handleSubmit(onHRQuestionnaireSubmit)}
+              disabled={submittingHR}
             >
-              {submitting && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
-              Assign Questionnaire
+              {submittingHR && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
+              Assign HR Questionnaire
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Technical Assessment Assignment Dialog */}
+      <Dialog open={assignAssessmentOpen} onOpenChange={setAssignAssessmentOpen}>
+        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
+          <DialogHeader className="flex-shrink-0 pb-4">
+            <DialogTitle>Assign Technical Assessment</DialogTitle>
+            <DialogDescription>
+              {targetCandidateForAssessment ? (
+                <>Assign technical assessment to {targetCandidateForAssessment.first_name} {targetCandidateForAssessment.last_name}</>
+              ) : (
+                'Select questions to create technical assessment'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              <form onSubmit={assessmentForm.handleSubmit(onAssessmentSubmit)} className="space-y-6">
+                {/* Pre-selected Candidate Display */}
+                {targetCandidateForAssessment && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Label className="text-sm font-medium mb-2 block text-blue-800">Assigning technical assessment to:</Label>
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={targetCandidateForAssessment.profile_photo_url?.url} />
+                        <AvatarFallback>
+                          {targetCandidateForAssessment.first_name[0]}{targetCandidateForAssessment.last_name}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-blue-900">
+                          {targetCandidateForAssessment.first_name} {targetCandidateForAssessment.last_name}
+                        </div>
+                        <div className="text-sm text-blue-700">
+                          {targetCandidateForAssessment.email}
+                        </div>
+                        <Badge className={getStageColor(targetCandidateForAssessment.current_stage)} variant="outline">
+                          {targetCandidateForAssessment.current_stage?.toUpperCase()}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Questions Selection */}
+                <div className="space-y-3">
+                  <Label>
+                    Select Questions 
+                    <span className="text-sm text-muted-foreground ml-2">
+                      (Showing only: MCQ, Coding, Essay types)
+                    </span>
+                  </Label>
+                  
+                  {/* Tag Selection */}
+                  {getUniqueTechnicalTags().length > 0 && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {getUniqueTechnicalTags().map((tag) => (
+                          <Controller
+                            key={tag}
+                            name="assessments.0.questions"
+                            control={assessmentForm.control}
+                            render={({ field }) => {
+                              const isTagSelected = selectedAssessmentTags.has(tag);
+                              return (
+                                <Button
+                                  type="button"
+                                  variant={isTagSelected ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => toggleAssessmentTagSelection(tag, field)}
+                                  className="text-xs"
+                                >
+                                  {isTagSelected && "✓ "}{tag}
+                                  <Badge variant="secondary" className="ml-1 text-xs">
+                                    {getFilteredTechnicalQuestions().filter(q => q.tags?.includes(tag)).length}
+                                  </Badge>
+                                </Button>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Individual Questions */}
+                  <Controller
+                    name="assessments.0.questions"
+                    control={assessmentForm.control}
+                    render={({ field }) => {
+                      const filteredQuestions = getFilteredTechnicalQuestions();
+                      
+                      return (
+                        <div className="border rounded-lg">
+                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
+                            <span className="text-sm font-medium">
+                              Select Questions (Filtered for technical assessment):
+                            </span>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange(filteredQuestions.map(q => q._id));
+                                  setSelectedAssessmentTags(new Set(getUniqueTechnicalTags()));
+                                }}
+                                className="text-xs"
+                              >
+                                Select All
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange([]);
+                                  setSelectedAssessmentTags(new Set());
+                                }}
+                                className="text-xs"
+                              >
+                                Clear All
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="max-h-64 overflow-y-auto">
+                            <div className="p-4 space-y-3">
+                              {filteredQuestions.length === 0 ? (
+                                <p className="text-center text-muted-foreground py-4">
+                                  No questions found for technical assessment types (MCQ, Coding, Essay)
+                                </p>
+                              ) : (
+                                filteredQuestions.map((question) => {
+                                  const isChecked = field.value?.includes(question._id) || false;
+
+                                  return (
+                                    <div key={question._id} className="flex items-start space-x-3">
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => {
+                                          const currentValue = field.value || [];
+                                          if (checked) {
+                                            field.onChange([...currentValue, question._id]);
+                                          } else {
+                                            field.onChange(currentValue.filter((id: string) => id !== question._id));
+                                          }
+                                        }}
+                                      />
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">{question.text}</p>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          <Badge 
+                                            variant="outline" 
+                                            className={`text-xs ${getQuestionTypeColor(question.type)}`}
+                                          >
+                                            {getQuestionTypeDisplay(question.type)}
+                                          </Badge>
+                                          
+                                          {question.difficulty && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              {question.difficulty.toUpperCase()}
+                                            </Badge>
+                                          )}
+                                          
+                                          {question.is_must_ask && (
+                                            <Badge variant="destructive" className="text-xs">
+                                              MUST ASK
+                                            </Badge>
+                                          )}
+                                                                                    {question.tags?.map((tag) => (
+                                            <Badge key={tag} variant="secondary" className="text-xs">
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
+                            Selected: {field.value?.length || 0} of {filteredQuestions.length} questions
+                            <span className="ml-2 text-blue-600">
+                              (Technical Assessment Questions Only)
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                </div>
+
+                {/* Days to Complete */}
+                <div className="space-y-2">
+                  <Label htmlFor="assessment_days_to_complete">Days to Complete</Label>
+                  <Input
+                    type="number"
+                    {...assessmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
+                    min={1}
+                    max={30}
+                    className="w-32"
+                    defaultValue={7}
+                  />
+                </div>
+              </form>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={closeAssessmentDialog}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={assessmentForm.handleSubmit(onAssessmentSubmit)}
+              disabled={submittingAssessment}
+            >
+              {submittingAssessment && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
+              Assign Assessment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Rejection Confirmation Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -1528,8 +1937,144 @@ const fetchAllData = async () => {
         </DialogContent>
       </Dialog>
 
+      {/* Stage Update Dialog */}
+      <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-indigo-600">
+              🔄 Update Candidate Stage
+            </DialogTitle>
+            <DialogDescription>
+              Move this candidate to a different stage in the hiring process.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCandidate && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={selectedCandidate.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {selectedCandidate.first_name[0]}{selectedCandidate.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {selectedCandidate.first_name} {selectedCandidate.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCandidate.email}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">Current:</span>
+                      <Badge className={getStageColor(selectedCandidate.current_stage)} variant="outline">
+                        {selectedCandidate.current_stage?.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* New Stage Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="new-stage">
+                  New Stage <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="new-stage"
+                  value={selectedNewStage}
+                  onChange={(e) => setSelectedNewStage(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-white dark:bg-gray-800"
+                  disabled={isUpdatingStage}
+                >
+                  <option value="">Select new stage</option>
+                  <option value="registered" disabled={selectedCandidate.current_stage === 'registered'}>
+                    📝 Registered
+                  </option>
+                  <option value="hr" disabled={selectedCandidate.current_stage === 'hr'}>
+                    👥 HR Review
+                  </option>
+                  <option value="assessment" disabled={selectedCandidate.current_stage === 'assessment'}>
+                    📊 Assessment
+                  </option>
+                  <option value="tech" disabled={selectedCandidate.current_stage === 'tech'}>
+                    💻 Technical Interview
+                  </option>
+                  <option value="manager" disabled={selectedCandidate.current_stage === 'manager'}>
+                    👔 Manager Review
+                  </option>
+                  <option value="feedback" disabled={selectedCandidate.current_stage === 'feedback'}>
+                    📋 Final Feedback
+                  </option>
+                </select>
+              </div>
+
+              {/* Stage Update Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="stage-reason">
+                  Reason for Stage Update
+                </Label>
+                <Textarea
+                  id="stage-reason"
+                  placeholder="Enter reason for moving candidate to this stage..."
+                  value={stageUpdateReason}
+                  onChange={(e) => setStageUpdateReason(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isUpdatingStage}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be recorded in the candidate's stage history.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStageUpdateModal(false);
+                setSelectedNewStage("");
+                setStageUpdateReason("");
+              }}
+              disabled={isUpdatingStage}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedCandidate && selectedNewStage) {
+                  updateCandidateStage(
+                    selectedCandidate._id, 
+                    selectedNewStage, 
+                    stageUpdateReason.trim() || `Stage updated to ${selectedNewStage}`
+                  );
+                }
+              }}
+              disabled={isUpdatingStage || !selectedNewStage}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {isUpdatingStage ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  🔄 Update Stage
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default HRHome;
+
