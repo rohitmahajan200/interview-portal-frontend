@@ -872,31 +872,36 @@ const InvigilatorQuestionsManagement = () => {
                         <Label>Must Ask Question</Label>
                       </div>
 
-                      {/* Individual Tags */}
-                      {(!useSameTagsForAll || editingQuestion) && (
-                        <div>
-                          <Label htmlFor={`questions.${questionIndex}.tags`}>
-                            Tags (comma separated)
-                          </Label>
-                          <Controller
-                            name={`questions.${questionIndex}.tags`}
-                            control={form.control}
-                            render={({ field }) => (
-                              <Input
-                                value={Array.isArray(field.value) ? field.value.join(', ') : ''}
-                                onChange={(e) => {
-                                  const tagsArray = e.target.value
-                                    .split(',')
-                                    .map(tag => tag.trim())
-                                    .filter(Boolean);
-                                  field.onChange(tagsArray);
-                                }}
-                                placeholder="e.g. javascript, algorithms, data-structures"
-                              />
-                            )}
-                          />
-                        </div>
-                      )}
+                    {(!useSameTagsForAll || editingQuestion) && (
+                      <div>
+                        <Label htmlFor={`questions.${questionIndex}.tags`}>
+                          Tags (comma separated)
+                        </Label>
+                        <Controller
+                          name={`questions.${questionIndex}.tags`}
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              value={Array.isArray(field.value) ? field.value.join(', ') : (field.value || '')}
+                              onChange={(e) => {
+                                // Just update with raw value during typing
+                                field.onChange(e.target.value);
+                              }}
+                              onBlur={(e) => {
+                                // Process tags only when user finishes typing
+                                const tagsArray = e.target.value
+                                  .split(',')
+                                  .map(tag => tag.trim())
+                                  .filter(Boolean);
+                                field.onChange(tagsArray);
+                              }}
+                              placeholder="e.g. javascript, algorithms, data-structures"
+                            />
+                          )}
+                        />
+                      </div>
+                    )}
+
 
                       {/* Explanation */}
                       <div>

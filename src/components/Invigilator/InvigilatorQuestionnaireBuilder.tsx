@@ -21,7 +21,6 @@ import toast, { Toaster } from 'react-hot-toast';
 const assessmentSchema = z.object({
   candidates: z.array(z.string().length(24, 'Invalid candidate ID')).min(1, 'Select at least one candidate'),
   assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
-  job: z.string().length(24, 'Invalid job ID').optional(),
   days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional()
 });
 
@@ -73,18 +72,10 @@ interface Candidate {
   };
 }
 
-interface Job {
-  _id: string;
-  title: string;
-  department: string;
-  location?: string;
-  description?: string;
-}
 
 interface Assessment {
   _id: string;
   candidate: Candidate;
-  job?: Job;
   questions: TechnicalQuestion[];
   assigned_by: {
     _id: string;
@@ -196,7 +187,6 @@ const AssessmentManagement = () => {
     defaultValues: {
       candidates: [],
       assigned_questions: [],
-      job: undefined,
       days_to_complete: 7, // Default to 7 days
     }
   });
@@ -263,8 +253,7 @@ const AssessmentManagement = () => {
     setSelectedJobForAutoSelect('');
     createForm.reset({ 
       candidates: [], 
-      assigned_questions: [], 
-      job: undefined,
+      assigned_questions: [],
       days_to_complete: 7 // Changed from due_at to days_to_complete with default value
     });
     setDialogOpen(true);
@@ -302,7 +291,6 @@ const AssessmentManagement = () => {
     createForm.reset({
       candidates: [], 
       assigned_questions: [], 
-      job: undefined,
       days_to_complete: 7 // Changed from due_at to days_to_complete
     });
     editForm.reset();
@@ -359,7 +347,6 @@ const AssessmentManagement = () => {
       const assessments = data.candidates.map(candidateId => ({
         candidate: candidateId,
         questions: data.assigned_questions,
-        job: data.job || undefined,
         days_to_complete: data.days_to_complete || undefined
       }));
 
@@ -569,7 +556,6 @@ const AssessmentManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
-                    <TableHead>Job</TableHead>
                     <TableHead>Questions</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Due Date</TableHead>
@@ -600,16 +586,6 @@ const AssessmentManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {assessment.job ? (
-                          <div>
-                            <div className="font-medium">{assessment.job.title}</div>
-                            <div className="text-sm text-muted-foreground">{assessment.job.department}</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">No job assigned</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {assessment.questions.slice(0, 2).map((question) => (
                             <Badge key={question._id} variant="outline" className="text-xs">
@@ -634,7 +610,7 @@ const AssessmentManagement = () => {
                       <TableCell className="text-sm">
                         <div>
                           <div className="font-medium">{assessment.assigned_by.name}</div>
-                          <div className="text-muted-foreground">{assessment.assigned_by.role}</div>
+                          <div className="text-muted-foreground">{`(${assessment.assigned_by.role})`}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -1044,11 +1020,6 @@ const AssessmentManagement = () => {
                           <div className="text-sm text-muted-foreground">
                             {editingAssessment.candidate.email}
                           </div>
-                          {editingAssessment.job && (
-                            <div className="text-sm text-muted-foreground">
-                              Job: {editingAssessment.job.title}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1267,24 +1238,6 @@ const AssessmentManagement = () => {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Job Information */}
-                {selectedAssessment.job && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Job Information</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div>
-                        <h3 className="font-semibold">{selectedAssessment.job.title}</h3>
-                        <p className="text-sm text-muted-foreground">{selectedAssessment.job.department}</p>
-                        {selectedAssessment.job.location && (
-                          <p className="text-xs text-muted-foreground">{selectedAssessment.job.location}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* Questions */}
                 <Card>

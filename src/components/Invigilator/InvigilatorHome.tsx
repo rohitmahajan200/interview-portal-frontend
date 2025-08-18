@@ -33,38 +33,47 @@ import {
   Check,
   Filter,
   ClipboardCheck,
+  FileText,
+  Copy,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 // Assessment status type definition (matching your backend model)
 type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
 type FrontendAssessmentStatus = "attempted" | "assigned" | "not-assigned";
 
+// Updated Zod Schema - matching backend bulk format
+const assessmentCreateSchema = z.object({
+  assessments: z.array(z.object({
+    candidate: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid candidate ID format"),
+    job: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid job ID format").optional(),
+    questions: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid question ID format"))
+      .min(1, "At least one question is required")
+      .max(50, "Cannot assign more than 50 questions"),
+    days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional()
+  })).min(1, "At least one assessment is required")
+});
+
+type AssignmentFormData = z.infer<typeof assessmentCreateSchema>;
+
 interface Question {
   _id: string;
   text: string;
-  type: 'mcq' | 'coding' | 'essay' | 'voice' | 'case_study' | 'short_answer' | 'long_answer';
+  type: 'mcq' | 'coding' | 'essay';
   options?: string[];
-  correct_answers?: any[];
+  correct_answers?: string[];
   explanation?: string;
   is_must_ask?: boolean;
   max_score?: number;
-  attachments?: string[];
   difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string[];
-  job_tags?: string[];
-  stage?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-}
-
-interface AssignmentFormData {
-  candidates: string[];
-  assigned_questions: string[];
-  days_to_complete: number;
 }
 
 type Candidate = {
@@ -82,39 +91,59 @@ type Candidate = {
   };
   applied_job: {
     _id: string;
+    name: string; // Add name field
     description: {
       location: string;
       country: string;
       time: string;
       expInYears: string;
       salary: string;
+      jobId: string; // Add jobId field
     };
   };
-  current_stage:
-    | "registered"
-    | "hr"
-    | "assessment"
-    | "tech"
-    | "manager"
-    | "feedback";
-  status:
-    | "active"
-    | "inactive"
-    | "withdrawn"
-    | "rejected"
-    | "hired"
-    | "deleted";
+  current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback";
+  status: "active" | "inactive" | "withdrawn" | "rejected" | "hired" | "deleted";
   email_verified: boolean;
   registration_date: string;
   last_login?: string;
   createdAt: string;
   updatedAt: string;
   documents?: { _id: string; document_type: string; document_url: string }[];
-  hrQuestionnaire?: { _id: string; status: string }[];
-  assessments?: { _id: string; status: BackendAssessmentStatus }[];
-  interviews?: { _id: string; status: string }[];
-  stage_history?: { _id: string; changed_at: string }[];
+  hrQuestionnaire?: { 
+    _id: string; 
+    status: string;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+  }[];
+  assessments?: { 
+    _id: string; 
+    status: BackendAssessmentStatus;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+  }[];
+  stage_history?: {
+    _id: string;
+    from_stage?: string;
+    to_stage: string;
+    changed_by?: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    action: string;
+    remarks: string;
+    changed_at: string;
+  }[];
 };
+
 
 const InvigilatorHome = () => {
   // State management for candidates and filters
@@ -130,6 +159,7 @@ const InvigilatorHome = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCandidate, setLoadingCandidate] = useState(false);
+  const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
 
   // Assignment Dialog States
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -138,20 +168,30 @@ const InvigilatorHome = () => {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
 
-  // Define allowed question types - ONLY MCQ, Coding, Essay, Short/Long Answer
-  const allowedQuestionTypes = ['mcq', 'coding', 'essay', 'short_answer', 'long_answer'];
-  
-  //state to store detailed assessment data
-  // const [assessmentDetails, setAssessmentDetails] = useState<{[candidateId: string]: any[]}>({});
+  // Define allowed question types - ONLY MCQ, Coding, Essay
+  const allowedQuestionTypes = ['mcq', 'coding', 'essay'];
 
-  // Form for assessment assignment
+  // Form for assessment assignment - Updated to match backend schema
   const assignmentForm = useForm<AssignmentFormData>({
+    resolver: zodResolver(assessmentCreateSchema),
     defaultValues: {
-      candidates: [],
-      assigned_questions: [],
-      days_to_complete: 7,
+      assessments: []
     },
   });
+  const copyToClipboard = async (url: string, docId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedDocId(docId);
+      toast.success('Document link copied to clipboard');
+      
+      setTimeout(() => setCopiedDocId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      toast.error('Failed to copy link');
+    }
+  };
 
   /**
    * Helper function to map backend status to frontend display status
@@ -160,21 +200,14 @@ const InvigilatorHome = () => {
     if (!candidate.assessments || candidate.assessments.length === 0) {
       return "not-assigned";
     }
-    return "assigned";
-    // const latestAssessment = candidate.assessments[candidate.assessments.length - 1];
     
-    // // Map backend status to frontend display status
-    // switch (latestAssessment.status) {
-    //   case "completed":
-    //     return "attempted";
-    //   case "pending":
-    //   case "started":
-    //     return "assigned";
-    //   case "expired":
-    //     return "attempted";
-    //   default:
-    //     return "not-assigned";
-    // }
+    // Check if any assessment is completed
+    const hasCompleted = candidate.assessments.some(a => a.status === "completed");
+    if (hasCompleted) {
+      return "attempted";
+    }
+    
+    return "assigned";
   };
 
   /**
@@ -219,7 +252,7 @@ const InvigilatorHome = () => {
         );
         
         setQuestions(filteredQuestions);
-        console.log(`Loaded ${filteredQuestions.length} questions of allowed types (MCQ, Coding, Essay, Short/Long Answer)`);
+        console.log(`Loaded ${filteredQuestions.length} questions of allowed types (MCQ, Coding, Essay)`);
       } catch (error) {
         console.error("Failed to fetch questions:", error);
         toast.error("Failed to load questions");
@@ -227,6 +260,10 @@ const InvigilatorHome = () => {
     };
     fetchQuestions();
   }, []);
+  const closeViewDialog = () => {
+    setDialogOpen(false);
+    setSelectedCandidate(null);
+  };
 
   /**
    * Filter candidates based on search term and assessment status
@@ -257,7 +294,7 @@ const InvigilatorHome = () => {
     setFilteredCandidates(filtered);
   }, [candidates, searchTerm, assessmentStatusFilter]);
 
-  // Open assignment dialog with single candidate pre-selected (BRIDGE FUNCTIONALITY)
+  // Open assignment dialog with single candidate pre-selected
   const openSingleCandidateAssignment = (candidate: Candidate) => {
     if (!candidate) {
       toast.error('No candidate selected');
@@ -268,11 +305,14 @@ const InvigilatorHome = () => {
     setDialogOpen(false);
     setAssignmentDialogOpen(true);
     
-    // 🔑 THE BRIDGE: Auto-select the candidate in the form
+    // Auto-select the candidate in the bulk format
     assignmentForm.reset({
-      candidates: [candidate._id],
-      assigned_questions: [],
-      days_to_complete: 7,
+      assessments: [{
+        candidate: candidate._id,
+        job: candidate.applied_job?._id,
+        questions: [],
+        days_to_complete: 7
+      }]
     });
     setSelectedTags(new Set());
   };
@@ -297,7 +337,7 @@ const InvigilatorHome = () => {
   };
 
   // Toggle tag selection for filtered questions
-  const toggleTagSelection = (tag: string, field: any) => {
+  const toggleTagSelection = (tag: string, field: { value: string[]; onChange: (value: string[]) => void }) => {
     const filteredQuestions = getFilteredQuestions();
     const newSelectedTags = new Set(selectedTags);
     if (selectedTags.has(tag)) {
@@ -316,7 +356,7 @@ const InvigilatorHome = () => {
     setSelectedTags(newSelectedTags);
   };
 
-  // Submit assignment (FIXED to match backend schema)
+  // Updated submit handler to match backend bulk format
   const onAssignmentSubmit = async (data: AssignmentFormData) => {
     if (!targetCandidate) {
       toast.error('No candidate selected');
@@ -327,35 +367,14 @@ const InvigilatorHome = () => {
       setSubmitting(true);
       
       // Validate that we have questions selected
-      if (data.assigned_questions.length === 0) {
+      if (data.assessments[0]?.questions.length === 0) {
         toast.error('Please select at least one question to assign');
         return;
       }
       
-      // Validate job ID exists
-      if (!targetCandidate.applied_job?._id) {
-        toast.error('Candidate job information is missing');
-        return;
-      }
+      console.log('Sending bulk assessment data:', data);
       
-      // Calculate due date
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + data.days_to_complete);
-      
-      // ✅ FIXED: Properly structure the assignment data matching backend
-      const assignmentData = {
-        candidate_id: targetCandidate._id,
-        job: targetCandidate.applied_job._id,
-        questions_by_stage: {
-          general: data.assigned_questions, // Put all questions in general stage
-        },
-        due_at: dueDate.toISOString(),
-      };
-      
-      console.log('Sending assignment data:', assignmentData);
-      console.log('Selected questions:', data.assigned_questions);
-      
-      const response = await api.post('/org/assessment/assign', assignmentData);
+      const response = await api.post('/org/assessment', data);
       
       if (response.data.success) {
         toast.success(`Assessment assigned to ${targetCandidate.first_name} ${targetCandidate.last_name}`);
@@ -366,34 +385,21 @@ const InvigilatorHome = () => {
       } else {
         toast.error(response.data.message || 'Failed to assign assessment');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Full assignment error:', error);
-      console.error('Error response:', error.response?.data);
-      
-      toast.error(
-        error?.response?.data?.message || 
-        error?.message || 
-        'Failed to assign assessment'
-      );
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : 'Failed to assign assessment';
+      toast.error(errorMessage || 'Failed to assign assessment');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Handle assignment action (BRIDGE HANDLER)
+  // Handle assignment action
   const handleAssignAssessment = (candidate: Candidate) => {
     openSingleCandidateAssignment(candidate);
   };
-
-  /**
-   * Get available candidates (those without active assessments)
-   */
-  // const getAvailableCandidates = () => {
-  //   return candidates.filter(candidate => 
-  //     candidate.current_stage === "assessment" && 
-  //     getAssessmentStatus(candidate) === "not-assigned"
-  //   );
-  // };
 
   /**
    * Badge styling for different assessment statuses
@@ -455,7 +461,7 @@ const InvigilatorHome = () => {
   };
 
   /**
-   * Calculate statistics for the dashboard - Fixed to use original candidates
+   * Calculate statistics for the dashboard
    */
   const stats = {
     total: candidates.filter(c => c.current_stage === "assessment").length,
@@ -471,9 +477,7 @@ const InvigilatorHome = () => {
     switch(type) {
       case 'mcq': return 'MCQ';
       case 'coding': return 'CODING';
-      case 'essay': return 'LONG ANSWER';
-      case 'short_answer': return 'SHORT ANSWER';
-      case 'long_answer': return 'LONG ANSWER';
+      case 'essay': return 'ESSAY';
       default: return type.toUpperCase();
     }
   };
@@ -482,9 +486,7 @@ const InvigilatorHome = () => {
     switch(type) {
       case 'mcq': return 'bg-blue-50 text-blue-700';
       case 'coding': return 'bg-green-50 text-green-700';
-      case 'essay': 
-      case 'long_answer': return 'bg-purple-50 text-purple-700';
-      case 'short_answer': return 'bg-orange-50 text-orange-700';
+      case 'essay': return 'bg-purple-50 text-purple-700';
       default: return 'bg-gray-50 text-gray-700';
     }
   };
@@ -512,7 +514,7 @@ const InvigilatorHome = () => {
         </p>
       </div>
 
-      {/* Statistics Cards - Assessment focused metrics */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -686,12 +688,12 @@ const InvigilatorHome = () => {
                             {assessmentStatus === "not-assigned" ? (
                               <>
                                 <Plus className="h-4 w-4 mr-1" />
-                                Click to Assign
+                                Assign
                               </>
                             ) : (
                               <>
                                 <Check className="h-4 w-4 mr-1" />
-                                Already Assigned
+                                {assessmentStatus === "assigned" ? "Assigned" : "Completed"}
                               </>
                             )}
                           </Button>
@@ -720,7 +722,7 @@ const InvigilatorHome = () => {
         </CardContent>
       </Card>
 
-      {/* Assignment Dialog - BRIDGE FUNCTIONALITY with QUESTION FILTERING */}
+      {/* Assignment Dialog - Updated to match bulk schema */}
       <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
@@ -737,7 +739,7 @@ const InvigilatorHome = () => {
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6">
               <form onSubmit={assignmentForm.handleSubmit(onAssignmentSubmit)} className="space-y-6">
-                {/* Pre-selected Candidate Display - BRIDGE UI */}
+                {/* Pre-selected Candidate Display */}
                 {targetCandidate && (
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <Label className="text-sm font-medium mb-2 block text-blue-800">Assigning assessment to:</Label>
@@ -768,7 +770,7 @@ const InvigilatorHome = () => {
                   <Label>
                     Select Questions 
                     <span className="text-sm text-muted-foreground ml-2">
-                      (Showing only: MCQ, Coding, Essay, Short/Long Answer types)
+                      (Showing only: MCQ, Coding, Essay types)
                     </span>
                   </Label>
                   
@@ -780,7 +782,7 @@ const InvigilatorHome = () => {
                         {getUniqueTags().map((tag) => (
                           <Controller
                             key={tag}
-                            name="assigned_questions"
+                            name="assessments.0.questions"
                             control={assignmentForm.control}
                             render={({ field }) => {
                               const isTagSelected = selectedTags.has(tag);
@@ -807,7 +809,7 @@ const InvigilatorHome = () => {
 
                   {/* Individual Questions - FILTERED for allowed types */}
                   <Controller
-                    name="assigned_questions"
+                    name="assessments.0.questions"
                     control={assignmentForm.control}
                     render={({ field }) => {
                       const filteredQuestions = getFilteredQuestions();
@@ -850,7 +852,7 @@ const InvigilatorHome = () => {
                             <div className="p-4 space-y-3">
                               {filteredQuestions.length === 0 ? (
                                 <p className="text-center text-muted-foreground py-4">
-                                  No questions found for allowed types (MCQ, Coding, Essay, Short/Long Answer)
+                                  No questions found for allowed types (MCQ, Coding, Essay)
                                 </p>
                               ) : (
                                 filteredQuestions.map((question) => {
@@ -902,7 +904,7 @@ const InvigilatorHome = () => {
                           <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
                             Selected: {field.value?.length || 0} of {filteredQuestions.length} questions
                             <span className="ml-2 text-blue-600">
-                              (Filtered: MCQ, Coding, Essay, Short/Long Answer only)
+                              (Filtered: MCQ, Coding, Essay only)
                             </span>
                           </div>
                         </div>
@@ -916,7 +918,7 @@ const InvigilatorHome = () => {
                   <Label htmlFor="days_to_complete">Days to Complete</Label>
                   <Input
                     type="number"
-                    {...assignmentForm.register('days_to_complete', { valueAsNumber: true })}
+                    {...assignmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
                     min={1}
                     max={30}
                     className="w-32"
@@ -942,154 +944,208 @@ const InvigilatorHome = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Candidate Details Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <Dialog open={dialogOpen} onOpenChange={closeViewDialog}>
+        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Candidate Assessment Details</DialogTitle>
           </DialogHeader>
 
           {selectedCandidate && (
             <div className="space-y-6">
-              {/* Applied Job */}
-              {selectedCandidate.applied_job && (
+              {/* Applied Position */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Applied Position</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                    <p className="text-lg font-bold text-purple-600 dark:text-purple-400 mb-2">
+                      {selectedCandidate.applied_job?.name}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      {selectedCandidate.applied_job?.description?.location && (
+                        <div>📍 {selectedCandidate.applied_job.description.location}</div>
+                      )}
+                      {selectedCandidate.applied_job?.description?.country && (
+                        <div>🌍 {selectedCandidate.applied_job.description.country}</div>
+                      )}
+                      {selectedCandidate.applied_job?.description?.time && (
+                        <div>⏰ {selectedCandidate.applied_job.description.time}</div>
+                      )}
+                      {selectedCandidate.applied_job?.description?.expInYears && (
+                        <div>💼 {selectedCandidate.applied_job.description.expInYears}</div>
+                      )}
+                      {selectedCandidate.applied_job?.description?.salary && (
+                        <div className="sm:col-span-2">💰 {selectedCandidate.applied_job.description.salary}</div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Documents */}
+              {selectedCandidate.documents && selectedCandidate.documents.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Applied Position</CardTitle>
+                    <CardTitle>Documents</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <strong>Location:</strong>{" "}
-                        {selectedCandidate.applied_job.description?.location}
-                      </div>
-                      <div>
-                        <strong>Country:</strong>{" "}
-                        {selectedCandidate.applied_job.description?.country}
-                      </div>
-                      <div>
-                        <strong>Time:</strong>{" "}
-                        {selectedCandidate.applied_job.description?.time}
-                      </div>
-                      <div>
-                        <strong>Experience:</strong>{" "}
-                        {selectedCandidate.applied_job.description?.expInYears}
-                      </div>
-                      <div>
-                        <strong>Salary:</strong>{" "}
-                        {selectedCandidate.applied_job.description?.salary}
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedCandidate.documents.map((doc) => {
+                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document_url);
+                        const isPDF = /\.pdf$/i.test(doc.document_url);
+
+                        const pdfThumbUrl = isPDF
+                          ? doc.document_url
+                              .replace("/upload/", "/upload/pg_1/")
+                              .replace(/\.pdf$/i, ".jpg")
+                          : null;
+
+                        return (
+                          <div
+                            key={doc._id}
+                            className="group relative border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer bg-white dark:bg-gray-800"
+                            onClick={() => window.open(doc.document_url, "_blank")}
+                          >
+                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-sm"
+                                onClick={(e) => copyToClipboard(doc.document_url, doc._id, e)}
+                                title="Copy document link"
+                              >
+                                {copiedDocId === doc._id ? (
+                                  <Check className="w-4 h-4 text-green-600" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-gray-600" />
+                                )}
+                              </Button>
+                            </div>
+                            <div className="h-52 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                              {isImage ? (
+                                <img
+                                  src={doc.document_url}
+                                  alt={doc.document_type}
+                                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform"
+                                />
+                              ) : isPDF ? (
+                                <img
+                                  src={pdfThumbUrl!}
+                                  alt={`${doc.document_type} preview`}
+                                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform"
+                                  onError={(e) => {
+                                    e.currentTarget.src =
+                                      "https://via.placeholder.com/300x200?text=PDF+Preview+Not+Available";
+                                  }}
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center text-gray-500">
+                                  <FileText className="w-10 h-10 mb-2" />
+                                  <span className="text-xs">Document</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="p-3">
+                              <p className="text-sm font-medium truncate capitalize">{doc.document_type}</p>
+                              <p className="text-xs text-gray-500 truncate">{doc.document_url}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Documents */}
-              {selectedCandidate.documents &&
-                selectedCandidate.documents.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Documents</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {selectedCandidate.documents.map(
-                          (doc: {
-                            _id: string;
-                            document_type: string;
-                            document_url: string;
-                          }) => (
-                            <div
-                              key={doc._id}
-                              className="flex items-center justify-between p-2 border rounded"
-                            >
-                              <div>
-                                <span className="font-medium capitalize">
-                                  {doc.document_type}
-                                </span>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  window.open(doc.document_url, "_blank")
-                                }
-                              >
-                                View Document
-                              </Button>
+              {/* HR Questionnaire */}
+              {selectedCandidate.hrQuestionnaire && selectedCandidate.hrQuestionnaire.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>HR Questionnaire</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {selectedCandidate.hrQuestionnaire.map((questionnaire) => (
+                        <div key={questionnaire._id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-medium">Questionnaire</span>
+                            <Badge className={
+                              questionnaire.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                              questionnaire.status === 'submitted' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {questionnaire.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Assigned by:</span>
+                              <div className="font-medium">{questionnaire.assigned_by.name}</div>
+                              <div className="text-xs text-gray-500">{questionnaire.assigned_by.role}</div>
                             </div>
-                          )
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-              {/* HR Questionnaire Status */}
-              {selectedCandidate.hrQuestionnaire &&
-                selectedCandidate.hrQuestionnaire.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>HR Questionnaire</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {selectedCandidate.hrQuestionnaire.map(
-                          (questionnaire: { _id: string; status: string }) => (
-                            <div
-                              key={questionnaire._id}
-                              className="flex items-center justify-between"
-                            >
-                              <span>Questionnaire Status:</span>
-                              <Badge
-                                className={
-                                  questionnaire.status === "pending"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-green-100 text-green-800"
-                                }
-                              >
-                                {questionnaire.status.toUpperCase()}
-                              </Badge>
+                            <div>
+                              <span className="text-gray-600">Due date:</span>
+                              <div className="font-medium">{formatDate(questionnaire.due_at)}</div>
                             </div>
-                          )
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Assessment Details Card */}
+              {/* Assessment Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Assessment Information</CardTitle>
+                  <CardTitle>Technical Assessments</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {selectedCandidate.assessments && selectedCandidate.assessments.length > 0 ? (
                     <div className="space-y-4">
-                      {selectedCandidate.assessments.map((assessment: { _id: string; status: BackendAssessmentStatus }, index: number) => (
-                        <div key={assessment._id} className="flex items-center justify-between p-3 border rounded">
-                          <div>
-                            <span className="font-medium">Assessment #{index + 1}</span>
-                            <div className="text-sm text-muted-foreground">Assessment ID: {assessment._id}</div>
+                      {selectedCandidate.assessments.map((assessment) => (
+                        <div key={assessment._id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-medium">Technical Assessment</span>
+                            <Badge className={
+                              assessment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                              assessment.status === 'started' ? 'bg-blue-100 text-blue-800' :
+                              assessment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {assessment.status.toUpperCase()}
+                            </Badge>
                           </div>
-                          <Badge className={getAssessmentStatusColor(getAssessmentStatus({ ...selectedCandidate, assessments: [assessment] }))}>
-                            {assessment.status.toUpperCase()}
-                          </Badge>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Assigned by:</span>
+                              <div className="font-medium">{assessment.assigned_by.name}</div>
+                              <div className="text-xs text-gray-500">{assessment.assigned_by.role}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Due date:</span>
+                              <div className="font-medium">{formatDate(assessment.due_at)}</div>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-muted-foreground">No assessments found for this candidate</p>
+                      <p className="text-muted-foreground">No technical assessments assigned yet</p>
                       <Button 
                         className="mt-4" 
                         variant="outline"
                         onClick={() => {
-                          setDialogOpen(false);
+                          closeViewDialog();
                           handleAssignAssessment(selectedCandidate);
                         }}
                       >
-                        Assign New Assessment
+                        Assign Technical Assessment
                       </Button>
                     </div>
                   )}
@@ -1097,30 +1153,63 @@ const InvigilatorHome = () => {
               </Card>
 
               {/* Stage History */}
-              {selectedCandidate.stage_history &&
-                selectedCandidate.stage_history.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Stage History</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {selectedCandidate.stage_history.map(
-                          (stage: { _id: string; changed_at: string }) => (
-                            <div key={stage._id} className="text-sm">
-                              <strong>Changed At:</strong>{" "}
-                              {formatDate(stage.changed_at)}
+              {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Application Timeline</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {selectedCandidate.stage_history.map((stage) => (
+                        <div
+                          key={stage._id}
+                          className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {stage.action?.toUpperCase() || 'STAGE_CHANGE'}
+                                </Badge>
+                                <p className="text-sm font-semibold capitalize">
+                                  {stage.from_stage ? `${stage.from_stage} → ${stage.to_stage}` : stage.to_stage}
+                                </p>
+                              </div>
+                              
+                              {stage.changed_by ? (
+                                <p className="text-xs text-gray-600">
+                                  Changed by:{" "}
+                                  <span className="font-medium">{stage.changed_by.name}</span>
+                                  <span className="ml-1 text-gray-500">• {stage.changed_by.role}</span>
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-600">System generated</p>
+                              )}
                             </div>
-                          )
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                            
+                            <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                              {formatDate(stage.changed_at)}
+                            </span>
+                          </div>
+
+                          {stage.remarks && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <p className="text-xs text-gray-600 italic">
+                                "{stage.remarks}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

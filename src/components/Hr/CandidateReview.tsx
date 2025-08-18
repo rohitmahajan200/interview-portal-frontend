@@ -176,7 +176,7 @@ const CandidateReview = () => {
   const updateCandidateStage = async (responseId: string, newStage: string, remarks?: string) => {
     setLoadingActions(prev => ({ ...prev, [`stage_${responseId}`]: true }));
     try {
-      await api.patch(`/org/hr-responses/${responseId}/update-stage`, {
+      await api.patch(`/org/candidates/${responseId}/update-stage`, {
         newStage,
         remarks
       });

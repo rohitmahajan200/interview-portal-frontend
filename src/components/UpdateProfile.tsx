@@ -171,7 +171,7 @@ export default function UpdateProfile({
         setIsEditing(false);
         localStorage.removeItem("tempProfilePhoto");
       }, 1000); // Delay by 1 second
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Submission error:", err);
       let errorMessage = "Failed to update profile. Please try again.";
       if (err.response?.status === 401) {
