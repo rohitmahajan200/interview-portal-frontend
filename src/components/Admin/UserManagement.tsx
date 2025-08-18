@@ -51,24 +51,20 @@ interface User {
 const inviteSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email format"),
-  role: z.enum(["HR", "INVIGILATOR", "MANAGER"], {
-    errorMap: () => ({ message: "Please select a valid role" })
+  role: z.enum(["ADMIN","HR", "INVIGILATOR", "MANAGER"], {
+    error: "Please select a valid role",
   })
 });
+type InviteFormData = z.infer<typeof inviteSchema>;
 
 const updateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email format"),
-  role: z.enum(["HR", "INVIGILATOR", "MANAGER"], {
-    errorMap: () => ({ message: "Please select a valid role" })
+  role: z.enum(["ADMIN","HR", "INVIGILATOR", "MANAGER"], {
+    error: "Please select a valid role",
   })
 });
 
-interface InviteFormData {
-  name: string;
-  email: string;
-  role: Role;
-}
 
 interface UpdateFormData {
   name: string;
@@ -398,7 +394,6 @@ const AdminHome = () => {
                             {user.name ? user.name[0] : user.email[0].toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        {console.log("user reee==>",user)}
                         <div>
                           <div className="font-medium">
                             {user.name || 'No name set'}

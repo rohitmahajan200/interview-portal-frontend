@@ -56,7 +56,7 @@ interface AssessmentListItem {
       email: string;
     };
   };
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'started' | 'expired';
   total_score?: number;
   ai_score?: number;
   createdAt: string;
@@ -101,7 +101,7 @@ interface AssessmentDetail {
   responses: AssessmentResponse[];
   total_score?: number;
   ai_score?: number;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'started' | 'expired';
   createdAt: string;
   updatedAt: string;
 }
