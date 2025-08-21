@@ -710,7 +710,7 @@ const ManagerDashboard: React.FC = () => {
 
                     {/* HR Questionnaire - Compact */}
                     
-                    {candidate.hr_questionnaire &&
+                    {/* {candidate.hr_questionnaire &&
                       candidate.hr_questionnaire.length > 0 && (
                         <div>
                           
@@ -750,10 +750,10 @@ const ManagerDashboard: React.FC = () => {
                             )}
                           </div>
                         </div>
-                      )}
+                      )} */}
 
                     {/* Assessment Results - Compact */}
-                    {candidate.assessments &&
+                    {/* {candidate.assessments &&
                       candidate.assessments.length > 0 && (
                         <div>
                           {console.log("Candiadte ree=>",candidate)}
@@ -796,7 +796,7 @@ const ManagerDashboard: React.FC = () => {
                             ))}
                           </div>
                         </div>
-                      )}
+                      )} */}
 
                     {/* Documents - Compact */}
                     {candidate.documents && candidate.documents.length > 0 && (

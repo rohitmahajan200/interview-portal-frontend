@@ -179,6 +179,8 @@ const CandidateManagement: React.FC = () => {
         year: "numeric"
       });
     } catch (error) {
+      console.log(error);
+      
       return "Invalid Date";
     }
   };
