@@ -7,6 +7,7 @@ import adminViewReducer from "../features/Org/View/adminViewSlice.js"
 import hrViewReducer from "../features/Org/View/HrViewSlice.js"
 import invigilatorReducer from "../features/Org/View/invigilatorViewSlice.js"
 import interviewSchedulingReducer from '@/features/Org/HR/interviewSchedulingSlice.js';
+import managerViewReducer from '@/features/Org/View/managerViewSlice';
 // Create and configure the Redux store
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     hrView: hrViewReducer,
     invigilator:invigilatorReducer,
     interviewScheduling: interviewSchedulingReducer,
+    managerView: managerViewReducer,
   },
 });
 
