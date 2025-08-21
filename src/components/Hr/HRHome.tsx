@@ -38,16 +38,15 @@ type StageHistory = {
   changed_at: string;
 }
 
-type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
-
-// Zod Schema for technical assessment assignment
 const assessmentCreateSchema = z.object({
   assessments: z.array(z.object({
     candidate: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid candidate ID format"),
     questions: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid question ID format"))
       .min(1, "At least one question is required")
       .max(50, "Cannot assign more than 50 questions"),
-    days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional()
+    days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional(),
+    is_seb: z.boolean(),
+    exam_duration: z.number().min(1, "Must be at least 1 minute").max(600, "Cannot exceed 10 hours")
   })).min(1, "At least one assessment is required")
 });
 
@@ -434,6 +433,7 @@ const HRHome = () => {
       setSubmittingAssessment(false);
     }
   };
+  
 
   // Other Handlers
   const updateCandidateStage = async (candidateId: string, newStage: string, remarks?: string) => {
@@ -1614,16 +1614,16 @@ const HRHome = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Technical Assessment Assignment Dialog */}
+      {/* Assignment Dialog - Updated with SEB and exam duration fields */}
       <Dialog open={assignAssessmentOpen} onOpenChange={setAssignAssessmentOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Assign Technical Assessment</DialogTitle>
+            <DialogTitle>Assign Assessment</DialogTitle>
             <DialogDescription>
               {targetCandidateForAssessment ? (
-                <>Assign technical assessment to {targetCandidateForAssessment.first_name} {targetCandidateForAssessment.last_name}</>
+                <>Assign assessment to {targetCandidateForAssessment.first_name} {targetCandidateForAssessment.last_name}</>
               ) : (
-                'Select questions to create technical assessment'
+                'Select candidates and assign questions to create assessments'
               )}
             </DialogDescription>
           </DialogHeader>
@@ -1634,7 +1634,7 @@ const HRHome = () => {
                 {/* Pre-selected Candidate Display */}
                 {targetCandidateForAssessment && (
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Label className="text-sm font-medium mb-2 block text-blue-800">Assigning technical assessment to:</Label>
+                    <Label className="text-sm font-medium mb-2 block text-blue-800">Assigning assessment to:</Label>
                     <div className="flex items-center space-x-3">
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={targetCandidateForAssessment.profile_photo_url?.url} />
@@ -1657,7 +1657,7 @@ const HRHome = () => {
                   </div>
                 )}
 
-                {/* Questions Selection */}
+                {/* Questions Selection - FILTERED for specific types only */}
                 <div className="space-y-3">
                   <Label>
                     Select Questions 
@@ -1699,7 +1699,7 @@ const HRHome = () => {
                     </div>
                   )}
 
-                  {/* Individual Questions */}
+                  {/* Individual Questions - FILTERED for allowed types */}
                   <Controller
                     name="assessments.0.questions"
                     control={assessmentForm.control}
@@ -1710,7 +1710,7 @@ const HRHome = () => {
                         <div className="border rounded-lg">
                           <div className="flex justify-between items-center p-3 border-b bg-gray-50">
                             <span className="text-sm font-medium">
-                              Select Questions (Filtered for technical assessment):
+                              Select Questions (Filtered for allowed types):
                             </span>
                             <div className="flex gap-2">
                               <Button
@@ -1744,7 +1744,7 @@ const HRHome = () => {
                             <div className="p-4 space-y-3">
                               {filteredQuestions.length === 0 ? (
                                 <p className="text-center text-muted-foreground py-4">
-                                  No questions found for technical assessment types (MCQ, Coding, Essay)
+                                  No questions found for allowed types (MCQ, Coding, Essay)
                                 </p>
                               ) : (
                                 filteredQuestions.map((question) => {
@@ -1779,12 +1779,7 @@ const HRHome = () => {
                                             </Badge>
                                           )}
                                           
-                                          {question.is_must_ask && (
-                                            <Badge variant="destructive" className="text-xs">
-                                              MUST ASK
-                                            </Badge>
-                                          )}
-                                                                                    {question.tags?.map((tag) => (
+                                          {question.tags?.map((tag) => (
                                             <Badge key={tag} variant="secondary" className="text-xs">
                                               {tag}
                                             </Badge>
@@ -1801,7 +1796,7 @@ const HRHome = () => {
                           <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
                             Selected: {field.value?.length || 0} of {filteredQuestions.length} questions
                             <span className="ml-2 text-blue-600">
-                              (Technical Assessment Questions Only)
+                              (Filtered: MCQ, Coding, Essay only)
                             </span>
                           </div>
                         </div>
@@ -1810,17 +1805,87 @@ const HRHome = () => {
                   />
                 </div>
 
+                {/* SEB & Exam Duration Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* SEB Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
+                    <Controller
+                      name="assessments.0.is_seb"
+                      control={assessmentForm.control}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="is_seb"
+                          />
+                          <Label htmlFor="is_seb" className="text-sm font-normal">
+                            Require Safe Exam Browser for this assessment
+                          </Label>
+                        </div>
+                      )}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, candidates must use Safe Exam Browser to take the assessment
+                    </p>
+                  </div>
+
+                  {/* Exam Duration Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        {...assessmentForm.register('assessments.0.exam_duration', { valueAsNumber: true })}
+                        min={1}
+                        max={600}
+                        placeholder="60"
+                        className="w-32"
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        {assessmentForm.watch('assessments.0.exam_duration') ? 
+                          `${Math.floor((assessmentForm.watch('assessments.0.exam_duration') || 60) / 60)}h ${(assessmentForm.watch('assessments.0.exam_duration') || 60) % 60}m` 
+                          : '1h 0m'
+                        }
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Time allocated for the exam in minutes (1-600 minutes / 10 hours max)
+                    </p>
+                    {assessmentForm.formState.errors.assessments?.[0]?.exam_duration && (
+                      <p className="text-red-600 text-sm">{assessmentForm.formState.errors.assessments[0].exam_duration.message}</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* Days to Complete */}
                 <div className="space-y-2">
-                  <Label htmlFor="assessment_days_to_complete">Days to Complete</Label>
-                  <Input
-                    type="number"
-                    {...assessmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
-                    min={1}
-                    max={30}
-                    className="w-32"
-                    defaultValue={7}
-                  />
+                  <Label htmlFor="days_to_complete">Days to Complete</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      {...assessmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
+                      min={1}
+                      max={30}
+                      className="w-32"
+                      defaultValue={7}
+                    />
+                    <div className="text-sm text-muted-foreground">
+                      {assessmentForm.watch('assessments.0.days_to_complete') ? 
+                        `Due: ${new Date(Date.now() + ((assessmentForm.watch('assessments.0.days_to_complete') || 7) * 24 * 60 * 60 * 1000))
+                          .toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric'
+                          })}` 
+                        : 'No deadline'
+                      }
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of days from assignment date for completion (1-30 days)
+                  </p>
                 </div>
               </form>
             </div>

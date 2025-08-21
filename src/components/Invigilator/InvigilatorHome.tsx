@@ -46,14 +46,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
 type FrontendAssessmentStatus = "attempted" | "assigned" | "not-assigned";
 
-// Updated Zod Schema - matching backend bulk format
+// Updated Zod Schema - matching backend bulk format with SEB and exam duration
 const assessmentCreateSchema = z.object({
   assessments: z.array(z.object({
     candidate: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid candidate ID format"),
     questions: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid question ID format"))
       .min(1, "At least one question is required")
       .max(50, "Cannot assign more than 50 questions"),
-    days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional()
+    days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional(),
+    is_seb: z.boolean(),
+    exam_duration: z.number().min(1, "Must be at least 1 minute").max(600, "Cannot exceed 10 hours")
   })).min(1, "At least one assessment is required")
 });
 
@@ -90,14 +92,14 @@ type Candidate = {
   };
   applied_job: {
     _id: string;
-    name: string; // Add name field
+    name: string;
     description: {
       location: string;
       country: string;
       time: string;
       expInYears: string;
       salary: string;
-      jobId: string; // Add jobId field
+      jobId: string;
     };
   };
   current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback";
@@ -143,7 +145,6 @@ type Candidate = {
   }[];
 };
 
-
 const InvigilatorHome = () => {
   // State management for candidates and filters
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -170,13 +171,20 @@ const InvigilatorHome = () => {
   // Define allowed question types - ONLY MCQ, Coding, Essay
   const allowedQuestionTypes = ['mcq', 'coding', 'essay'];
 
-  // Form for assessment assignment - Updated to match backend schema
+  // Form for assessment assignment - Updated to match backend schema with SEB and exam duration
   const assignmentForm = useForm<AssignmentFormData>({
     resolver: zodResolver(assessmentCreateSchema),
     defaultValues: {
-      assessments: []
+      assessments: [{
+        candidate: "",
+        questions: [],
+        days_to_complete: 7,
+        is_seb: false,
+        exam_duration: 60
+      }]
     },
   });
+
   const copyToClipboard = async (url: string, docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -259,6 +267,7 @@ const InvigilatorHome = () => {
     };
     fetchQuestions();
   }, []);
+
   const closeViewDialog = () => {
     setDialogOpen(false);
     setSelectedCandidate(null);
@@ -309,7 +318,9 @@ const InvigilatorHome = () => {
       assessments: [{
         candidate: candidate._id,
         questions: [],
-        days_to_complete: 7
+        days_to_complete: 7,
+        is_seb: false,
+        exam_duration: 60
       }]
     });
     setSelectedTags(new Set());
@@ -319,7 +330,15 @@ const InvigilatorHome = () => {
   const closeAssignmentDialog = () => {
     setAssignmentDialogOpen(false);
     setTargetCandidate(null);
-    assignmentForm.reset();
+    assignmentForm.reset({
+      assessments: [{
+        candidate: "",
+        questions: [],
+        days_to_complete: 7,
+        is_seb: false,
+        exam_duration: 60
+      }]
+    });
     setSelectedTags(new Set());
   };
 
@@ -354,7 +373,7 @@ const InvigilatorHome = () => {
     setSelectedTags(newSelectedTags);
   };
 
-  // Updated submit handler to match backend bulk format
+  // Updated submit handler to match backend bulk format with SEB and exam duration
   const onAssignmentSubmit = async (data: AssignmentFormData) => {
     if (!targetCandidate) {
       toast.error('No candidate selected');
@@ -625,7 +644,7 @@ const InvigilatorHome = () => {
                           <Avatar>
                             <AvatarImage src={candidate.profile_photo_url.url} />
                             <AvatarFallback>
-                              {candidate.first_name[0]}{candidate.last_name[0]}
+                              {candidate.first_name[0]}{candidate.last_name}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -720,7 +739,7 @@ const InvigilatorHome = () => {
         </CardContent>
       </Card>
 
-      {/* Assignment Dialog - Updated to match bulk schema */}
+      {/* Assignment Dialog - Updated with SEB and exam duration fields */}
       <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
@@ -745,7 +764,7 @@ const InvigilatorHome = () => {
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={targetCandidate.profile_photo_url?.url} />
                         <AvatarFallback>
-                          {targetCandidate.first_name[0]}{targetCandidate.last_name[0]}
+                          {targetCandidate.first_name[0]}{targetCandidate.last_name}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -911,17 +930,87 @@ const InvigilatorHome = () => {
                   />
                 </div>
 
+                {/* SEB & Exam Duration Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* SEB Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
+                    <Controller
+                      name="assessments.0.is_seb"
+                      control={assignmentForm.control}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="is_seb"
+                          />
+                          <Label htmlFor="is_seb" className="text-sm font-normal">
+                            Require Safe Exam Browser for this assessment
+                          </Label>
+                        </div>
+                      )}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      When enabled, candidates must use Safe Exam Browser to take the assessment
+                    </p>
+                  </div>
+
+                  {/* Exam Duration Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        {...assignmentForm.register('assessments.0.exam_duration', { valueAsNumber: true })}
+                        min={1}
+                        max={600}
+                        placeholder="60"
+                        className="w-32"
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        {assignmentForm.watch('assessments.0.exam_duration') ? 
+                          `${Math.floor((assignmentForm.watch('assessments.0.exam_duration') || 60) / 60)}h ${(assignmentForm.watch('assessments.0.exam_duration') || 60) % 60}m` 
+                          : '1h 0m'
+                        }
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Time allocated for the exam in minutes (1-600 minutes / 10 hours max)
+                    </p>
+                    {assignmentForm.formState.errors.assessments?.[0]?.exam_duration && (
+                      <p className="text-red-600 text-sm">{assignmentForm.formState.errors.assessments[0].exam_duration.message}</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* Days to Complete */}
                 <div className="space-y-2">
                   <Label htmlFor="days_to_complete">Days to Complete</Label>
-                  <Input
-                    type="number"
-                    {...assignmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
-                    min={1}
-                    max={30}
-                    className="w-32"
-                    defaultValue={7}
-                  />
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="number"
+                      {...assignmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
+                      min={1}
+                      max={30}
+                      className="w-32"
+                      defaultValue={7}
+                    />
+                    <div className="text-sm text-muted-foreground">
+                      {assignmentForm.watch('assessments.0.days_to_complete') ? 
+                        `Due: ${new Date(Date.now() + ((assignmentForm.watch('assessments.0.days_to_complete') || 7) * 24 * 60 * 60 * 1000))
+                          .toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric'
+                          })}` 
+                        : 'No deadline'
+                      }
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Number of days from assignment date for completion (1-30 days)
+                  </p>
                 </div>
               </form>
             </div>
@@ -1044,7 +1133,6 @@ const InvigilatorHome = () => {
                                 </div>
                               )}
                             </div>
-
                             <div className="p-3">
                               <p className="text-sm font-medium truncate capitalize">{doc.document_type}</p>
                               <p className="text-xs text-gray-500 truncate">{doc.document_url}</p>
