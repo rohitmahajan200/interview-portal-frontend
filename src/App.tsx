@@ -62,7 +62,7 @@ function App() {
       element: <OrgDashboard />,
     },
     {
-      path:"/start-assessment/:assessmentId",
+      path:"/start-assessment",
       element:<SecureAssessmentLanding />,
     },
     {
