@@ -127,14 +127,15 @@ export default function Assessments() {
       return;
     }
 
-    /* Safe Exam Browser (no query params) ----------------------------------- */
     if (row.is_seb) {
       const apiBase =
         (import.meta as any).env?.VITE_API_URL ?? window.location.origin;
       const host = apiBase.replace(/^https?:\/\//, "").replace(/\/$/, "");
-      window.location.href = `seb://${host}/candidates/seb/config`;
+      // Add the token as a query param for SEB
+      window.location.href = `seb://${host}/candidates/seb/config?token=${row.access_token}`;
       return;
     }
+
 
     /* Standard web flow (include token) ------------------------------------- */
     const feBase =
