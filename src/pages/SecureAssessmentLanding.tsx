@@ -21,6 +21,8 @@ import ProctorGhost from "@/components/ProctorGhost";
 import AssessmentInterface from "@/components/AssessmentInterface";
 import ProctorSnapshots from "@/components/ProctorSnapshots";
 import toast from "react-hot-toast";
+import { sebHeaders } from "@/lib/sebHashes";
+
 
 const SecureAssessmentLanding = () => {
   const [token, setToken] = useState("");
@@ -40,7 +42,8 @@ const SecureAssessmentLanding = () => {
 
     try {
       setIsLoading(true);
-      const res = await api.post(`/candidates/seb/entry?token=${token}`, { token });
+      const url = `/candidates/seb/entry?token=${encodeURIComponent(token)}`;
+      const res = await api.post(`/candidates/seb/entry?token=${token}`, { token }, { headers: await sebHeaders(url) });
       const id = res.data.data.assessmentId;
       setAssessmentId(id);
       setMessage("Entry successful. Please review the instructions below.");
@@ -60,8 +63,12 @@ const SecureAssessmentLanding = () => {
     
     try {
       setIsLoading(true);
-      await api.post(`/candidates/assessments/${assessmentId}/start`);
-      const { data } = await api.get(`/candidates/assessments/${assessmentId}`);
+      const startUrl = `/candidates/assessments/${assessmentId}/start`;
+      await api.post(startUrl, null, { headers: await sebHeaders(startUrl) });
+
+      const getUrl = `/candidates/assessments/${assessmentId}`;
+      const { data } = await api.get(getUrl, { headers: await sebHeaders(getUrl) });
+
       setAssessment(data.data.assessment);
       setStarted(true);
       setMessage("");
