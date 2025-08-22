@@ -28,6 +28,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { getAllMetrics, getSnapshots, clearProctorStores } from '@/lib/proctorStore';
+import { sebHeaders } from "@/lib/sebHashes";
+
 
 // Types based on your backend models
 interface Question {
@@ -105,7 +107,9 @@ const AssessmentInterface: React.FC<AssessmentInterfaceProps> = ({
   const fetchAssessment = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response: any = await api.get(`/candidates/assessments/${assessmentId}`); // any at fetch boundary
+      const url = `/candidates/assessments/${assessmentId}`;
+      const response: any = await api.get(url, { headers: await sebHeaders(url) });
+
       const data: any = response.data.data; // any at fetch boundary
 
       setAssessment(data.assessment as Assessment);
@@ -217,11 +221,13 @@ const AssessmentInterface: React.FC<AssessmentInterfaceProps> = ({
         ];
 
         // send to backend along with responses & snapshots
-        await api.post(`/candidates/assessments/${assessmentId}/submit`, {
-          responses: submissionResponses,
-          proctoring_logs,
-          proctoring_snapshots: snaps
-        });
+        const submitUrl = `/candidates/assessments/${assessmentId}/submit`;
+        await api.post(
+          submitUrl,
+          { responses: submissionResponses, proctoring_logs, proctoring_snapshots: snaps },
+          { headers: await sebHeaders(submitUrl) }
+        );
+
 
         // optional: clear local stores after successful submit
         clearProctorStores().catch(() => {});
