@@ -474,6 +474,7 @@ const ManagerDashboard: React.FC = () => {
                       onClick={() => openActionModal(candidate, "feedback")}
                       className="text-blue-600 hover:text-blue-700"
                     >
+                      Feedback
                       <MessageSquare className="h-4 w-4" />
                     </Button>
 
@@ -483,6 +484,7 @@ const ManagerDashboard: React.FC = () => {
                       onClick={() => openActionModal(candidate, "hire")}
                       className="text-green-600 hover:text-green-700"
                     >
+                      Hire
                       <ThumbsUp className="h-4 w-4" />
                     </Button>
 
@@ -492,6 +494,7 @@ const ManagerDashboard: React.FC = () => {
                       onClick={() => openActionModal(candidate, "reject")}
                       className="text-red-600 hover:text-red-700"
                     >
+                      Reject
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
 
@@ -499,8 +502,9 @@ const ManagerDashboard: React.FC = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => openActionModal(candidate, "hold")}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-yellow-600 hover:text-red-700"
                     >
+                      Hold
                       <CirclePause className="h-4 w-4" />
                     </Button>
 

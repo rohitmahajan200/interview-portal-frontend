@@ -22,6 +22,7 @@ import AssessmentInterface from "@/components/AssessmentInterface";
 import ProctorSnapshots from "@/components/ProctorSnapshots";
 import toast from "react-hot-toast";
 import { sebHeaders } from "@/lib/sebHashes";
+import { clearProctorStores } from "@/lib/proctorStore";
 
 
 const SecureAssessmentLanding = () => {
@@ -34,28 +35,43 @@ const SecureAssessmentLanding = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // Step 1 → Entry
-  const handleEntry = async () => {
-    if (!token.trim()) {
-      toast.error("Please enter a valid access token");
-      return;
+ // Step 1 → Entry
+const handleEntry = async () => {
+  if (!token.trim()) {
+    toast.error("Please enter a valid access token");
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+
+    const url = `/candidates/seb/entry?token=${encodeURIComponent(token)}`;
+    const res = await api.post(
+      url,
+      { token },
+      { headers: await sebHeaders(url) }
+    );
+
+    const id = res.data.data.assessmentId;
+    setAssessmentId(id);
+    setMessage("Entry successful. Please review the instructions below.");
+    toast.success("Successfully authenticated!");
+
+    // ✅ Clear proctor DB only on first entry in this SEB session
+    if (!sessionStorage.getItem("proctorCleared")) {
+      await clearProctorStores();
+      sessionStorage.setItem("proctorCleared", "true");
     }
 
-    try {
-      setIsLoading(true);
-      const url = `/candidates/seb/entry?token=${encodeURIComponent(token)}`;
-      const res = await api.post(`/candidates/seb/entry?token=${token}`, { token }, { headers: await sebHeaders(url) });
-      const id = res.data.data.assessmentId;
-      setAssessmentId(id);
-      setMessage("Entry successful. Please review the instructions below.");
-      toast.success("Successfully authenticated!");
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Failed to authenticate with SEB";
-      setMessage(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  } catch (err: any) {
+    const errorMessage =
+      err.response?.data?.message || "Failed to authenticate with SEB";
+    setMessage(errorMessage);
+    toast.error(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Step 2 → Start exam
   const handleStart = async () => {

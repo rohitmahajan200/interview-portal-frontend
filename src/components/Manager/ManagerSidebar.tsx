@@ -4,8 +4,6 @@ import {
   Home,
   Users,
   Calendar,
-  MessageSquare,
-  BarChart3,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
@@ -49,9 +47,6 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
     navItem("Dashboard", Home, "manager-home"),
     navItem("Calendar", Calendar, "manager-calendar"),
     navItem("Candidates", Users, "candidate-management"),
-    navItem("Interviews", Calendar, "interview-management"),
-    navItem("Feedback", MessageSquare, "feedback-management"),
-    navItem("Analytics", BarChart3, "manager-analytics"),
   ];
 
   return (

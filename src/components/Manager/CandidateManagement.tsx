@@ -26,6 +26,10 @@ import {
   Phone,
   BarChart3,
   X,
+  Circle,
+  CirclePause,
+  CircleX,
+  CircleCheck,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -441,12 +445,19 @@ const CandidateManagement: React.FC = () => {
                           {candidate.last_name || "User"}
                         </h3>
                         <Badge className={getStatusColor(candidate.status)}>
+                          {candidate.status==="active"?<Circle />:
+                          candidate.status==="hold"?<CirclePause />:
+                          candidate.status==="rejected"?<CircleX />:
+                          candidate.status==="hired"?<CircleCheck />:
+                          null
+                          }
                           {candidate.status}
                         </Badge>
                         <Badge
                         className={getStageColor(candidate.current_stage)}>
                           {/* Progress circle */}
                       <StageCircle currentStage={candidate.current_stage} />
+                      
                         </Badge>
                       </div>
 
@@ -531,8 +542,7 @@ const CandidateManagement: React.FC = () => {
                         <div>
                           <h4 className="font-semibold mb-3 flex items-center gap-2">
                             <MessageSquare className="h-4 w-4 text-purple-600" />
-                            HR Review ({candidate.hr_questionnaire.length}{" "}
-                            responses)
+                            HR Review
                           </h4>
                           <div className="space-y-2">
                             {candidate.hr_questionnaire

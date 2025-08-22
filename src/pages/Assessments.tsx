@@ -317,7 +317,7 @@ export default function Assessments() {
               {filtered.map((r) => {
                 const isTech = r.kind === "technical";
                 const status = r.status as string;
-                const actionLabel = status === "pending" ? "Start" : status === "started" ? "Resume" : status === "completed" ? "View" : "Expired";
+                const actionLabel = status === "pending" ? "Start" : status === "started" ? "Resume" : status === "completed" ? "View" : "Completed";
                 const actionIcon = status === "pending" ? <Play className="h-4 w-4" /> : status === "started" ? <RotateCcw className="h-4 w-4" /> : status === "completed" ? <Eye className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />;
 
                 const disabled = status === "expired";

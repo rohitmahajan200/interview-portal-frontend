@@ -20,9 +20,6 @@ import { ManagerSidebar } from "./ManagerSidebar";
 import ManagerDashboard from "./ManagerDashboard";
 import ManagerCalendar from "./ManagerCalendar";
 import CandidateManagement from "./CandidateManagement";
-import InterviewManagement from "./InterviewManagement";
-import FeedbackManagement from "./FeedbackManagement";
-import ManagerAnalytics from "./ManagerAnalytics";
 
 const Manager: React.FC = () => {
   const dispatch = useDispatch();
@@ -61,12 +58,6 @@ const Manager: React.FC = () => {
         return <ManagerCalendar />;
       case "candidate-management":
         return <CandidateManagement />;
-      case "interview-management":
-        return <InterviewManagement />;
-      case "feedback-management":
-        return <FeedbackManagement />;
-      case "manager-analytics":
-        return <ManagerAnalytics />;
       default:
         return <ManagerDashboard />;
     }
