@@ -73,6 +73,11 @@ interface AssessmentResponse {
   max_score?: number;
 }
 
+interface ProctoringLog {
+  event: string;
+  severity: 'info' | 'warn' | 'error';
+  timestamp: string;
+}
 interface AssessmentDetail {
   _id: string;
   candidate: {
@@ -83,8 +88,8 @@ interface AssessmentDetail {
       url: string;
       publicId: string;
     };
-    current_stage?: string; // ✅ Added for stage updates
-    status?: string; // ✅ Added for stage updates
+    current_stage?: string;
+    status?: string;
   };
   assessment: {
     _id: string;
@@ -104,6 +109,8 @@ interface AssessmentDetail {
   status: 'pending' | 'completed' | 'started' | 'expired';
   createdAt: string;
   updatedAt: string;
+  proctoring_logs?: ProctoringLog[];         // <-- added for TS correctness
+  proctoring_snapshots?: string[];           // <-- added for TS correctness
 }
 
 const AssessmentReview = () => {
@@ -113,9 +120,8 @@ const AssessmentReview = () => {
   const [loadingList, setLoadingList] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [statistics, setStatistics] = useState<AssessmentStatistics | null>(null);
-  const [loadingActions, setLoadingActions] = useState<{[key: string]: boolean}>({});
-  const [editingResponse, setEditingResponse] = useState<string | null>(null);
-  const [stageUpdateModal, setStageUpdateModal] = useState(false); // ✅ Added stage update modal state
+  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
+  const [stageUpdateModal, setStageUpdateModal] = useState(false);
 
   const fetchStatistics = async () => {
     try {
@@ -127,20 +133,15 @@ const AssessmentReview = () => {
   };
 
   const triggerAIEvaluation = async (responseId: string, event?: React.MouseEvent) => {
-    if (event) {
-      event.stopPropagation();
-    }
-    
+    if (event) event.stopPropagation();
     setLoadingActions(prev => ({ ...prev, [`ai_${responseId}`]: true }));
     try {
       const response = await api.post(`/org/assessment/evaluate/${responseId}`);
-      
       if (selectedAssessment && selectedAssessment._id === responseId) {
         await fetchAssessmentDetail(responseId);
       }
-      
       await fetchAssessmentsList();
-      await fetchStatistics(); // Refresh statistics
+      await fetchStatistics();
       console.log('AI evaluation completed:', response.data.message);
     } catch (error) {
       console.error('AI evaluation failed:', error);
@@ -149,7 +150,6 @@ const AssessmentReview = () => {
     }
   };
 
-  // ✅ Added stage update function
   const updateCandidateStage = async (candidateId: string, newStage: string, remarks?: string) => {
     setLoadingActions(prev => ({ ...prev, [`stage_${candidateId}`]: true }));
     try {
@@ -157,12 +157,10 @@ const AssessmentReview = () => {
         newStage,
         remarks
       });
-      
       await Promise.all([
         fetchAssessmentDetail(selectedAssessment!._id),
         fetchAssessmentsList()
       ]);
-      
       setStageUpdateModal(false);
       console.log('Stage updated successfully');
     } catch (error) {
@@ -205,8 +203,7 @@ const AssessmentReview = () => {
   const closeAssessmentDialog = () => {
     setIsDialogOpen(false);
     setSelectedAssessment(null);
-    setEditingResponse(null);
-    setStageUpdateModal(false); // ✅ Reset stage modal state
+    setStageUpdateModal(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -216,7 +213,6 @@ const AssessmentReview = () => {
       return 'Invalid Date';
     }
   };
-
   const formatDateTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'dd MMM yyyy, HH:mm');
@@ -224,34 +220,23 @@ const AssessmentReview = () => {
       return 'Invalid Date';
     }
   };
-
-  const getInitials = (name?: string) => {
-    if (!name) return '??';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
+  const getInitials = (name?: string) =>
+    name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '??';
   const getQuestionTypeIcon = (type: string) => {
     switch (type) {
-      case 'mcq':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'coding':
-        return <Code className="h-4 w-4" />;
-      case 'essay':
-        return <PenTool className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
+      case 'mcq': return <CheckCircle className="h-4 w-4" />;
+      case 'coding': return <Code className="h-4 w-4" />;
+      case 'essay': return <PenTool className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
     }
   };
-
   const getQuestionTypeBadge = (type: string) => {
     const config = {
       mcq: { label: 'MCQ', variant: 'default' as const },
       coding: { label: 'Coding', variant: 'secondary' as const },
       essay: { label: 'Essay', variant: 'outline' as const }
     };
-    
     const { label, variant } = config[type as keyof typeof config] || { label: type.toUpperCase(), variant: 'outline' as const };
-    
     return (
       <Badge variant={variant} className="text-xs">
         {getQuestionTypeIcon(type)}
@@ -259,35 +244,97 @@ const AssessmentReview = () => {
       </Badge>
     );
   };
-
   const renderAnswer = (response: AssessmentResponse) => {
     const { type, answer } = response;
-
-    if (!answer) {
-      return <span className="text-muted-foreground italic">No answer provided</span>;
-    }
-
+    if (!answer) return <span className="text-muted-foreground italic">No answer provided</span>;
     switch (type) {
-      case 'mcq':
-        return <Badge variant="outline">{String(answer)}</Badge>;
-      case 'coding':
-        return (
-          <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm overflow-x-auto">
-            <pre>{String(answer)}</pre>
-          </div>
-        );
-      case 'essay':
-        return <p className="whitespace-pre-wrap text-sm">{String(answer)}</p>;
-      default:
+      case 'mcq': return <Badge variant="outline">{String(answer)}</Badge>;
+      case 'coding': return (
+        <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm overflow-x-auto">
+          <pre>{String(answer)}</pre>
+        </div>);
+      case 'essay': default:
         return <p className="whitespace-pre-wrap text-sm">{String(answer)}</p>;
     }
   };
-
   const getScoreColor = (score: number, maxScore: number) => {
     const percentage = (score / maxScore) * 100;
     if (percentage >= 80) return 'text-green-600';
     if (percentage >= 60) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  // New: Directly used proctoring helpers here
+  const renderProctoringLogs = () => {
+    if (!selectedAssessment?.proctoring_logs || selectedAssessment.proctoring_logs.length === 0) {
+      return <p className="text-sm text-muted-foreground italic">No proctoring logs captured</p>;
+    }
+    return (
+      <ScrollArea className="h-56 rounded-lg border border-gray-200 bg-muted/30 px-0 py-0">
+  <Table className="text-sm">
+    <TableHeader>
+      <TableRow className="bg-gray-50">
+        <TableHead className="font-semibold text-gray-700 px-3 py-2">Event</TableHead>
+        <TableHead className="font-semibold text-gray-700 px-3 py-2">Severity</TableHead>
+        <TableHead className="font-semibold text-gray-700 px-3 py-2 text-right">Timestamp</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {selectedAssessment.proctoring_logs.map((log, idx) => (
+        <TableRow key={idx} className={log.severity === "warn" ? "bg-red-50" : ""}>
+          <TableCell className="whitespace-pre-wrap px-3 py-2">{log.event}</TableCell>
+          <TableCell className="px-3 py-2">
+            <Badge
+              variant={log.severity === "warn"
+                ? "destructive"
+                : log.severity === "error"
+                ? "outline"
+                : "secondary"}
+              className={
+                log.severity === "warn"
+                  ? "bg-red-200 text-red-700"
+                  : log.severity === "error"
+                  ? "bg-gray-200 text-gray-700"
+                  : "bg-blue-100 text-blue-700"
+              }
+            >
+              {log.severity.toUpperCase()}
+            </Badge>
+          </TableCell>
+          <TableCell className="text-right px-3 py-2 font-mono text-xs text-gray-600">{formatDateTime(log.timestamp)}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</ScrollArea>
+
+    );
+  };
+
+  const renderSnapshots = () => {
+    const shots = selectedAssessment?.proctoring_snapshots;
+    if (!shots || shots.length === 0) {
+      return <p className="text-sm text-muted-foreground italic">No snapshots captured</p>;
+    }
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {shots.map((url, idx) => (
+          <a
+            key={idx}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded overflow-hidden border hover:shadow-md transition"
+          >
+            <img
+              src={url}
+              alt={`Proctoring snapshot ${idx + 1}`}
+              className="object-contain w-full h-32 md:h-40"
+            />
+          </a>
+        ))}
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -301,7 +348,9 @@ const AssessmentReview = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Assessment Reviews</h1>
-          <p className="text-muted-foreground">Review and evaluate candidate assessment responses</p>
+          <p className="text-muted-foreground">
+            Review and evaluate candidate assessment responses
+          </p>
         </div>
         <div className="flex items-center gap-4">
           {statistics && (
@@ -325,7 +374,6 @@ const AssessmentReview = () => {
           </Badge>
         </div>
       </div>
-
       {/* Assessments Table */}
       <Card className="flex-1">
         <CardHeader>
@@ -353,28 +401,32 @@ const AssessmentReview = () => {
                 </TableHeader>
                 <TableBody>
                   {assessmentsList.map((item) => (
-                    <TableRow 
-                      key={item._id} 
+                    <TableRow
+                      key={item._id}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => openAssessmentDialog(item._id)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage 
-                              src={item.candidate.profile_photo_url?.url} 
-                              alt={item.candidate.name} 
+                            <AvatarImage
+                              src={item.candidate.profile_photo_url?.url}
+                              alt={item.candidate.name}
                             />
-                            <AvatarFallback>{getInitials(item.candidate.name)}</AvatarFallback>
+                            <AvatarFallback>
+                              {getInitials(item.candidate.name)}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{item.candidate.name}</p>
-                            <p className="text-sm text-muted-foreground">{item.candidate.email}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {item.candidate.email}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
+                        <Badge
                           variant={item.status === 'completed' ? 'default' : 'secondary'}
                           className={cn(
                             item.status === 'completed' && 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -416,7 +468,7 @@ const AssessmentReview = () => {
                               {loadingActions[`ai_${item._id}`] ? 'Evaluating...' : 'Evaluate'}
                             </Button>
                           )}
-                          
+
                           <Button
                             size="sm"
                             variant="outline"
@@ -452,7 +504,6 @@ const AssessmentReview = () => {
               Review assessment responses and provide evaluation
             </DialogDescription>
           </DialogHeader>
-
           {loadingDetail ? (
             <div className="flex justify-center items-center flex-1">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -463,14 +514,15 @@ const AssessmentReview = () => {
               <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full pr-4">
                   <div className="space-y-6 pb-4">
+
                     {/* Candidate Info */}
                     <Card>
                       <CardContent className="pt-6">
                         <div className="flex items-start gap-4">
                           <Avatar className="h-16 w-16">
-                            <AvatarImage 
-                              src={selectedAssessment.candidate.profile_photo_url?.url} 
-                              alt={selectedAssessment.candidate.name} 
+                            <AvatarImage
+                              src={selectedAssessment.candidate.profile_photo_url?.url}
+                              alt={selectedAssessment.candidate.name}
                             />
                             <AvatarFallback className="text-lg">
                               {getInitials(selectedAssessment.candidate.name)}
@@ -489,7 +541,6 @@ const AssessmentReview = () => {
                                   {selectedAssessment.status}
                                 </Badge>
                               </div>
-                              {/* ✅ Added current stage display */}
                               {selectedAssessment.candidate.current_stage && (
                                 <div>
                                   <span className="font-medium">Current Stage: </span>
@@ -582,7 +633,7 @@ const AssessmentReview = () => {
                                     <Badge variant="destructive">Flagged</Badge>
                                   )}
                                   {response.ai_score !== undefined && response.max_score && (
-                                    <Badge 
+                                    <Badge
                                       variant="outline"
                                       className={getScoreColor(response.ai_score, response.max_score)}
                                     >
@@ -591,7 +642,6 @@ const AssessmentReview = () => {
                                   )}
                                 </div>
                               </div>
-
                               <div className="space-y-3">
                                 <div>
                                   <h5 className="text-sm font-medium mb-2">Answer:</h5>
@@ -605,6 +655,27 @@ const AssessmentReview = () => {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* Proctoring logs & snapshots */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          Proctoring Review
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Snapshots</h4>
+                          {renderSnapshots()}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Event Logs</h4>
+                          {renderProctoringLogs()}
+                        </div>
+                      </CardContent>
+                    </Card>
+
                   </div>
                 </ScrollArea>
               </div>
@@ -628,14 +699,14 @@ const AssessmentReview = () => {
                     </Button>
                   )}
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={closeAssessmentDialog}>
                     Close
                   </Button>
-                  {/* ✅ Added Update Stage button - only show if AI evaluated */}
+                  {/* Only show Update Stage if AI evaluated */}
                   {selectedAssessment && selectedAssessment.ai_score !== undefined && (
-                    <Button 
+                    <Button
                       onClick={() => setStageUpdateModal(true)}
                       className="flex items-center gap-2"
                     >
@@ -654,7 +725,7 @@ const AssessmentReview = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ✅ Added Stage Update Modal */}
+      {/* Stage Update Modal */}
       <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -663,17 +734,16 @@ const AssessmentReview = () => {
               Move {selectedAssessment?.candidate.name} to the next stage of the hiring process
             </DialogDescription>
           </DialogHeader>
-          
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target as HTMLFormElement);
-            const newStage = formData.get('stage') as string;
-            const remarks = formData.get('remarks') as string;
-            
-            if (selectedAssessment) {
-              updateCandidateStage(selectedAssessment.candidate._id, newStage, remarks);
-            }
-          }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target as HTMLFormElement);
+              const newStage = formData.get('stage') as string;
+              const remarks = formData.get('remarks') as string;
+              if (selectedAssessment) {
+                updateCandidateStage(selectedAssessment.candidate._id, newStage, remarks);
+              }
+            }}>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">New Stage</label>
@@ -695,14 +765,15 @@ const AssessmentReview = () => {
                 />
               </div>
             </div>
-            
             <div className="flex justify-end gap-2 mt-6">
               <Button type="button" variant="outline" onClick={() => setStageUpdateModal(false)}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={!!selectedAssessment && !!loadingActions[`stage_${selectedAssessment.candidate._id}`]}
+              <Button
+                type="submit"
+                disabled={
+                  !!selectedAssessment && !!loadingActions[`stage_${selectedAssessment.candidate._id}`]
+                }
               >
                 {selectedAssessment && loadingActions[`stage_${selectedAssessment.candidate._id}`] && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
