@@ -25,22 +25,13 @@ import {
   Mail,
   Phone,
   BarChart3,
-  X
+  X,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/app/store";
-
-// Simple Progress component
-const Progress: React.FC<{ value: number; className?: string }> = ({ value, className }) => (
-  <div className={`w-full bg-gray-200 rounded-full h-2 ${className}`}>
-    <div
-      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-      style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-    />
-  </div>
-);
+import { StageCircle } from "../ui/StageCircle";
 
 interface CandidateTracking {
   _id: string;
@@ -115,11 +106,11 @@ const CandidateManagement: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  
+
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stageFilter, setStageFilter] = useState<string>("all");
-  
+
   const user = useSelector((state: RootState) => state.orgAuth.user);
   const isAdmin = user?.role === "ADMIN";
 
@@ -130,9 +121,10 @@ const CandidateManagement: React.FC = () => {
   const fetchCandidates = async () => {
     try {
       setLoading(true);
-      const response = await api.get<{ success: boolean; data: CandidateTracking[] }>(
-        "/org/manager/assign-candidates"
-      );
+      const response = await api.get<{
+        success: boolean;
+        data: CandidateTracking[];
+      }>("/org/manager/assign-candidates");
       setCandidates(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch candidates:", error);
@@ -164,23 +156,17 @@ const CandidateManagement: React.FC = () => {
     };
     return colors[stage] || "bg-gray-100 text-gray-800";
   };
-
-  const calculateProgress = (candidate: CandidateTracking): number => {
-    const stages = ['registered', 'hr', 'assessment', 'tech', 'manager', 'feedback'];
-    const currentIndex = stages.indexOf(candidate.current_stage);
-    return ((currentIndex + 1) / stages.length) * 100;
-  };
-
+  
   const formatDate = (dateString: string): string => {
     try {
       return new Date(dateString).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-        year: "numeric"
+        year: "numeric",
       });
     } catch (error) {
       console.log(error);
-      
+
       return "Invalid Date";
     }
   };
@@ -201,23 +187,28 @@ const CandidateManagement: React.FC = () => {
     setSearchTerm("");
   };
 
-  const hasActiveFilters = statusFilter !== "all" || stageFilter !== "all" || searchTerm.length > 0;
+  const hasActiveFilters =
+    statusFilter !== "all" || stageFilter !== "all" || searchTerm.length > 0;
 
   // Apply all filters
   const filteredCandidates = candidates.filter((candidate) => {
     // Search filter
-    const matchesSearch = !searchTerm || (
+    const matchesSearch =
+      !searchTerm ||
       candidate.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidate.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidate.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.applied_job?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      candidate.applied_job?.name
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     // Status filter
-    const matchesStatus = statusFilter === "all" || candidate.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || candidate.status === statusFilter;
 
     // Stage filter
-    const matchesStage = stageFilter === "all" || candidate.current_stage === stageFilter;
+    const matchesStage =
+      stageFilter === "all" || candidate.current_stage === stageFilter;
 
     return matchesSearch && matchesStatus && matchesStage;
   });
@@ -234,10 +225,12 @@ const CandidateManagement: React.FC = () => {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Candidate Tracking</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Candidate Tracking
+        </h1>
         <p className="text-muted-foreground">
-          {isAdmin 
-            ? "Track all candidates assigned to managers across all stages" 
+          {isAdmin
+            ? "Track all candidates assigned to managers across all stages"
             : "Monitor progress of candidates assigned to you throughout their journey"}
         </p>
       </div>
@@ -259,36 +252,66 @@ const CandidateManagement: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg border">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 min-w-[40px]">Status:</span>
+              <span className="text-xs font-medium text-gray-600 min-w-[40px]">
+                Status:
+              </span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-7 text-xs min-w-[100px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">All</SelectItem>
-                  <SelectItem value="active" className="text-xs">Active</SelectItem>
-                  <SelectItem value="hired" className="text-xs">Hired</SelectItem>
-                  <SelectItem value="rejected" className="text-xs">Rejected</SelectItem>
-                  <SelectItem value="withdrawn" className="text-xs">Withdrawn</SelectItem>
-                  <SelectItem value="hold" className="text-xs">Hold</SelectItem>
+                  <SelectItem value="all" className="text-xs">
+                    All
+                  </SelectItem>
+                  <SelectItem value="active" className="text-xs">
+                    Active
+                  </SelectItem>
+                  <SelectItem value="hired" className="text-xs">
+                    Hired
+                  </SelectItem>
+                  <SelectItem value="rejected" className="text-xs">
+                    Rejected
+                  </SelectItem>
+                  <SelectItem value="withdrawn" className="text-xs">
+                    Withdrawn
+                  </SelectItem>
+                  <SelectItem value="hold" className="text-xs">
+                    Hold
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 min-w-[35px]">Stage:</span>
+              <span className="text-xs font-medium text-gray-600 min-w-[35px]">
+                Stage:
+              </span>
               <Select value={stageFilter} onValueChange={setStageFilter}>
                 <SelectTrigger className="h-7 text-xs min-w-[100px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">All</SelectItem>
-                  <SelectItem value="registered" className="text-xs">Registered</SelectItem>
-                  <SelectItem value="hr" className="text-xs">HR Review</SelectItem>
-                  <SelectItem value="assessment" className="text-xs">Assessment</SelectItem>
-                  <SelectItem value="tech" className="text-xs">Technical</SelectItem>
-                  <SelectItem value="manager" className="text-xs">Manager</SelectItem>
-                  <SelectItem value="feedback" className="text-xs">Feedback</SelectItem>
+                  <SelectItem value="all" className="text-xs">
+                    All
+                  </SelectItem>
+                  <SelectItem value="registered" className="text-xs">
+                    Registered
+                  </SelectItem>
+                  <SelectItem value="hr" className="text-xs">
+                    HR Review
+                  </SelectItem>
+                  <SelectItem value="assessment" className="text-xs">
+                    Assessment
+                  </SelectItem>
+                  <SelectItem value="tech" className="text-xs">
+                    Technical
+                  </SelectItem>
+                  <SelectItem value="manager" className="text-xs">
+                    Manager
+                  </SelectItem>
+                  <SelectItem value="feedback" className="text-xs">
+                    Feedback
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -316,8 +339,12 @@ const CandidateManagement: React.FC = () => {
         {hasActiveFilters && (
           <div className="flex flex-wrap gap-1">
             {searchTerm && (
-              <Badge variant="secondary" className="text-xs h-5 px-2 flex items-center gap-1">
-                Search: "{searchTerm.substring(0, 20)}{searchTerm.length > 20 ? '...' : ''}"
+              <Badge
+                variant="secondary"
+                className="text-xs h-5 px-2 flex items-center gap-1"
+              >
+                Search: "{searchTerm.substring(0, 20)}
+                {searchTerm.length > 20 ? "..." : ""}"
                 <Button
                   variant="ghost"
                   size="sm"
@@ -329,7 +356,10 @@ const CandidateManagement: React.FC = () => {
               </Badge>
             )}
             {statusFilter !== "all" && (
-              <Badge variant="secondary" className="text-xs h-5 px-2 flex items-center gap-1">
+              <Badge
+                variant="secondary"
+                className="text-xs h-5 px-2 flex items-center gap-1"
+              >
                 Status: {statusFilter}
                 <Button
                   variant="ghost"
@@ -342,7 +372,10 @@ const CandidateManagement: React.FC = () => {
               </Badge>
             )}
             {stageFilter !== "all" && (
-              <Badge variant="secondary" className="text-xs h-5 px-2 flex items-center gap-1">
+              <Badge
+                variant="secondary"
+                className="text-xs h-5 px-2 flex items-center gap-1"
+              >
                 Stage: {stageFilter}
                 <Button
                   variant="ghost"
@@ -362,7 +395,7 @@ const CandidateManagement: React.FC = () => {
       <div className="space-y-4">
         {filteredCandidates.map((candidate) => {
           const isExpanded = expandedCards.has(candidate._id);
-          const progress = calculateProgress(candidate);
+
           const metrics = candidate.progress_metrics || {
             stages_completed: 0,
             total_assessments: 0,
@@ -371,11 +404,14 @@ const CandidateManagement: React.FC = () => {
             documents_uploaded: 0,
             feedback_count: 0,
             hr_questionnaire_completed: false,
-            current_stage_duration: 0
+            current_stage_duration: 0,
           };
 
           return (
-            <Card key={candidate._id} className="overflow-hidden hover:shadow-lg transition-shadow">
+            <Card
+              key={candidate._id}
+              className="overflow-hidden hover:shadow-lg transition-shadow"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   {/* Left: Candidate Info */}
@@ -383,27 +419,41 @@ const CandidateManagement: React.FC = () => {
                     <Avatar className="w-12 h-12">
                       <AvatarImage src={candidate.profile_photo_url?.url} />
                       <AvatarFallback>
-                        {candidate.first_name?.[0] || 'U'}{candidate.last_name || 'U'}
+                        {candidate.first_name?.[0] || "U"}
+                        {candidate.last_name || "U"}
                       </AvatarFallback>
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-lg font-semibold truncate">
-                          {candidate.first_name || 'Unknown'} {candidate.last_name || 'User'}
+                        <h3
+                          className={`text-lg font-semibold truncate 
+                        ${
+                          candidate.status === "rejected"
+                            ? "line-through text-red-600 opacity-75"
+                            : candidate.status === "hired"
+                            ? "text-green-700 font-bold animate-pulse"
+                            : ""
+                        }`}
+                        >
+                          {candidate.status === "hired" && "🎉 "}
+                          {candidate.first_name }{" "}
+                          {candidate.last_name || "User"}
                         </h3>
                         <Badge className={getStatusColor(candidate.status)}>
                           {candidate.status}
                         </Badge>
-                        <Badge className={getStageColor(candidate.current_stage)}>
-                          {candidate.current_stage}
+                        <Badge
+                        className={getStageColor(candidate.current_stage)}>
+                          {/* Progress circle */}
+                      <StageCircle currentStage={candidate.current_stage} />
                         </Badge>
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                         <div className="flex items-center gap-1">
                           <Mail className="h-3 w-3" />
-                          {candidate.email || 'No email'}
+                          {candidate.email || "No email"}
                         </div>
                         {candidate.phone && (
                           <div className="flex items-center gap-1">
@@ -414,14 +464,10 @@ const CandidateManagement: React.FC = () => {
                       </div>
 
                       <div className="text-sm font-medium text-blue-600 mb-2">
-                        {candidate.applied_job?.name || 'No job specified'}
+                        {candidate.applied_job?.name || "No job specified"}
                       </div>
 
-                      {/* Progress Bar */}
-                      <div className="flex items-center gap-3">
-                        <Progress value={progress} className="flex-1" />
-                        <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
-                      </div>
+                      
                     </div>
                   </div>
 
@@ -431,7 +477,10 @@ const CandidateManagement: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="flex items-center gap-1 text-blue-600">
                         <Video className="h-3 w-3" />
-                        <span>{metrics.completed_interviews + metrics.pending_interviews}</span>
+                        <span>
+                          {metrics.completed_interviews +
+                            metrics.pending_interviews}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1 text-green-600">
                         <FileText className="h-3 w-3" />
@@ -449,7 +498,9 @@ const CandidateManagement: React.FC = () => {
 
                     {/* Stage Duration */}
                     <div className="text-right">
-                      <div className="text-xs text-muted-foreground">Current Stage</div>
+                      <div className="text-xs text-muted-foreground">
+                        Current Stage
+                      </div>
                       <div className="text-sm font-medium">
                         {metrics.current_stage_duration} days
                       </div>
@@ -474,59 +525,75 @@ const CandidateManagement: React.FC = () => {
               {isExpanded && (
                 <CardContent className="pt-0 border-t">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
                     {/* HR Questionnaire - Compact */}
-                    {candidate.hr_questionnaire && candidate.hr_questionnaire.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-purple-600" />
-                          HR Review ({candidate.hr_questionnaire.length} responses)
-                        </h4>
-                        <div className="space-y-2">
-                          {candidate.hr_questionnaire.slice(0, 3).map((qa, index) => (
-                            <div key={index} className="p-2 bg-purple-50 rounded border border-purple-100">
-                              <div className="text-xs font-medium text-purple-800 mb-1">
-                                {qa.question_text?.substring(0, 60) || 'No question'}...
-                              </div>
-                              <div className="text-xs text-gray-700">
-                                {typeof qa.response === 'string' 
-                                  ? qa.response.substring(0, 80) + "..."
-                                  : String(qa.response || 'No response')}
-                              </div>
-                            </div>
-                          ))}
+                    {candidate.hr_questionnaire &&
+                      candidate.hr_questionnaire.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-purple-600" />
+                            HR Review ({candidate.hr_questionnaire.length}{" "}
+                            responses)
+                          </h4>
+                          <div className="space-y-2">
+                            {candidate.hr_questionnaire
+                              .slice(0, 3)
+                              .map((qa, index) => (
+                                <div
+                                  key={index}
+                                  className="p-2 bg-purple-50 rounded border border-purple-100"
+                                >
+                                  <div className="text-xs font-medium text-purple-800 mb-1">
+                                    {qa.question_text?.substring(0, 60) ||
+                                      "No question"}
+                                    ...
+                                  </div>
+                                  <div className="text-xs text-gray-700">
+                                    {typeof qa.response === "string"
+                                      ? qa.response.substring(0, 80) + "..."
+                                      : String(qa.response || "No response")}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Assessment Results - Compact */}
-                    {candidate.assessments && candidate.assessments.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-indigo-600" />
-                          Assessments
-                        </h4>
-                        <div className="space-y-2">
-                          {candidate.assessments.map((assessment, index) => (
-                            <div key={index} className="p-2 bg-indigo-50 rounded border border-indigo-100">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-medium text-indigo-800">
-                                  {assessment.assessment_type || 'Unknown Assessment'}
-                                </span>
-                                <Badge variant="outline" className="text-indigo-700 border-indigo-300">
-                                  {assessment.overall_score || 0}%
-                                </Badge>
-                              </div>
-                              {assessment.remarks && (
-                                <div className="text-xs text-indigo-600 italic">
-                                  "{assessment.remarks.substring(0, 60)}..."
+                    {candidate.assessments &&
+                      candidate.assessments.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-indigo-600" />
+                            Assessments
+                          </h4>
+                          <div className="space-y-2">
+                            {candidate.assessments.map((assessment, index) => (
+                              <div
+                                key={index}
+                                className="p-2 bg-indigo-50 rounded border border-indigo-100"
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-sm font-medium text-indigo-800">
+                                    {assessment.assessment_type ||
+                                      "Unknown Assessment"}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-indigo-700 border-indigo-300"
+                                  >
+                                    {assessment.overall_score || 0}%
+                                  </Badge>
                                 </div>
-                              )}
-                            </div>
-                          ))}
+                                {assessment.remarks && (
+                                  <div className="text-xs text-indigo-600 italic">
+                                    "{assessment.remarks.substring(0, 60)}..."
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Documents - Compact */}
                     {candidate.documents && candidate.documents.length > 0 && (
@@ -536,71 +603,94 @@ const CandidateManagement: React.FC = () => {
                           Documents
                         </h4>
                         <div className="space-y-2">
-                          {candidate.documents.slice(0, 4).map((document, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-emerald-50 rounded border border-emerald-100">
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-emerald-800 truncate">
-                                  {document.name || 'Unnamed Document'}
+                          {candidate.documents
+                            .slice(0, 4)
+                            .map((document, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 bg-emerald-50 rounded border border-emerald-100"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-emerald-800 truncate">
+                                    {document.name || "Unnamed Document"}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    {document.document_type || "Unknown Type"}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-600">
-                                  {document.document_type || 'Unknown Type'}
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {document.status || "Unknown"}
+                                  </Badge>
+                                  {document.document_url && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        window.open(
+                                          document.document_url,
+                                          "_blank"
+                                        )
+                                      }
+                                      className="h-6 w-6 p-0"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {document.status || 'Unknown'}
-                                </Badge>
-                                {document.document_url && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => window.open(document.document_url, '_blank')}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     )}
 
                     {/* Stage History */}
-                    {candidate.stage_history && candidate.stage_history.length > 0 && (
-                      <div className="lg:col-span-2">
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-600" />
-                          Stage History
-                        </h4>
-                        <div className="space-y-2">
-                          {candidate.stage_history.slice(0, 5).map((stage, index) => (
-                            <div key={index} className="p-3 bg-gray-50 rounded border border-gray-200">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-xs">
-                                    {stage.from_stage || 'Unknown'} → {stage.to_stage || 'Unknown'}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    by {stage.changed_by?.name || 'Unknown User'}
-                                  </span>
+                    {candidate.stage_history &&
+                      candidate.stage_history.length > 0 && (
+                        <div className="lg:col-span-2">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-600" />
+                            Stage History
+                          </h4>
+                          <div className="space-y-2">
+                            {candidate.stage_history
+                              .slice(0, 5)
+                              .map((stage, index) => (
+                                <div
+                                  key={index}
+                                  className="p-3 bg-gray-50 rounded border border-gray-200"
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        {stage.from_stage || "Unknown"} →{" "}
+                                        {stage.to_stage || "Unknown"}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        by{" "}
+                                        {stage.changed_by?.name ||
+                                          "Unknown User"}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {stage.changed_at
+                                        ? formatDate(stage.changed_at)
+                                        : "Unknown Date"}
+                                    </span>
+                                  </div>
+                                  {stage.remarks && (
+                                    <div className="text-xs text-gray-600 italic">
+                                      "{stage.remarks}"
+                                    </div>
+                                  )}
                                 </div>
-                                <span className="text-xs text-muted-foreground">
-                                  {stage.changed_at ? formatDate(stage.changed_at) : 'Unknown Date'}
-                                </span>
-                              </div>
-                              {stage.remarks && (
-                                <div className="text-xs text-gray-600 italic">
-                                  "{stage.remarks}"
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-
+                      )}
                   </div>
                 </CardContent>
               )}
