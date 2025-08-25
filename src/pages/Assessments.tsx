@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
-import type { JSX } from "react/jsx-runtime";
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
