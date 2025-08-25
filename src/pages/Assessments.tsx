@@ -127,9 +127,17 @@ export default function Assessments() {
     const token = row.access_token;
     if (!token) return;
     if (row.is_seb) {
-      setShowSebDialog(row);
+      const apiBase =
+        (import.meta as any).env?.VITE_API_URL ?? window.location.origin;
+      const host = apiBase.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      window.location.href = `seb://${host}/candidates/seb/config`;
       return;
     }
+
+    /* Standard web flow (include token) ------------------------------------- */
+    const feBase =
+      ((import.meta as any).env?.VITE_FRONTEND_URL || "").replace(/\/$/, "");
+    window.location.href = `${feBase}/start-assessment?token=${token}`;
   };
 
   /* ------------------------------ Data fetch ------------------------------ */
