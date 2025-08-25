@@ -76,7 +76,7 @@ function App() {
     },
     {
       path:"*",
-      element:<NotFound /> //Email verification informative form
+      element:<NotFound /> //Email Verification informative form
     },
   ]);
 
