@@ -6,7 +6,7 @@ export const registerCandidateSchema = z.object({
   email: z.string().email("Invalid email"),
   phone: z.string().regex(/^\+?[1-9]\d{7,14}$/, "Invalid international phone number"),
   date_of_birth: z.string().min(1, "Date of birth is required"),
-  gender: z.enum(["male", "female", "other"]),
+  gender: z.enum(["male", "female"]),
   address: z.string().min(1, "Address is required"),
   portfolio_url: z.union([
     z.string().min(1).url("Invalid portfolio URL"), // Valid URLs only
