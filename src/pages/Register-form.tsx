@@ -68,9 +68,9 @@ type FormValues = {
   email: string;
   phone: string;
   date_of_birth: string;
-  gender: "male" | "female" | "other";
+  gender: "male" | "female";
   address: string;
-  portfolio_url?: string;
+  portfolio_url?: string | null;
   profile_photo_url: FileList;
   applied_job: string;
   resume: FileList;
@@ -550,6 +550,7 @@ case "checkbox": {
       if (!hrResponses || hrResponses.length === 0) {
         toast.error("Please complete the HR questionnaire to continue");
         setHrQuestionnaireOpen(true);
+        await loadHRQuestions();
         setLoading(false);
         return;
       }
@@ -564,6 +565,7 @@ case "checkbox": {
       if (unansweredQuestions.length > 0) {
         toast.error(`Please answer all ${hrResponses.length} HR questions`);
         setHrQuestionnaireOpen(true);
+        await loadHRQuestions();
         setLoading(false);
         return;
       }
@@ -761,7 +763,6 @@ case "checkbox": {
                       <option value="">Select Gender</option>
                       <option value="male">Male</option>
                       <option value="female">Female</option>
-                      <option value="other">Other</option>
                     </select>
                     {errors.gender && (
                       <p className="text-red-500 text-sm mt-1">
@@ -915,7 +916,7 @@ case "checkbox": {
                 <div className="pt-6 border-t">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-medium">HR Questionnaire <span className="text-red-500">*</span></h3>
+                      <h3 className="text-lg font-medium">Basic Details <span className="text-red-500">*</span></h3>
                       <p className="text-sm text-gray-600">Please answer all questions to complete your registration</p>
                     </div>
                     <Button
