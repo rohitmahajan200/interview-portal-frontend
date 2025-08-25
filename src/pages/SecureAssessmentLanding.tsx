@@ -309,7 +309,10 @@ const handleEntry = async () => {
                   ✅ You will be notified of your results via email
                 </p>
               </div>
-              <Button onClick={() => window.close()} className="w-full">
+              <Button 
+                onClick={() => (window.location.href = "/quit")} 
+                className="w-full"
+              >
                 Close Window
               </Button>
             </div>
