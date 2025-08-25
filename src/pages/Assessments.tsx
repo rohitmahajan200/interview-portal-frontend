@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import api from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -30,6 +29,9 @@ import {
   CheckCircle2,
   Ban,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
+import type { JSX } from "react/jsx-runtime";
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -108,6 +110,7 @@ export default function Assessments() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSebDialog, setShowSebDialog] = useState<null | TechnicalAssessment>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] =
     useState<"all" | "pending" | "started" | "completed" | "expired">("all");
@@ -122,24 +125,11 @@ export default function Assessments() {
 
     /* Technical assessment -------------------------------------------------- */
     const token = row.access_token;
-    if (!token) {
-      console.warn("Missing access_token for technical assessment");
-      return;
-    }
-
-    /* Safe Exam Browser (no query params) ----------------------------------- */
+    if (!token) return;
     if (row.is_seb) {
-      const apiBase =
-        (import.meta as any).env?.VITE_API_URL ?? window.location.origin;
-      const host = apiBase.replace(/^https?:\/\//, "").replace(/\/$/, "");
-      window.location.href = `seb://${host}/candidates/seb/config`;
+      setShowSebDialog(row);
       return;
     }
-
-    /* Standard web flow (include token) ------------------------------------- */
-    const feBase =
-      ((import.meta as any).env?.VITE_FRONTEND_URL || "").replace(/\/$/, "");
-    window.location.href = `${feBase}/start-assessment?token=${token}`;
   };
 
   /* ------------------------------ Data fetch ------------------------------ */
@@ -551,6 +541,60 @@ export default function Assessments() {
           </Table>
         </div>
       )}
+      <Dialog open={Boolean(showSebDialog)} onOpenChange={(open) => !open && setShowSebDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Safe Exam Browser Required</DialogTitle>
+            <DialogDescription>
+              To begin this assessment, Safe Exam Browser (SEB) will be launched.
+              <br />
+              <strong>Warning:</strong> SEB will close some apps automatically for security reasons, and your
+              computer may become locked down during the exam.
+            </DialogDescription>
+          </DialogHeader>
+
+          <p className="mb-2 text-sm">
+            If you do not have SEB installed, download it from
+            <a
+              href="https://safeexambrowser.org/download_en.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-blue-600 underline"
+            >
+              the official SEB download page
+            </a>
+            .
+          </p>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSebDialog(null)}>
+              Cancel
+            </Button>
+
+            <Button
+              onClick={() => {
+                if (!showSebDialog) return;
+                const row = showSebDialog;
+
+                // Resolve API base and host safely
+                const apiBase = (import.meta as any).env?.VITE_API_URL || window.location.origin;
+                const host = new URL(apiBase, window.location.origin).host;
+
+                // Include token in SEB link (URL-encoded)
+                const sebUrl = `seb://${host}/candidates/seb/config?token=${encodeURIComponent(
+                  row.access_token
+                )}`;
+
+                window.location.href = sebUrl;
+                setShowSebDialog(null);
+              }}
+            >
+              Open Safe Exam Browser
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

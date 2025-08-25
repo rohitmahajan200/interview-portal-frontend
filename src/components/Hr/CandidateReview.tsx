@@ -173,10 +173,10 @@ const CandidateReview = () => {
     }
   };
 
-  const updateCandidateStage = async (responseId: string, newStage: string, remarks?: string) => {
+  const updateCandidateStage = async (responseId: string, candidateId:string, newStage: string, remarks?: string) => {
     setLoadingActions(prev => ({ ...prev, [`stage_${responseId}`]: true }));
     try {
-      await api.patch(`/org/candidates/${responseId}/update-stage`, {
+      await api.patch(`/org/candidates/${candidateId}/update-stage`, {
         newStage,
         remarks
       });
@@ -706,7 +706,8 @@ const CandidateReview = () => {
             const remarks = formData.get('remarks') as string;
             
             if (selectedCandidate) {
-              updateCandidateStage(selectedCandidate._id, newStage, remarks);
+              console.log(selectedCandidate)
+              updateCandidateStage(selectedCandidate._id, selectedCandidate.candidate._id, newStage, remarks);
             }
           }}>
             <div className="space-y-4">

@@ -16,6 +16,7 @@ import OrgOTPLoginForm from "./pages/OrgOTPLoginForm";
 import OrgSetupPasswordForm from "./pages/OrgSetupPasswordForm";
 import OrgDashboard from "./pages/OrgDashboard";
 import SecureHRInterview from "./pages/SecureHrQn";
+import SebQuitPage from "./pages/SebQuitPage";
 
 
 function App() {
@@ -68,6 +69,10 @@ function App() {
     {
       path:"/start-hrqna",
       element:<SecureHRInterview />,
+    },
+    {
+      path:"/quit",
+      element:<SebQuitPage />,
     },
     {
       path:"*",
