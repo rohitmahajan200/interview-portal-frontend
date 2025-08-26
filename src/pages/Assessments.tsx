@@ -137,7 +137,7 @@ export default function Assessments() {
     window.location.href = `${feBase}/start-assessment?token=${token}`;
   };
 
-  /* ------------------------------ Data fetch ------------------------------ */
+  /* ------------------------------ Data fetch ----------------------------- */
 
   useEffect(() => {
     let mounted = true;
