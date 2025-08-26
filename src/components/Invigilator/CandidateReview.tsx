@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,6 +10,9 @@ import { Calendar, Clock, Eye, FileText, User, Mail, Code, PenTool, CheckCircle,
 import { format } from 'date-fns';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import toast, { Toaster } from "react-hot-toast";
 
 // TypeScript interfaces for Assessment Review
 interface AssessmentStatistics {
@@ -45,6 +48,7 @@ interface AssessmentListItem {
       publicId: string;
     };
     name: string;
+    status: string;
   };
   assessment: {
     _id: string;
@@ -71,6 +75,7 @@ interface AssessmentResponse {
   ai_score?: number;
   flagged?: boolean;
   max_score?: number;
+  remarks?: string;
 }
 
 interface ProctoringLog {
@@ -78,6 +83,7 @@ interface ProctoringLog {
   severity: 'info' | 'warn' | 'error';
   timestamp: string;
 }
+
 interface AssessmentDetail {
   _id: string;
   candidate: {
@@ -109,8 +115,20 @@ interface AssessmentDetail {
   status: 'pending' | 'completed' | 'started' | 'expired';
   createdAt: string;
   updatedAt: string;
-  proctoring_logs?: ProctoringLog[];         // <-- added for TS correctness
-  proctoring_snapshots?: string[];           // <-- added for TS correctness
+  proctoring_logs?: ProctoringLog[];
+  proctoring_snapshots?: string[];
+}
+
+// Add interface for candidate to reject
+interface CandidateToReject {
+  _id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  current_stage: string;
+  profile_photo_url?: {
+    url: string;
+  };
 }
 
 const AssessmentReview = () => {
@@ -122,6 +140,18 @@ const AssessmentReview = () => {
   const [statistics, setStatistics] = useState<AssessmentStatistics | null>(null);
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [stageUpdateModal, setStageUpdateModal] = useState(false);
+  
+  // Rejection related state
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [candidateToReject, setCandidateToReject] = useState<CandidateToReject | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  
+  // Stage update state
+  const [stageUpdateReason, setStageUpdateReason] = useState("");
+  const [stageFeedback, setStageFeedback] = useState("");
+  const [selectedNewStage, setSelectedNewStage] = useState("");
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
   const fetchStatistics = async () => {
     try {
@@ -142,31 +172,62 @@ const AssessmentReview = () => {
       }
       await fetchAssessmentsList();
       await fetchStatistics();
+      toast.success('AI evaluation completed successfully');
       console.log('AI evaluation completed:', response.data.message);
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI evaluation failed:', error);
+      toast.error(error?.response?.data?.message || 'Failed to evaluate assessment');
     } finally {
       setLoadingActions(prev => ({ ...prev, [`ai_${responseId}`]: false }));
     }
   };
 
-  const updateCandidateStage = async (candidateId: string, newStage: string, remarks?: string) => {
-    setLoadingActions(prev => ({ ...prev, [`stage_${candidateId}`]: true }));
+  const updateCandidateStage = async (candidateId: string, newStage: string, internal_feedback: string, remarks?: string) => {
+    setIsUpdatingStage(true);
     try {
-      await api.patch(`/org/candidates/${candidateId}/update-stage`, {
+      const response = await api.patch(`/org/candidates/${candidateId}/update-stage`, {
         newStage,
-        remarks
+        remarks,
+        internal_feedback: { feedback: internal_feedback }
       });
-      await Promise.all([
-        fetchAssessmentDetail(selectedAssessment!._id),
-        fetchAssessmentsList()
-      ]);
-      setStageUpdateModal(false);
-      console.log('Stage updated successfully');
-    } catch (error) {
+      
+      if (response.data.success) {
+        toast.success(`Candidate stage updated to ${newStage.toUpperCase()}`);
+        await Promise.all([
+          fetchAssessmentDetail(selectedAssessment!._id),
+          fetchAssessmentsList()
+        ]);
+        setStageUpdateModal(false);
+        setIsDialogOpen(false);
+      }
+    } catch (error: any) {
       console.error('Failed to update stage:', error);
+      toast.error(error?.response?.data?.message || "Failed to update candidate stage");
     } finally {
-      setLoadingActions(prev => ({ ...prev, [`stage_${candidateId}`]: false }));
+      setIsUpdatingStage(false);
+    }
+  };
+
+  const rejectCandidate = async (candidateId: string, reason: string) => {
+    setIsRejecting(true);
+    try {
+      const response = await api.patch(`/org/candidates/${candidateId}/reject`, {
+        rejection_reason: reason
+      });
+      
+      if (response.data.success) {
+        toast.success("Candidate rejected successfully");
+        await fetchAssessmentsList();
+        setIsDialogOpen(false);
+        setRejectDialogOpen(false);
+        setCandidateToReject(null);
+        setRejectionReason("");
+      }
+    } catch (error: any) {
+      console.error('Failed to reject candidate:', error);
+      toast.error(error?.response?.data?.message || "Failed to reject candidate");
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -204,6 +265,12 @@ const AssessmentReview = () => {
     setIsDialogOpen(false);
     setSelectedAssessment(null);
     setStageUpdateModal(false);
+    setRejectDialogOpen(false);
+    setCandidateToReject(null);
+    setRejectionReason("");
+    setStageUpdateReason("");
+    setStageFeedback("");
+    setSelectedNewStage("");
   };
 
   const formatDate = (dateString: string) => {
@@ -213,6 +280,7 @@ const AssessmentReview = () => {
       return 'Invalid Date';
     }
   };
+
   const formatDateTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'dd MMM yyyy, HH:mm');
@@ -220,8 +288,22 @@ const AssessmentReview = () => {
       return 'Invalid Date';
     }
   };
+
   const getInitials = (name?: string) =>
     name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '??';
+
+  const getStageColor = (stage: string) => {
+    switch (stage) {
+      case "registered": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "hr": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "assessment": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case "tech": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      case "manager": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "feedback": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
+  };
+
   const getQuestionTypeIcon = (type: string) => {
     switch (type) {
       case 'mcq': return <CheckCircle className="h-4 w-4" />;
@@ -230,6 +312,7 @@ const AssessmentReview = () => {
       default: return <FileText className="h-4 w-4" />;
     }
   };
+
   const getQuestionTypeBadge = (type: string) => {
     const config = {
       mcq: { label: 'MCQ', variant: 'default' as const },
@@ -244,6 +327,7 @@ const AssessmentReview = () => {
       </Badge>
     );
   };
+
   const renderAnswer = (response: AssessmentResponse) => {
     const { type, answer } = response;
     if (!answer) return <span className="text-muted-foreground italic">No answer provided</span>;
@@ -257,6 +341,7 @@ const AssessmentReview = () => {
         return <p className="whitespace-pre-wrap text-sm">{String(answer)}</p>;
     }
   };
+
   const getScoreColor = (score: number, maxScore: number) => {
     const percentage = (score / maxScore) * 100;
     if (percentage >= 80) return 'text-green-600';
@@ -264,50 +349,49 @@ const AssessmentReview = () => {
     return 'text-red-600';
   };
 
-  // New: Directly used proctoring helpers here
+  // Proctoring helpers
   const renderProctoringLogs = () => {
     if (!selectedAssessment?.proctoring_logs || selectedAssessment.proctoring_logs.length === 0) {
       return <p className="text-sm text-muted-foreground italic">No proctoring logs captured</p>;
     }
     return (
       <ScrollArea className="h-56 rounded-lg border border-gray-200 bg-muted/30 px-0 py-0">
-  <Table className="text-sm">
-    <TableHeader>
-      <TableRow className="bg-gray-50">
-        <TableHead className="font-semibold text-gray-700 px-3 py-2">Event</TableHead>
-        <TableHead className="font-semibold text-gray-700 px-3 py-2">Severity</TableHead>
-        <TableHead className="font-semibold text-gray-700 px-3 py-2 text-right">Timestamp</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {selectedAssessment.proctoring_logs.map((log, idx) => (
-        <TableRow key={idx} className={log.severity === "warn" ? "bg-red-50" : ""}>
-          <TableCell className="whitespace-pre-wrap px-3 py-2">{log.event}</TableCell>
-          <TableCell className="px-3 py-2">
-            <Badge
-              variant={log.severity === "warn"
-                ? "destructive"
-                : log.severity === "error"
-                ? "outline"
-                : "secondary"}
-              className={
-                log.severity === "warn"
-                  ? "bg-red-200 text-red-700"
-                  : log.severity === "error"
-                  ? "bg-gray-200 text-gray-700"
-                  : "bg-blue-100 text-blue-700"
-              }
-            >
-              {log.severity.toUpperCase()}
-            </Badge>
-          </TableCell>
-          <TableCell className="text-right px-3 py-2 font-mono text-xs text-gray-600">{formatDateTime(log.timestamp)}</TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-</ScrollArea>
-
+        <Table className="text-sm">
+          <TableHeader>
+            <TableRow className="bg-gray-50">
+              <TableHead className="font-semibold text-gray-700 px-3 py-2">Event</TableHead>
+              <TableHead className="font-semibold text-gray-700 px-3 py-2">Severity</TableHead>
+              <TableHead className="font-semibold text-gray-700 px-3 py-2 text-right">Timestamp</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {selectedAssessment.proctoring_logs.map((log, idx) => (
+              <TableRow key={idx} className={log.severity === "warn" ? "bg-red-50" : ""}>
+                <TableCell className="whitespace-pre-wrap px-3 py-2">{log.event}</TableCell>
+                <TableCell className="px-3 py-2">
+                  <Badge
+                    variant={log.severity === "warn"
+                      ? "destructive"
+                      : log.severity === "error"
+                      ? "outline"
+                      : "secondary"}
+                    className={
+                      log.severity === "warn"
+                        ? "bg-red-200 text-red-700"
+                        : log.severity === "error"
+                        ? "bg-gray-200 text-gray-700"
+                        : "bg-blue-100 text-blue-700"
+                    }
+                  >
+                    {log.severity.toUpperCase()}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right px-3 py-2 font-mono text-xs text-gray-600">{formatDateTime(log.timestamp)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </ScrollArea>
     );
   };
 
@@ -317,19 +401,21 @@ const AssessmentReview = () => {
       return <p className="text-sm text-muted-foreground italic">No snapshots captured</p>;
     }
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {shots.map((url, idx) => (
           <a
             key={idx}
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded overflow-hidden border hover:shadow-md transition"
+            className="block rounded-lg overflow-hidden border border-gray-200 shadow-sm hover:shadow-lg transition"
+            style={{ aspectRatio: "4/3" }}
           >
             <img
               src={url}
               alt={`Proctoring snapshot ${idx + 1}`}
-              className="object-contain w-full h-32 md:h-40"
+              className="w-full h-full object-cover block"
+              style={{ minHeight: "160px", maxHeight: "224px" }}
             />
           </a>
         ))}
@@ -344,6 +430,11 @@ const AssessmentReview = () => {
 
   return (
     <div className="h-full flex flex-col space-y-6 p-6">
+      <Toaster
+        position="bottom-right"
+        containerStyle={{ zIndex: 9999 }}
+      />
+      
       {/* Enhanced Header with Statistics */}
       <div className="flex items-center justify-between">
         <div>
@@ -374,6 +465,7 @@ const AssessmentReview = () => {
           </Badge>
         </div>
       </div>
+
       {/* Assessments Table */}
       <Card className="flex-1">
         <CardHeader>
@@ -437,7 +529,7 @@ const AssessmentReview = () => {
                       </TableCell>
                       <TableCell>
                         {item.ai_score !== undefined ? (
-                          <span className="font-medium">{item.total_score}</span>
+                          <span className="font-medium">{item.ai_score}</span>
                         ) : (
                           <Badge variant="secondary" className="text-orange-600">
                             Not evaluated
@@ -559,6 +651,12 @@ const AssessmentReview = () => {
                                   </Badge>
                                 )}
                               </div>
+                              {selectedAssessment.ai_score !== undefined && (
+                                <div>
+                                  <span className="font-medium">Score: </span>
+                                  <span className="text-lg font-bold">{selectedAssessment.ai_score}</span>
+                                </div>
+                              )}
                               {selectedAssessment.total_score !== undefined && (
                                 <div>
                                   <span className="font-medium">Total Score: </span>
@@ -649,6 +747,14 @@ const AssessmentReview = () => {
                                     {renderAnswer(response)}
                                   </div>
                                 </div>
+                                {response.remarks && (
+                                  <div>
+                                    <h5 className="text-sm font-medium mt-4 mb-2">AI Feedback:</h5>
+                                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                                      {response.remarks}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -704,6 +810,29 @@ const AssessmentReview = () => {
                   <Button variant="outline" onClick={closeAssessmentDialog}>
                     Close
                   </Button>
+                  
+                  {/* Reject Button - Added */}
+                  {selectedAssessment && selectedAssessment.candidate.status !== 'rejected' && selectedAssessment.ai_score !== undefined && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setCandidateToReject({
+                          _id: selectedAssessment.candidate._id,
+                          first_name: selectedAssessment.candidate.name.split(' ')[0] || '',
+                          last_name: selectedAssessment.candidate.name.split(' ').slice(1).join(' ') || '',
+                          email: selectedAssessment.candidate.email,
+                          current_stage: selectedAssessment.candidate.current_stage || '',
+                          profile_photo_url: selectedAssessment.candidate.profile_photo_url
+                        });
+                        setRejectionReason("");
+                        setRejectDialogOpen(true);
+                      }}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      ❌ Reject Candidate
+                    </Button>
+                  )}
+                  
                   {/* Only show Update Stage if AI evaluated */}
                   {selectedAssessment && selectedAssessment.ai_score !== undefined && (
                     <Button
@@ -725,65 +854,254 @@ const AssessmentReview = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Stage Update Modal */}
+      {/* Stage Update Modal - Updated with HR Home logic */}
       <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Update Candidate Stage</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-indigo-600">
+              🔄 Update Candidate Stage
+            </DialogTitle>
             <DialogDescription>
-              Move {selectedAssessment?.candidate.name} to the next stage of the hiring process
+              Move this candidate to a different stage in the hiring process.
             </DialogDescription>
           </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.target as HTMLFormElement);
-              const newStage = formData.get('stage') as string;
-              const remarks = formData.get('remarks') as string;
-              if (selectedAssessment) {
-                updateCandidateStage(selectedAssessment.candidate._id, newStage, remarks);
-              }
-            }}>
+
+          {selectedAssessment && (
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">New Stage</label>
-                <select name="stage" className="w-full p-2 border rounded mt-1" required>
-                  <option value="">Select Stage</option>
-                  <option value="assessment">Assessment</option>
-                  <option value="tech">Technical Interview</option>
-                  <option value="manager">Manager Review</option>
-                  <option value="feedback">Final Feedback</option>
+              {/* Candidate Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={selectedAssessment.candidate.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {getInitials(selectedAssessment.candidate.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{selectedAssessment.candidate.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedAssessment.candidate.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">Current:</span>
+                      <Badge className={getStageColor(selectedAssessment.candidate.current_stage || '')} variant="outline">
+                        {selectedAssessment.candidate.current_stage?.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* New Stage Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="new-stage">
+                  New Stage <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="new-stage"
+                  value={selectedNewStage}
+                  onChange={(e) => setSelectedNewStage(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-white dark:bg-gray-800"
+                  disabled={isUpdatingStage}
+                >
+                  <option value="">Select new stage</option>
+                  <option value="registered" disabled={selectedAssessment.candidate.current_stage === 'registered'}>
+                    📝 Registered
+                  </option>
+                  <option value="hr" disabled={selectedAssessment.candidate.current_stage === 'hr'}>
+                    👥 HR Review
+                  </option>
+                  <option value="assessment" disabled={selectedAssessment.candidate.current_stage === 'assessment'}>
+                    📊 Assessment
+                  </option>
+                  <option value="tech" disabled={selectedAssessment.candidate.current_stage === 'tech'}>
+                    💻 Technical Interview
+                  </option>
+                  <option value="manager" disabled={selectedAssessment.candidate.current_stage === 'manager'}>
+                    👔 Manager Review
+                  </option>
+                  <option value="feedback" disabled={selectedAssessment.candidate.current_stage === 'feedback'}>
+                    📋 Final Feedback
+                  </option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm font-medium">Remarks</label>
-                <textarea
-                  name="remarks"
-                  placeholder="Add transition remarks..."
-                  className="w-full p-2 border rounded mt-1"
-                  rows={3}
+
+              {/* Reason for Stage Update */}
+              <div className="space-y-2">
+                <Label htmlFor="stage-reason">
+                  Reason for Stage Update
+                </Label>
+                <Textarea
+                  id="stage-reason"
+                  placeholder="Enter reason for moving candidate to this stage..."
+                  value={stageUpdateReason}
+                  onChange={(e) => setStageUpdateReason(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isUpdatingStage}
                 />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be recorded in the candidate's stage history.
+                </p>
+              </div>
+
+              {/* Internal Feedback (compulsory) */}
+              <div className="space-y-2">
+                <Label htmlFor="stage-feedback">
+                  Internal Feedback <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="stage-feedback"
+                  placeholder="Provide your feedback for this stage update..."
+                  value={stageFeedback}
+                  onChange={(e) => setStageFeedback(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isUpdatingStage}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This feedback will be attached to the candidate's profile and visible internally.
+                </p>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <Button type="button" variant="outline" onClick={() => setStageUpdateModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  !!selectedAssessment && !!loadingActions[`stage_${selectedAssessment.candidate._id}`]
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStageUpdateModal(false);
+                setSelectedNewStage("");
+                setStageUpdateReason("");
+                setStageFeedback("");
+              }}
+              disabled={isUpdatingStage}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedAssessment && selectedNewStage && stageFeedback.trim()) {
+                  updateCandidateStage(
+                    selectedAssessment.candidate._id,
+                    selectedNewStage,
+                    stageFeedback,
+                    stageUpdateReason.trim() || `Stage updated to ${selectedNewStage}`
+                  );
                 }
-              >
-                {selectedAssessment && loadingActions[`stage_${selectedAssessment.candidate._id}`] && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
-                )}
-                Update Stage
-              </Button>
-            </div>
-          </form>
+              }}
+              disabled={isUpdatingStage || !selectedNewStage || !stageFeedback.trim()}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {isUpdatingStage ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  🔄 Update Stage
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rejection Confirmation Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              ⚠️ Confirm Candidate Rejection
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Please provide a reason for rejecting this candidate.
+            </DialogDescription>
+          </DialogHeader>
+
+          {candidateToReject && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={candidateToReject.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {candidateToReject.first_name[0]}{candidateToReject.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {candidateToReject.first_name} {candidateToReject.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {candidateToReject.email}
+                    </p>
+                    <Badge className={getStageColor(candidateToReject.current_stage)} variant="outline">
+                      {candidateToReject.current_stage?.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rejection Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">
+                  Reason for Rejection <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Please provide a detailed reason for rejecting this candidate..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isRejecting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be recorded in the candidate's history for future reference.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setCandidateToReject(null);
+                setRejectionReason("");
+              }}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (candidateToReject && rejectionReason.trim()) {
+                  rejectCandidate(candidateToReject._id, rejectionReason.trim());
+                }
+              }}
+              disabled={isRejecting || !rejectionReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isRejecting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Rejecting...
+                </>
+              ) : (
+                <>
+                  ❌ Confirm Rejection
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

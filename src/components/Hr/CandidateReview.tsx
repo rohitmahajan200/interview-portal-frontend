@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar, Clock, Eye, FileText, Play, User, Mail, Briefcase } from 'lucide-react';
+import toast, { Toaster } from "react-hot-toast";
 import { format } from 'date-fns';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
 // TypeScript interfaces (keep your existing interfaces)
 
@@ -111,6 +114,18 @@ interface CandidateDetail {
   summary?: string;
 }
 
+// Add interface for candidate to reject (matching the structure)
+interface CandidateToReject {
+  _id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  current_stage: string;
+  profile_photo_url?: {
+    url: string;
+  };
+}
+
 const CandidateReview = () => {
   const [responsesList, setResponsesList] = useState<CandidateListItem[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDetail | null>(null);
@@ -121,6 +136,12 @@ const CandidateReview = () => {
   const [loadingActions, setLoadingActions] = useState<{[key: string]: boolean}>({});
   const [editingResponse, setEditingResponse] = useState<string | null>(null);
   const [stageUpdateModal, setStageUpdateModal] = useState(false);
+  
+  // Rejection related state
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [candidateToReject, setCandidateToReject] = useState<CandidateToReject | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchStatistics = async () => {
     try {
@@ -173,12 +194,13 @@ const CandidateReview = () => {
     }
   };
 
-  const updateCandidateStage = async (responseId: string, candidateId:string, newStage: string, remarks?: string) => {
+  const updateCandidateStage = async (responseId: string, candidateId:string, newStage: string, feedback: string, remarks?: string) => {
     setLoadingActions(prev => ({ ...prev, [`stage_${responseId}`]: true }));
     try {
-      await api.patch(`/org/candidates/${candidateId}/update-stage`, {
+      await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
-        remarks
+        remarks,
+        internal_feedback: {feedback: feedback}
       });
       
       await Promise.all([
@@ -187,8 +209,11 @@ const CandidateReview = () => {
       ]);
       
       setStageUpdateModal(false);
-    } catch (error) {
+      setIsDialogOpen(false)
+      toast.success(`Candidate stage updated to ${newStage.toUpperCase()}`);
+    } catch (error: any) {
       console.error('Failed to update stage:', error);
+      toast.error(error?.response?.data?.message || "Failed to update candidate stage");
     } finally {
       setLoadingActions(prev => ({ ...prev, [`stage_${responseId}`]: false }));
     }
@@ -228,6 +253,8 @@ const CandidateReview = () => {
     setIsDialogOpen(false);
     setSelectedCandidate(null);
     setEditingResponse(null);
+    setStageUpdateModal(false);
+    setRejectDialogOpen(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -240,6 +267,18 @@ const CandidateReview = () => {
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const getStageColor = (stage: string) => {
+    switch (stage) {
+      case "registered": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "hr": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "assessment": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case "tech": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      case "manager": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "feedback": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
   };
 
   const renderAnswer = (response: QuestionResponse) => {
@@ -295,8 +334,35 @@ const CandidateReview = () => {
     fetchStatistics();
   }, []);
 
+  const rejectCandidate = async (candidateId: string, reason: string) => {
+    setIsRejecting(true);
+    try {
+      const response = await api.patch(`/org/candidates/${candidateId}/reject`, {
+        rejection_reason: reason
+      });
+      
+      if (response.data.success) {
+        toast.success("Candidate rejected successfully");
+        await fetchResponsesList();
+        setIsDialogOpen(false);
+        setRejectDialogOpen(false);
+        setCandidateToReject(null);
+        setRejectionReason("");
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to reject candidate");
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col space-y-6 p-6">
+      <Toaster
+        position="bottom-right"
+        containerStyle={{ zIndex: 9999 }}
+      />
+      
       {/* Enhanced Header with Statistics */}
       <div className="flex items-center justify-between">
         <div>
@@ -673,9 +739,32 @@ const CandidateReview = () => {
                   <Button variant="outline" onClick={closeCandidateDialog}>
                     Close
                   </Button>
+                  
+                  {/* Reject Button - Added */}
+                  {selectedCandidate && selectedCandidate.candidate.status !== 'rejected' && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setCandidateToReject({
+                          _id: selectedCandidate.candidate._id,
+                          first_name: selectedCandidate.candidate.name.split(' ')[0] || '',
+                          last_name: selectedCandidate.candidate.name.split(' ').slice(1).join(' ') || '',
+                          email: selectedCandidate.candidate.email,
+                          current_stage: selectedCandidate.candidate.current_stage,
+                          profile_photo_url: selectedCandidate.candidate.profile_photo_url
+                        });
+                        setRejectionReason("");
+                        setRejectDialogOpen(true);
+                      }}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      ❌ Reject Candidate
+                    </Button>
+                  )}
+                  
                   {selectedCandidate && (
                     <Button onClick={() => setStageUpdateModal(true)}>
-                      Update Stage
+                      🔄 Update Stage
                     </Button>
                   )}
                 </div>
@@ -702,15 +791,22 @@ const CandidateReview = () => {
           <form onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.target as HTMLFormElement);
-            const newStage = formData.get('stage') as string;
-            const remarks = formData.get('remarks') as string;
-            
+            const newStage = formData.get("stage") as string;
+            const remarks = formData.get("remarks") as string;
+            const feedback = formData.get("feedback") as string;
+
             if (selectedCandidate) {
-              console.log(selectedCandidate)
-              updateCandidateStage(selectedCandidate._id, selectedCandidate.candidate._id, newStage, remarks);
+              updateCandidateStage(
+                selectedCandidate._id,
+                selectedCandidate.candidate._id,
+                newStage,
+                feedback,
+                remarks
+              );
             }
           }}>
             <div className="space-y-4">
+              {/* Stage Selection */}
               <div>
                 <label className="text-sm font-medium">New Stage</label>
                 <select name="stage" className="w-full p-2 border rounded mt-1" required>
@@ -721,6 +817,8 @@ const CandidateReview = () => {
                   <option value="feedback">Final Feedback</option>
                 </select>
               </div>
+
+              {/* Remarks */}
               <div>
                 <label className="text-sm font-medium">Remarks</label>
                 <textarea
@@ -729,9 +827,30 @@ const CandidateReview = () => {
                   className="w-full p-2 border rounded mt-1"
                   rows={3}
                 />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be stored in stage history.
+                </p>
+              </div>
+
+              {/* Internal Feedback (compulsory) */}
+              <div>
+                <label className="text-sm font-medium">
+                  Internal Feedback <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="feedback"
+                  placeholder="Provide internal feedback for this stage update..."
+                  className="w-full p-2 border rounded mt-1"
+                  rows={3}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  This feedback will be attached to the candidate's profile and visible only internally.
+                </p>
               </div>
             </div>
             
+            {/* Footer Buttons */}
             <div className="flex justify-end gap-2 mt-6">
               <Button type="button" variant="outline" onClick={() => setStageUpdateModal(false)}>
                 Cancel
@@ -749,6 +868,103 @@ const CandidateReview = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Rejection Confirmation Dialog - FIXED */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              ⚠️ Confirm Candidate Rejection
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Please provide a reason for rejecting this candidate.
+            </DialogDescription>
+          </DialogHeader>
+
+          {candidateToReject && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={candidateToReject.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {candidateToReject.first_name[0]}{candidateToReject.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {candidateToReject.first_name} {candidateToReject.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {candidateToReject.email}
+                    </p>
+                    <Badge className={getStageColor(candidateToReject.current_stage)} variant="outline">
+                      {candidateToReject.current_stage?.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rejection Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">
+                  Reason for Rejection <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Please provide a detailed reason for rejecting this candidate..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isRejecting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be recorded in the candidate's history for future reference.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setCandidateToReject(null);
+                setRejectionReason("");
+              }}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (candidateToReject && rejectionReason.trim()) {
+                  rejectCandidate(candidateToReject._id, rejectionReason.trim());
+                }
+              }}
+              disabled={isRejecting || !rejectionReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isRejecting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Rejecting...
+                </>
+              ) : (
+                <>
+                  ❌ Confirm Rejection
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

@@ -202,6 +202,7 @@ const HRHome = () => {
   const [isRejecting, setIsRejecting] = useState(false);
   const [stageUpdateModal, setStageUpdateModal] = useState(false);
   const [stageUpdateReason, setStageUpdateReason] = useState("");
+  const [stageFeedback, setStageFeedback] = useState("");
   const [selectedNewStage, setSelectedNewStage] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
@@ -449,12 +450,13 @@ const HRHome = () => {
   };
   
   // Other Handlers
-  const updateCandidateStage = async (candidateId: string, newStage: string, remarks?: string) => {
+  const updateCandidateStage = async (candidateId: string, newStage: string, internal_feedback: string, remarks?: string, ) => {
     setIsUpdatingStage(true);
     try {
-      const response = await api.patch(`/org/candidates/${candidateId}/update-stage`, {
+      const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
-        remarks
+        remarks,
+        internal_feedback: {feedback: internal_feedback}
       });
       
       if (response.data.success) {
@@ -2088,24 +2090,41 @@ const HRHome = () => {
                 </select>
               </div>
 
-              {/* Stage Update Reason */}
-              <div className="space-y-2">
-                <Label htmlFor="stage-reason">
-                  Reason for Stage Update
-                </Label>
-                <Textarea
-                  id="stage-reason"
-                  placeholder="Enter reason for moving candidate to this stage..."
-                  value={stageUpdateReason}
-                  onChange={(e) => setStageUpdateReason(e.target.value)}
-                  className="min-h-[100px]"
-                  disabled={isUpdatingStage}
-                />
-                <p className="text-xs text-muted-foreground">
-                  This reason will be recorded in the candidate's stage history.
-                </p>
-              </div>
-            </div>
+               <div className="space-y-2">
+                  <Label htmlFor="stage-reason">
+                    Reason for Stage Update
+                  </Label>
+                  <Textarea
+                    id="stage-reason"
+                    placeholder="Enter reason for moving candidate to this stage..."
+                    value={stageUpdateReason}
+                    onChange={(e) => setStageUpdateReason(e.target.value)}
+                    className="min-h-[100px]"
+                    disabled={isUpdatingStage}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This reason will be recorded in the candidate's stage history.
+                  </p>
+                </div>
+
+                {/* Internal Feedback (compulsory) */}
+                <div className="space-y-2">
+                  <Label htmlFor="stage-feedback">
+                    Internal Feedback <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="stage-feedback"
+                    placeholder="Provide your feedback for this stage update..."
+                    value={stageFeedback}
+                    onChange={(e) => setStageFeedback(e.target.value)}
+                    className="min-h-[100px]"
+                    disabled={isUpdatingStage}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This feedback will be attached to the candidate's profile and visible internally.
+                  </p>
+                </div>
+  </div>
           )}
 
           <DialogFooter className="gap-2">
@@ -2128,6 +2147,7 @@ const HRHome = () => {
                   updateCandidateStage(
                     selectedCandidate._id, 
                     selectedNewStage, 
+                    stageFeedback,
                     stageUpdateReason.trim() || `Stage updated to ${selectedNewStage}`
                   );
                 }
