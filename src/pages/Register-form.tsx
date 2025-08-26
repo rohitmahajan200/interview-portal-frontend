@@ -104,13 +104,13 @@ export default function RegisterForm({
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // HR Questionnaire states
+  // Basic Details states
   const [hrQuestionnaireOpen, setHrQuestionnaireOpen] = useState(false);
   const [hrQuestions, setHrQuestions] = useState<HRQuestion[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [hrResponses, setHrResponses] = useState<FormValues['hr_responses']>([]);
 
-  // Audio states for HR questionnaire
+  // Audio states for Basic Details
   const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
   const [mediaRecorders, setMediaRecorders] = useState<{ [key: number]: MediaRecorder | null }>({});
   const [audioBlobs, setAudioBlobs] = useState<{ [key: number]: Blob | null }>({});
@@ -307,13 +307,13 @@ export default function RegisterForm({
     setHrResponses(updatedResponses);
   };
 
-  // Open HR questionnaire dialog
+  // Open Basic Details dialog
   const openHRQuestionnaire = () => {
     setHrQuestionnaireOpen(true);
     loadHRQuestions();
   };
 
-  // Close HR questionnaire dialog
+  // Close Basic Details dialog
   const closeHRQuestionnaire = () => {
     setHrQuestionnaireOpen(false);
     // Cleanup audio URLs
@@ -548,7 +548,7 @@ case "checkbox": {
     setLoading(true);
     try {
       if (!hrResponses || hrResponses.length === 0) {
-        toast.error("Please complete the HR questionnaire to continue");
+        toast.error("Please complete the Basic Details to continue");
         setHrQuestionnaireOpen(true);
         await loadHRQuestions();
         setLoading(false);
@@ -912,7 +912,7 @@ case "checkbox": {
                   </div>
                 </div>
 
-                {/* HR Questionnaire Section */}
+                {/* Basic Details Section */}
                 <div className="pt-6 border-t">
                   <div className="flex items-center justify-between">
                     <div>
@@ -965,11 +965,11 @@ case "checkbox": {
         </div>
       </div>
 
-      {/* HR Questionnaire Dialog */}
+      {/* Basic Details Dialog */}
       <Dialog open={hrQuestionnaireOpen} onOpenChange={setHrQuestionnaireOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-11/12 flex flex-col overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>HR Questionnaire</DialogTitle>
+            <DialogTitle>Basic Details</DialogTitle>
             <DialogDescription>
               Please answer the following questions. You can provide text responses, select from multiple choices, 
               record audio, upload audio files, or select dates as required.
