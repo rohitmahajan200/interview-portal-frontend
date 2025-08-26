@@ -205,6 +205,9 @@ const HRHome = () => {
   const [selectedNewStage, setSelectedNewStage] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
+  //Total Marks
+  const [totalMarks,setTotalMarks]=useState(0);
+
   // Forms
   const hrQuestionnaireForm = useForm<HRQuestionnaireFormData>({
     defaultValues: {
@@ -1758,8 +1761,10 @@ const HRHome = () => {
                                           const currentValue = field.value || [];
                                           if (checked) {
                                             field.onChange([...currentValue, question._id]);
+                                            setTotalMarks((prev)=>prev+question.max_score)
                                           } else {
                                             field.onChange(currentValue.filter((id: string) => id !== question._id));
+                                            setTotalMarks((prev)=>prev-question.max_score)
                                           }
                                         }}
                                       />
@@ -1772,14 +1777,20 @@ const HRHome = () => {
                                           >
                                             {getQuestionTypeDisplay(question.type)}
                                           </Badge>
+
+                                          {question.max_score && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              {question.max_score}
+                                            </Badge>
+                                          )}
                                           
                                           {/* {question.difficulty && (
                                             <Badge variant="secondary" className="text-xs">
                                               {question.difficulty.toUpperCase()}
                                             </Badge>
-                                          )} */}
+                                          )}
                                           
-                                          {/* {question.tags?.map((tag) => (
+                                          {question.tags?.map((tag) => (
                                             <Badge key={tag} variant="secondary" className="text-xs">
                                               {tag}
                                             </Badge>
@@ -1886,6 +1897,15 @@ const HRHome = () => {
                   <p className="text-xs text-muted-foreground">
                     Number of days from assignment date for completion (1-30 days)
                   </p>
+                </div>
+                {/* Total Marks */}
+                <div className="space-y-2">
+                  <Label htmlFor="total_marks">Total Marks</Label>
+                  <div className="flex items-center gap-4">
+                    <p className="text-xs text-muted-foreground">
+                    {totalMarks}
+                    </p>
+                  </div>  
                 </div>
               </form>
             </div>
