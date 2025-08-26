@@ -47,7 +47,7 @@ interface TechnicalQuestion {
   explanation?: string;
   is_must_ask: boolean;
   max_score: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
+  // difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string[];
   createdBy: string;
 }
@@ -369,7 +369,7 @@ const AssessmentManagement = () => {
         exam_duration: data.exam_duration
       }));
 
-      const response = await api.post('/org/assessment', { assessments });
+      // const response = await api.post('/org/assessment', { assessments });
       
       toast.success(`${assessments.length} assessment(s) created successfully`);
       closeDialog();
@@ -955,19 +955,19 @@ const AssessmentManagement = () => {
                                         <Badge variant="outline" className="text-xs">
                                           {question.type.toUpperCase()}
                                         </Badge>
-                                        {question.difficulty && (
+                                        {/* {question.difficulty && (
                                           <Badge variant="secondary" className="text-xs">
                                             {question.difficulty.toUpperCase()}
                                           </Badge>
-                                        )}
+                                        )} */}
                                         <Badge variant="secondary" className="text-xs">
                                           {question.max_score} pts
                                         </Badge>
-                                        {question.tags?.map((tag) => (
+                                        {/* {question.tags?.map((tag) => (
                                           <Badge key={tag} variant="secondary" className="text-xs">
                                             {tag}
                                           </Badge>
-                                        ))}
+                                        ))} */}
                                       </div>
                                     </div>
                                   </div>
