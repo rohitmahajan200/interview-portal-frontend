@@ -1197,19 +1197,19 @@ const AssessmentManagement = () => {
                                         <Badge variant="outline" className="text-xs">
                                           {question.type.toUpperCase()}
                                         </Badge>
-                                        {question.difficulty && (
+                                        {/* {question.difficulty && (
                                           <Badge variant="secondary" className="text-xs">
                                             {question.difficulty.toUpperCase()}
                                           </Badge>
-                                        )}
+                                        )} */}
                                         <Badge variant="secondary" className="text-xs">
                                           {question.max_score} pts
                                         </Badge>
-                                        {question.tags?.map((tag) => (
+                                        {/* {question.tags?.map((tag) => (
                                           <Badge key={tag} variant="secondary" className="text-xs">
                                             {tag}
                                           </Badge>
-                                        ))}
+                                        ))} */}
                                       </div>
                                     </div>
                                   </div>

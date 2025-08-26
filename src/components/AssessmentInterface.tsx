@@ -295,19 +295,6 @@ const AssessmentInterface: React.FC<AssessmentInterfaceProps> = ({
               <Badge variant="secondary" className="capitalize">
                 {question.type}
               </Badge>
-              {question.difficulty && (
-                <Badge
-                  variant={
-                    question.difficulty === 'easy'
-                      ? 'default'
-                      : question.difficulty === 'medium'
-                      ? 'secondary'
-                      : 'destructive'
-                  }
-                >
-                  {question.difficulty}
-                </Badge>
-              )}
               {isAnswered && (
                 <Badge variant="default" className="bg-green-100 text-green-800">
                   ✓ Answered
