@@ -1386,11 +1386,11 @@ const AssessmentManagement = () => {
                                 <Badge variant="outline">
                                   {question.type.toUpperCase()}
                                 </Badge>
-                                {question.difficulty && (
+                                {/* {question.difficulty && (
                                   <Badge variant="secondary">
                                     {question.difficulty.toUpperCase()}
                                   </Badge>
-                                )}
+                                )} */}
                                 <Badge variant="secondary">
                                   {question.max_score} points
                                 </Badge>
@@ -1399,11 +1399,11 @@ const AssessmentManagement = () => {
                                     REQUIRED
                                   </Badge>
                                 )}
-                                {question.tags?.map((tag) => (
+                                {/* {question.tags?.map((tag) => (
                                   <Badge key={tag} variant="secondary" className="text-xs">
                                     {tag}
                                   </Badge>
-                                ))}
+                                ))} */}
                               </div>
                             </div>
                           </div>
