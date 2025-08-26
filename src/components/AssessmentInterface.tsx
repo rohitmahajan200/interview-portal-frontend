@@ -39,7 +39,7 @@ interface Question {
   options?: string[];
   correct_answers?: string[];
   explanation?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
+  // difficulty?: 'easy' | 'medium' | 'hard';
   max_score?: number;
   tags?: string[];
   is_must_ask?: boolean;

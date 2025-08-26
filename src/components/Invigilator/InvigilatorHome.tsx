@@ -898,17 +898,17 @@ const InvigilatorHome = () => {
                                             {getQuestionTypeDisplay(question.type)}
                                           </Badge>
                                           
-                                          {question.difficulty && (
+                                          {/* {question.difficulty && (
                                             <Badge variant="secondary" className="text-xs">
                                               {question.difficulty.toUpperCase()}
                                             </Badge>
-                                          )}
+                                          )} */}
                                           
-                                          {question.tags?.map((tag) => (
+                                          {/* {question.tags?.map((tag) => (
                                             <Badge key={tag} variant="secondary" className="text-xs">
                                               {tag}
                                             </Badge>
-                                          ))}
+                                          ))} */}
                                         </div>
                                       </div>
                                     </div>
