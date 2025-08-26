@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
@@ -33,7 +33,6 @@ const assessmentUpdateSchema = z.object({
   exam_duration: z.number().min(1, "Must be at least 1 minute").max(600, "Cannot exceed 10 hours").optional(),
 });
 
-
 type CreateFormData = z.infer<typeof assessmentSchema>;
 type EditFormData = z.infer<typeof assessmentUpdateSchema>;
 
@@ -47,7 +46,6 @@ interface TechnicalQuestion {
   explanation?: string;
   is_must_ask: boolean;
   max_score: number;
-  // difficulty?: 'easy' | 'medium' | 'hard';
   tags?: string[];
   createdBy: string;
 }
@@ -76,7 +74,6 @@ interface Candidate {
   };
 }
 
-
 interface Assessment {
   _id: string;
   candidate: Candidate;
@@ -97,7 +94,6 @@ interface Assessment {
   createdAt: string;
   updatedAt: string;
 }
-
 
 const AssessmentManagement = () => {
   // State
@@ -122,6 +118,54 @@ const AssessmentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  // Update createForm defaultValues
+  const createForm = useForm<CreateFormData>({
+    resolver: zodResolver(assessmentSchema),
+    defaultValues: {
+      candidates: [],
+      assigned_questions: [],
+      days_to_complete: 7,
+      is_seb: false,
+      exam_duration: 60, // Default 1 hour
+    }
+  });
+
+  const editForm = useForm<EditFormData>({
+    resolver: zodResolver(assessmentUpdateSchema),
+    defaultValues: {
+      assigned_questions: [],
+      days_to_complete: 7,
+      is_seb: false,
+      exam_duration: 60, // Default 1 hour
+    }
+  });
+
+  // FIXED: Use useWatch for reactive total marks calculation - CREATE FORM
+  const selectedCreateQuestionIds = useWatch({
+    control: createForm.control,
+    name: 'assigned_questions'
+  }) || [];
+
+  const createTotalMarks = useMemo(() => {
+    if (!Array.isArray(selectedCreateQuestionIds) || selectedCreateQuestionIds.length === 0) return 0;
+    const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
+    return selectedCreateQuestionIds.reduce((sum, id) => sum + (scoreById.get(id) ?? 0), 0);
+  }, [selectedCreateQuestionIds, questions]);
+
+  // FIXED: Use useWatch for reactive total marks calculation - EDIT FORM
+  const selectedEditQuestionIds = useWatch({
+    control: editForm.control,
+    name: 'assigned_questions'
+  }) || [];
+
+  const editTotalMarks = useMemo(() => {
+    if (!Array.isArray(selectedEditQuestionIds) || selectedEditQuestionIds.length === 0) return 0;
+    const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
+    return selectedEditQuestionIds.reduce((sum, id) => sum + (scoreById.get(id) ?? 0), 0);
+  }, [selectedEditQuestionIds, questions]);
+
+  const isEditing = !!editingAssessment;
 
   // Helper functions - Following HR questionnaire pattern
   const getUniqueJobs = () => {
@@ -188,31 +232,6 @@ const AssessmentManagement = () => {
     field.onChange(Array.from(currentSelectedQuestions));
   };
 
-  // Update createForm defaultValues
-  const createForm = useForm<CreateFormData>({
-    resolver: zodResolver(assessmentSchema),
-    defaultValues: {
-      candidates: [],
-      assigned_questions: [],
-      days_to_complete: 7,
-      is_seb: false,
-      exam_duration: 60, // Default 1 hour
-    }
-  });
-
-  const editForm = useForm<EditFormData>({
-    resolver: zodResolver(assessmentUpdateSchema),
-    defaultValues: {
-      assigned_questions: [],
-      days_to_complete: 7,
-      is_seb: false,
-      exam_duration: 60, // Default 1 hour
-    }
-  });
-
-
-  const isEditing = !!editingAssessment;
-
   // Fetch all data
   const fetchAllData = async () => {
     try {
@@ -265,11 +284,12 @@ const AssessmentManagement = () => {
     createForm.reset({ 
       candidates: [], 
       assigned_questions: [],
-      days_to_complete: 7 // Changed from due_at to days_to_complete with default value
+      days_to_complete: 7,
+      is_seb: false,
+      exam_duration: 60
     });
     setDialogOpen(true);
   };
-
 
   // Replace the openEditDialog function
   const openEditDialog = (assessment: Assessment) => {
@@ -288,8 +308,6 @@ const AssessmentManagement = () => {
     });
     setDialogOpen(true);
   };
-
-
 
   const openViewDialog = (assessment: Assessment) => {
     setSelectedAssessment(assessment);
@@ -311,8 +329,6 @@ const AssessmentManagement = () => {
     });
     editForm.reset();
   };
-
-
 
   const closeViewDialog = () => {
     setViewDialogOpen(false);
@@ -385,7 +401,6 @@ const AssessmentManagement = () => {
     }
   };
 
-
   // Update onEditSubmit function
   const onEditSubmit = async (data: EditFormData) => {
     if (!editingAssessment) return;
@@ -415,8 +430,6 @@ const AssessmentManagement = () => {
       setSubmitting(false);
     }
   };
-
-
 
   // Get status badge color
   const getStatusColor = (status: string) => {
@@ -955,19 +968,9 @@ const AssessmentManagement = () => {
                                         <Badge variant="outline" className="text-xs">
                                           {question.type.toUpperCase()}
                                         </Badge>
-                                        {/* {question.difficulty && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            {question.difficulty.toUpperCase()}
-                                          </Badge>
-                                        )} */}
                                         <Badge variant="secondary" className="text-xs">
                                           {question.max_score} pts
                                         </Badge>
-                                        {/* {question.tags?.map((tag) => (
-                                          <Badge key={tag} variant="secondary" className="text-xs">
-                                            {tag}
-                                          </Badge>
-                                        ))} */}
                                       </div>
                                     </div>
                                   </div>
@@ -986,73 +989,82 @@ const AssessmentManagement = () => {
                       <p className="text-red-600 text-sm">{createForm.formState.errors.assigned_questions.message}</p>
                     )}
                   </div>
-                    {/* SEB & Exam Duration Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* SEB Field */}
-                      <div className="space-y-2">
-                        <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
-                        <Controller
-                          name="is_seb"
-                          control={createForm.control}
-                          render={({ field }) => (
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                id="is_seb"
-                              />
-                              <Label htmlFor="is_seb" className="text-sm font-normal">
-                                Require Safe Exam Browser for this assessment
-                              </Label>
-                            </div>
-                          )}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          When enabled, candidates must use Safe Exam Browser to take the assessment
-                        </p>
-                      </div>
 
-                      {/* Exam Duration Field */}
-                      <div className="space-y-2">
-                        <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
-                        <div className="flex items-center gap-4">
-                          <Input
-                            type="number"
-                            {...createForm.register('exam_duration', { valueAsNumber: true })}
-                            min={1}
-                            max={600}
-                            placeholder="60"
-                            className="w-32"
-                          />
-                          <div className="text-sm text-muted-foreground">
-                            {createForm.watch('exam_duration') ? 
-                              `${Math.floor((createForm.watch('exam_duration') || 60) / 60)}h ${(createForm.watch('exam_duration') || 60) % 60}m` 
-                              : '1h 0m'
-                            }
+                  {/* FIXED: Assessment Configuration with Uniform 4-Field Layout */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {/* SEB Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
+                      <Controller
+                        name="is_seb"
+                        control={createForm.control}
+                        render={({ field }) => (
+                          <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              id="is_seb"
+                            />
+                            <Label htmlFor="is_seb" className="text-sm font-normal">
+                              Required
+                            </Label>
                           </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Time allocated for the exam in minutes (1-600 minutes / 10 hours max)
-                        </p>
-                        {createForm.formState.errors.exam_duration && (
-                          <p className="text-red-600 text-sm">{createForm.formState.errors.exam_duration.message}</p>
                         )}
-                      </div>
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Secure browser requirement
+                      </p>
                     </div>
 
-                  {/* Days to Complete */}
-                  <div className="space-y-2">
-                    <Label htmlFor="days_to_complete">Days to Complete (Optional)</Label>
-                    <div className="flex items-center gap-4">
+                    {/* Exam Duration Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
+                      <Input
+                        type="number"
+                        {...createForm.register('exam_duration', { valueAsNumber: true })}
+                        min={1}
+                        max={600}
+                        placeholder="60"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {createForm.watch('exam_duration') ? 
+                          `${Math.floor((createForm.watch('exam_duration') || 60) / 60)}h ${(createForm.watch('exam_duration') || 60) % 60}m` 
+                          : 'Time in minutes'
+                        }
+                      </p>
+                      {createForm.formState.errors.exam_duration && (
+                        <p className="text-red-600 text-sm">{createForm.formState.errors.exam_duration.message}</p>
+                      )}
+                    </div>
+
+                    {/* Total Marks Field - FIXED with Uniform Styling */}
+                    <div className="space-y-2">
+                      <Label htmlFor="create_total_marks">Total Marks</Label>
+                      <Input
+                        id="create_total_marks"
+                        type="number"
+                        value={createTotalMarks}
+                        readOnly
+                        className="w-full bg-gray-50"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Sum of selected questions
+                      </p>
+                    </div>
+
+                    {/* Days to Complete Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="days_to_complete">Days to Complete</Label>
                       <Input
                         type="number"
                         {...createForm.register('days_to_complete', { valueAsNumber: true })}
                         min={1}
                         max={30}
                         placeholder="7"
-                        className="w-32"
+                        className="w-full"
                       />
-                      <div className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {createForm.watch('days_to_complete') ? 
                           `Due: ${new Date(Date.now() + ((createForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000))
                             .toLocaleDateString('en-US', { 
@@ -1060,18 +1072,14 @@ const AssessmentManagement = () => {
                               day: 'numeric', 
                               year: 'numeric'
                             })}` 
-                          : 'No deadline'
+                          : 'Deadline calculation'
                         }
-                      </div>
+                      </p>
+                      {createForm.formState.errors.days_to_complete && (
+                        <p className="text-red-600 text-sm">{createForm.formState.errors.days_to_complete.message}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Number of days from assignment date for completion (1-30 days)
-                    </p>
-                    {createForm.formState.errors.days_to_complete && (
-                      <p className="text-red-600 text-sm">{createForm.formState.errors.days_to_complete.message}</p>
-                    )}
                   </div>
-
                 </form>
               )}
 
@@ -1197,19 +1205,9 @@ const AssessmentManagement = () => {
                                         <Badge variant="outline" className="text-xs">
                                           {question.type.toUpperCase()}
                                         </Badge>
-                                        {/* {question.difficulty && (
-                                          <Badge variant="secondary" className="text-xs">
-                                            {question.difficulty.toUpperCase()}
-                                          </Badge>
-                                        )} */}
                                         <Badge variant="secondary" className="text-xs">
                                           {question.max_score} pts
                                         </Badge>
-                                        {/* {question.tags?.map((tag) => (
-                                          <Badge key={tag} variant="secondary" className="text-xs">
-                                            {tag}
-                                          </Badge>
-                                        ))} */}
                                       </div>
                                     </div>
                                   </div>
@@ -1228,71 +1226,82 @@ const AssessmentManagement = () => {
                       <p className="text-red-600 text-sm">{editForm.formState.errors.assigned_questions.message}</p>
                     )}
                   </div>
-                  {/* SEB & Exam Duration Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* SEB Field */}
-                      <div className="space-y-2">
-                        <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
-                        <Controller
-                          name="is_seb"
-                          control={editForm.control}
-                          render={({ field }) => (
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                id="is_seb"
-                              />
-                              <Label htmlFor="is_seb" className="text-sm font-normal">
-                                Require Safe Exam Browser for this assessment
-                              </Label>
-                            </div>
-                          )}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          When enabled, candidates must use Safe Exam Browser to take the assessment
-                        </p>
-                      </div>
 
-                      {/* Exam Duration Field */}
-                      <div className="space-y-2">
-                        <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
-                        <div className="flex items-center gap-4">
-                          <Input
-                            type="number"
-                            {...editForm.register('exam_duration', { valueAsNumber: true })}
-                            min={1}
-                            max={600}
-                            placeholder="60"
-                            className="w-32"
-                          />
-                          <div className="text-sm text-muted-foreground">
-                            {createForm.watch('exam_duration') ? 
-                              `${Math.floor((createForm.watch('exam_duration') || 60) / 60)}h ${(createForm.watch('exam_duration') || 60) % 60}m` 
-                              : '1h 0m'
-                            }
+                  {/* FIXED: Assessment Configuration with Uniform 4-Field Layout - EDIT FORM */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {/* SEB Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_is_seb">Safe Exam Browser (SEB)</Label>
+                      <Controller
+                        name="is_seb"
+                        control={editForm.control}
+                        render={({ field }) => (
+                          <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              id="edit_is_seb"
+                            />
+                            <Label htmlFor="edit_is_seb" className="text-sm font-normal">
+                              Required
+                            </Label>
                           </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Time allocated for the exam in minutes (1-600 minutes / 10 hours max)
-                        </p>
-                        {createForm.formState.errors.exam_duration && (
-                          <p className="text-red-600 text-sm">{createForm.formState.errors.exam_duration.message}</p>
                         )}
-                      </div>
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Secure browser requirement
+                      </p>
                     </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="days_to_complete">Days to Complete</Label>
-                    <div className="flex items-center gap-4">
+
+                    {/* Exam Duration Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_exam_duration">Exam Duration (Required)</Label>
+                      <Input
+                        type="number"
+                        {...editForm.register('exam_duration', { valueAsNumber: true })}
+                        min={1}
+                        max={600}
+                        placeholder="60"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {editForm.watch('exam_duration') ? 
+                          `${Math.floor((editForm.watch('exam_duration') || 60) / 60)}h ${(editForm.watch('exam_duration') || 60) % 60}m` 
+                          : 'Time in minutes'
+                        }
+                      </p>
+                      {editForm.formState.errors.exam_duration && (
+                        <p className="text-red-600 text-sm">{editForm.formState.errors.exam_duration.message}</p>
+                      )}
+                    </div>
+
+                    {/* Total Marks Field - FIXED with Uniform Styling */}
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_total_marks">Total Marks</Label>
+                      <Input
+                        id="edit_total_marks"
+                        type="number"
+                        value={editTotalMarks}
+                        readOnly
+                        className="w-full bg-gray-50"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Sum of selected questions
+                      </p>
+                    </div>
+
+                    {/* Days to Complete Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_days_to_complete">Days to Complete</Label>
                       <Input
                         type="number"
                         {...editForm.register('days_to_complete', { valueAsNumber: true })}
                         min={1}
                         max={30}
                         placeholder="7"
-                        className="w-32"
+                        className="w-full"
                       />
-                      <div className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {editForm.watch('days_to_complete') ? 
                           `Due: ${new Date(Date.now() + ((editForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000))
                             .toLocaleDateString('en-US', { 
@@ -1300,16 +1309,13 @@ const AssessmentManagement = () => {
                               day: 'numeric', 
                               year: 'numeric'
                             })}` 
-                          : 'No deadline'
+                          : 'Deadline calculation'
                         }
-                      </div>
+                      </p>
+                      {editForm.formState.errors.days_to_complete && (
+                        <p className="text-red-600 text-sm">{editForm.formState.errors.days_to_complete.message}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Number of days from assignment date for completion (1-30 days)
-                    </p>
-                    {editForm.formState.errors.days_to_complete && (
-                      <p className="text-red-600 text-sm">{editForm.formState.errors.days_to_complete.message}</p>
-                    )}
                   </div>
                 </form>
               )}
@@ -1386,11 +1392,6 @@ const AssessmentManagement = () => {
                                 <Badge variant="outline">
                                   {question.type.toUpperCase()}
                                 </Badge>
-                                {/* {question.difficulty && (
-                                  <Badge variant="secondary">
-                                    {question.difficulty.toUpperCase()}
-                                  </Badge>
-                                )} */}
                                 <Badge variant="secondary">
                                   {question.max_score} points
                                 </Badge>
@@ -1399,11 +1400,6 @@ const AssessmentManagement = () => {
                                     REQUIRED
                                   </Badge>
                                 )}
-                                {/* {question.tags?.map((tag) => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))} */}
                               </div>
                             </div>
                           </div>
