@@ -1,8 +1,14 @@
-// GlobalErrorPage.jsx
 import { useRouteError } from "react-router-dom";
+
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
 
 export default function GlobalErrorPage() {
   const error = useRouteError();
+
+  const message = isError(error) ? error.message : "An unexpected error occurred.";
+
   console.error("Route Error:", error);
 
   return (
@@ -12,7 +18,7 @@ export default function GlobalErrorPage() {
           Oops! Something went wrong.
         </h1>
         <p className="text-gray-700 mb-4">
-          {error?.message || "An unexpected error occurred."}
+          {message}
         </p>
         <button
           onClick={() => window.location.reload()}
