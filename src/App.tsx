@@ -1,7 +1,6 @@
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+// src/App.tsx
+import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import GlobalErrorPage from "./components/GlobalErrorPage";
 
 import { LoginForm } from "@/pages/login-form";
 import { EmailVerification } from "./pages/emailVerification";
@@ -18,73 +17,34 @@ import OrgDashboard from "./pages/OrgDashboard";
 import SecureHRInterview from "./pages/SecureHrQn";
 import SebQuitPage from "./pages/SebQuitPage";
 
-
-function App() {
-  // Define all application routes
-  const router = createBrowserRouter([
-    {
-      path: "/login",                  // Login route
-      element: <LoginForm />,
-    },
-    {
-      path: "/",         // Dashboard route
-      element: <Dashboard />,
-    },
-    {
-      path: "/register-candidate", // Registration form route
-      element: <RegisterForm />,
-    },
-    {
-      path: "/login-otp",
-      element: <OTPLoginForm />,
-    },
-    {
-      path: "/forget-password",
-      element: <OTPForgetPasswordForm />,
-    },
-    {
-      path:"/email-verification",
-      element:<EmailVerification /> //Email verification informative form
-    },
-      {
-      path: "/org/login",
-      element: <OrgLoginForm />,
-    },
-    {
-      path: "/org/otp-login", 
-      element: <OrgOTPLoginForm />,
-    },
-    {
-      path: "/org/setup-password",
-      element: <OrgSetupPasswordForm />,
-    },
-    {
-      path: "/org",
-      element: <OrgDashboard />,
-    },
-    {
-      path:"/start-assessment",
-      element:<SecureAssessmentLanding />,
-    },
-    {
-      path:"/start-hrqna",
-      element:<SecureHRInterview />,
-    },
-    {
-      path:"/quit",
-      element:<SebQuitPage />,
-    },
-    {
-      path:"*",
-      element:<NotFound /> //Email Verification informative form
-    },
-  ]);
-
-  return (
-    <>
-      <RouterProvider router={router} />      {/* Provide router to the app */}
-    </>
-  );
+function RootLayout() {
+  return <Outlet />; // optional shared layout/shell goes here
 }
 
-export default App;
+const router = createBrowserRouter([
+  {
+    path: "/",                    // 🔑 single root
+    element: <RootLayout />,
+    errorElement: <GlobalErrorPage />,   // 🔑 global route error UI
+    children: [
+      { index: true, element: <Dashboard /> },         // "/" -> Dashboard
+      { path: "login", element: <LoginForm /> },
+      { path: "register-candidate", element: <RegisterForm /> },
+      { path: "login-otp", element: <OTPLoginForm /> },
+      { path: "forget-password", element: <OTPForgetPasswordForm /> },
+      { path: "email-verification", element: <EmailVerification /> },
+      { path: "org/login", element: <OrgLoginForm /> },
+      { path: "org/otp-login", element: <OrgOTPLoginForm /> },
+      { path: "org/setup-password", element: <OrgSetupPasswordForm /> },
+      { path: "org", element: <OrgDashboard /> },
+      { path: "start-assessment", element: <SecureAssessmentLanding /> },
+      { path: "start-hrqna", element: <SecureHRInterview /> },
+      { path: "quit", element: <SebQuitPage /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+]);
+
+export default function App() {
+  return <RouterProvider router={router} />;
+}
