@@ -89,7 +89,7 @@ type Candidate = {
   email: string;
   phone: string;
   date_of_birth: string;
-  gender: "male" | "female" | "other";
+  gender: "male" | "female";
   address: string;
   shortlisted: boolean;
   profile_photo_url: {

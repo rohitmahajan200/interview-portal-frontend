@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -184,6 +184,18 @@ const InvigilatorHome = () => {
       }]
     },
   });
+
+  // FIXED: Use useWatch for reactive total marks calculation
+  const selectedQuestionIds = useWatch({
+    control: assignmentForm.control,
+    name: 'assessments.0.questions'
+  }) || [];
+
+  const totalMarks = useMemo(() => {
+    if (!Array.isArray(selectedQuestionIds) || selectedQuestionIds.length === 0) return 0;
+    const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
+    return selectedQuestionIds.reduce((sum, id) => sum + (scoreById.get(id) ?? 0), 0);
+  }, [selectedQuestionIds, questions]);
 
   const copyToClipboard = async (url: string, docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -739,7 +751,7 @@ const InvigilatorHome = () => {
         </CardContent>
       </Card>
 
-      {/* Assignment Dialog - Updated with SEB and exam duration fields */}
+      {/* Assignment Dialog - Updated with uniform 4-field layout and reactive total marks */}
       <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader className="flex-shrink-0 pb-4">
@@ -897,18 +909,12 @@ const InvigilatorHome = () => {
                                           >
                                             {getQuestionTypeDisplay(question.type)}
                                           </Badge>
-                                          
-                                          {/* {question.difficulty && (
+
+                                          {question.max_score && (
                                             <Badge variant="secondary" className="text-xs">
-                                              {question.difficulty.toUpperCase()}
+                                              {question.max_score} pts
                                             </Badge>
-                                          )} */}
-                                          
-                                          {/* {question.tags?.map((tag) => (
-                                            <Badge key={tag} variant="secondary" className="text-xs">
-                                              {tag}
-                                            </Badge>
-                                          ))} */}
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -930,8 +936,8 @@ const InvigilatorHome = () => {
                   />
                 </div>
 
-                {/* SEB & Exam Duration Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* FIXED: Assessment Configuration with Uniform 4-Field Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* SEB Field */}
                   <div className="space-y-2">
                     <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
@@ -939,64 +945,72 @@ const InvigilatorHome = () => {
                       name="assessments.0.is_seb"
                       control={assignmentForm.control}
                       render={({ field }) => (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             id="is_seb"
                           />
                           <Label htmlFor="is_seb" className="text-sm font-normal">
-                            Require Safe Exam Browser for this assessment
+                            Required
                           </Label>
                         </div>
                       )}
                     />
                     <p className="text-xs text-muted-foreground">
-                      When enabled, candidates must use Safe Exam Browser to take the assessment
+                      Secure browser requirement
                     </p>
                   </div>
 
                   {/* Exam Duration Field */}
                   <div className="space-y-2">
                     <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        {...assignmentForm.register('assessments.0.exam_duration', { valueAsNumber: true })}
-                        min={1}
-                        max={600}
-                        placeholder="60"
-                        className="w-32"
-                      />
-                      <div className="text-sm text-muted-foreground">
-                        {assignmentForm.watch('assessments.0.exam_duration') ? 
-                          `${Math.floor((assignmentForm.watch('assessments.0.exam_duration') || 60) / 60)}h ${(assignmentForm.watch('assessments.0.exam_duration') || 60) % 60}m` 
-                          : '1h 0m'
-                        }
-                      </div>
-                    </div>
+                    <Input
+                      type="number"
+                      {...assignmentForm.register('assessments.0.exam_duration', { valueAsNumber: true })}
+                      min={1}
+                      max={600}
+                      placeholder="60"
+                      className="w-full"
+                    />
                     <p className="text-xs text-muted-foreground">
-                      Time allocated for the exam in minutes (1-600 minutes / 10 hours max)
+                      {assignmentForm.watch('assessments.0.exam_duration') ? 
+                        `${Math.floor((assignmentForm.watch('assessments.0.exam_duration') || 60) / 60)}h ${(assignmentForm.watch('assessments.0.exam_duration') || 60) % 60}m` 
+                        : 'Time in minutes'
+                      }
                     </p>
                     {assignmentForm.formState.errors.assessments?.[0]?.exam_duration && (
                       <p className="text-red-600 text-sm">{assignmentForm.formState.errors.assessments[0].exam_duration.message}</p>
                     )}
                   </div>
-                </div>
 
-                {/* Days to Complete */}
-                <div className="space-y-2">
-                  <Label htmlFor="days_to_complete">Days to Complete</Label>
-                  <div className="flex items-center gap-4">
+                  {/* Total Marks Field - FIXED with Uniform Styling */}
+                  <div className="space-y-2">
+                    <Label htmlFor="total_marks">Total Marks</Label>
+                    <Input
+                      id="total_marks"
+                      type="number"
+                      value={totalMarks}
+                      readOnly
+                      className="w-full bg-gray-50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Sum of selected questions
+                    </p>
+                  </div>
+
+                  {/* Days to Complete Field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="days_to_complete">Days to Complete</Label>
                     <Input
                       type="number"
                       {...assignmentForm.register('assessments.0.days_to_complete', { valueAsNumber: true })}
                       min={1}
                       max={30}
-                      className="w-32"
+                      className="w-full"
                       defaultValue={7}
                     />
-                    <div className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {assignmentForm.watch('assessments.0.days_to_complete') ? 
                         `Due: ${new Date(Date.now() + ((assignmentForm.watch('assessments.0.days_to_complete') || 7) * 24 * 60 * 60 * 1000))
                           .toLocaleDateString('en-US', { 
@@ -1004,13 +1018,10 @@ const InvigilatorHome = () => {
                             day: 'numeric', 
                             year: 'numeric'
                           })}` 
-                        : 'No deadline'
+                        : 'Deadline calculation'
                       }
-                    </div>
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Number of days from assignment date for completion (1-30 days)
-                  </p>
                 </div>
               </form>
             </div>
