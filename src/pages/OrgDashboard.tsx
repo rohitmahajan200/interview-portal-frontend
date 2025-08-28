@@ -12,6 +12,7 @@ import Invigilator from '@/components/Invigilator/Invigilator';
 import api from '@/lib/api';
 import { setUser } from '@/features/Candidate/auth/authSlice';
 import Manager from '@/components/Manager/Manager';
+import Spinner from '@/components/ui/spinner';
 
 const OrgDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -42,13 +43,15 @@ const OrgDashboard = () => {
     fetchOrgUser();
   }, [dispatch, navigate]);
   
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 w-screen h-screen overflow-hidden flex items-center justify-center">
-        <div>Loading...</div>
-      </div>
-    );
-  }
+   if (isLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center space-y-4">
+            <Spinner></Spinner>
+          </div>
+        </div>
+      );
+    }
 
   // If user is not admin, show only their role dashboard
   if (orgUser && orgUser.role !== "ADMIN") {
@@ -71,6 +74,8 @@ const OrgDashboard = () => {
       </div>
     );
   }
+
+     
   
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col">

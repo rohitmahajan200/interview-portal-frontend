@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { setUser } from "@/features/Candidate/auth/authSlice";
 import api from "@/lib/api";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Importing page views
@@ -24,22 +24,28 @@ import Feedback from "./Feedback";
 import Profile from "./Profile";
 import Settings from "./Settings";
 import ThemeToggle from "@/components/themeToggle";
+import Spinner from "@/components/ui/spinner";
 
 export default function Page() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isLoading,setIsLoading]=useState(false);
   const currentView = useSelector((state: RootState) => state.view.currentView);
 
   useEffect(() => {
     const fetchCandidate = async () => {
       try {
+        setIsLoading(true);
         const res = await api.get("/candidates/me");
         if (res.data.user) {
           dispatch(setUser(res.data.user)); // Save user info in Redux store
-        }
+        } 
       } catch (error) {
         console.error("Failed to fetch candidate profile:", error);
         navigate("/login"); // Redirect to login if error occurs
+      }
+      finally{
+        setIsLoading(false);
       }
     };
 
@@ -70,6 +76,16 @@ export default function Page() {
         return <Home />;
     }
   };
+
+    if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <Spinner></Spinner>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
