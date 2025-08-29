@@ -2,7 +2,6 @@
 import React from "react";
 import {
   Home,
-  Users,
   Calendar,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -46,7 +45,6 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
   const managerNav = [
     navItem("Dashboard", Home, "manager-home"),
     navItem("Calendar", Calendar, "manager-calendar"),
-    navItem("Candidates", Users, "candidate-management"),
   ];
 
   return (

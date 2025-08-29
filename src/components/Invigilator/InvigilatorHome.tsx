@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import {
   ClipboardCheck,
   FileText,
   Copy,
+  MessageSquare,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -44,7 +46,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 // Assessment status type definition (matching your backend model)
 type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
-type FrontendAssessmentStatus = "attempted" | "assigned" | "not-assigned";
+type FrontendAssessmentStatus = "completed" | "assigned" | "not-assigned" | "expired";
 
 // Updated Zod Schema - matching backend bulk format with SEB and exam duration
 const assessmentCreateSchema = z.object({
@@ -86,6 +88,7 @@ type Candidate = {
   date_of_birth: string;
   gender: "male" | "female" | "other";
   address: string;
+  shortlisted: boolean;
   profile_photo_url: {
     url: string;
     publicId: string;
@@ -130,6 +133,26 @@ type Candidate = {
     };
     due_at: string;
   }[];
+  interviews?: { 
+    _id: string; 
+    title: string;
+    status: string;
+    type: string;
+    meeting_link?: string;
+    platform?: string;
+    description?: string;
+    interviewers: {
+      _id: string;
+      name: string;
+      role: string;
+    }[];
+    scheduled_by: {
+      _id: string;
+      name: string;
+      email: string;
+      role: string;
+    };
+  }[];
   stage_history?: {
     _id: string;
     from_stage?: string;
@@ -143,9 +166,20 @@ type Candidate = {
     remarks: string;
     changed_at: string;
   }[];
+  internal_feedback?: {
+    _id: string;
+    feedback_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    feedback: string;
+    feedback_at?: string; 
+  }[];
 };
 
 const InvigilatorHome = () => {
+  
   // State management for candidates and filters
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
@@ -167,6 +201,61 @@ const InvigilatorHome = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+
+  // Rejection Dialog States
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [candidateToReject, setCandidateToReject] = useState<Candidate | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  // Stage Update Dialog States
+  const [stageUpdateModal, setStageUpdateModal] = useState(false);
+  const [stageUpdateReason, setStageUpdateReason] = useState("");
+  const [stageFeedback, setStageFeedback] = useState("");
+  const [selectedNewStage, setSelectedNewStage] = useState("");
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
+  // Dialog states for Feedback - FIXED naming consistency
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [candidateForFeedback, setCandidateForFeedback] = useState<Candidate | null>(null);
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [feedbackType, setFeedbackType] = useState("general");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  // FIXED: Submit feedback function without parameters
+  const submitFeedback = async () => {
+    if (!candidateForFeedback?._id || !feedbackContent.trim()) {
+      toast.error("Please provide feedback content");
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    try {
+      const response = await api.post(`/org/candidates/${candidateForFeedback._id}/feedback`, {
+        content: feedbackContent.trim(),
+        feedback_type: feedbackType,
+      });
+      
+      if (response.data.success) {
+        toast.success("Feedback added successfully");
+        // Close dialog and reset state
+        setFeedbackDialogOpen(false);
+        setCandidateForFeedback(null);
+        setFeedbackContent("");
+        setFeedbackType("general");
+        // Refresh data
+        await fetchCandidates();
+      }
+      setDialogOpen(false)
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : "Failed to add feedback";
+      toast.error(errorMessage || "Failed to add feedback");
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   // Define allowed question types - ONLY MCQ, Coding, Essay
   const allowedQuestionTypes = ['mcq', 'coding', 'essay'];
@@ -212,20 +301,101 @@ const InvigilatorHome = () => {
     }
   };
 
+  // Rejection Handler
+  const rejectCandidate = async (candidateId: string, reason: string) => {
+    setIsRejecting(true);
+    try {
+      const response = await api.patch(`/org/candidates/${candidateId}/reject`, {
+        rejection_reason: reason
+      });
+      
+      if (response.data.success) {
+        toast.success("Candidate rejected successfully");
+        // Refresh candidates data
+        await fetchCandidates();
+        setDialogOpen(false);
+        setRejectDialogOpen(false);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : "Failed to reject candidate";
+      toast.error(errorMessage || "Failed to reject candidate");
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  // Stage Update Handler
+  const updateCandidateStage = async (candidateId: string, newStage: string, internal_feedback: string, remarks?: string) => {
+    setIsUpdatingStage(true);
+    try {
+      const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
+        newStage,
+        remarks,
+        internal_feedback: {feedback: internal_feedback}
+      });
+      
+      if (response.data.success) {
+        toast.success(`Candidate stage updated to ${newStage.toUpperCase()}`);
+        // Refresh candidates data
+        await fetchCandidates();
+        setDialogOpen(false);
+        setStageUpdateModal(false);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : "Failed to update candidate stage";
+      toast.error(errorMessage || "Failed to update candidate stage");
+    } finally {
+      setIsUpdatingStage(false);
+    }
+  };
+
+  // Helper function for status colors
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "inactive": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      case "withdrawn": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case "rejected": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "hired": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
+  };
+
   /**
    * Helper function to map backend status to frontend display status
    */
   const getAssessmentStatus = (candidate: Candidate): FrontendAssessmentStatus => {
+    console.log(candidate.assessments);
+    
     if (!candidate.assessments || candidate.assessments.length === 0) {
       return "not-assigned";
     }
     
-    // Check if any assessment is completed
+    // ✅ Check for completed first (highest priority)
     const hasCompleted = candidate.assessments.some(a => a.status === "completed");
     if (hasCompleted) {
-      return "attempted";
+      return "completed";
     }
     
+    // ✅ Check for active assessments (started/pending) next
+    const hasActiveAssessments = candidate.assessments.some(a => 
+      a.status === "started" || a.status === "pending"
+    );
+    if (hasActiveAssessments) {
+      return "assigned";
+    }
+    
+    // ✅ Only check for expired if no active assessments exist (lowest priority)
+    const hasExpired = candidate.assessments.some(a => a.status === "expired");
+    if (hasExpired) {
+      return "expired";
+    }
+    
+    // Fallback (shouldn't normally reach here)
     return "assigned";
   };
 
@@ -236,23 +406,25 @@ const InvigilatorHome = () => {
     return questions.filter(question => allowedQuestionTypes.includes(question.type));
   };
 
+  // FIXED: Create fetchCandidates function
+  const fetchCandidates = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/org/candidates");
+      setCandidates(response.data.data);
+      setFilteredCandidates(response.data.data);
+    } catch (error) {
+      console.error("Failed to fetch candidates:", error);
+      toast.error("Failed to load candidates");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /**
    * Fetch all candidates from the API
    */
   useEffect(() => {
-    const fetchCandidates = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/org/candidates");
-        setCandidates(response.data.data);
-        setFilteredCandidates(response.data.data);
-      } catch (error) {
-        console.error("Failed to fetch candidates:", error);
-        toast.error("Failed to load candidates");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCandidates();
   }, []);
 
@@ -409,8 +581,7 @@ const InvigilatorHome = () => {
         toast.success(`Assessment assigned to ${targetCandidate.first_name} ${targetCandidate.last_name}`);
         closeAssignmentDialog();
         // Refresh candidates data
-        const candidatesResponse = await api.get("/org/candidates");
-        setCandidates(candidatesResponse.data.data);
+        await fetchCandidates();
       } else {
         toast.error(response.data.message || 'Failed to assign assessment');
       }
@@ -433,14 +604,16 @@ const InvigilatorHome = () => {
   /**
    * Badge styling for different assessment statuses
    */
-  const getAssessmentStatusColor = (status: FrontendAssessmentStatus) => {
+ const getAssessmentStatusColor = (status: FrontendAssessmentStatus) => {
     switch (status) {
-      case "attempted": 
+      case "completed": 
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "assigned": 
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "not-assigned": 
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case "expired":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
       default: 
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
@@ -494,9 +667,10 @@ const InvigilatorHome = () => {
    */
   const stats = {
     total: candidates.filter(c => c.current_stage === "assessment").length,
-    attempted: candidates.filter(c => c.current_stage === "assessment" && getAssessmentStatus(c) === 'attempted').length,
+    completed: candidates.filter(c => c.current_stage === "assessment" && getAssessmentStatus(c) === 'completed').length,
     assigned: candidates.filter(c => c.current_stage === "assessment" && getAssessmentStatus(c) === 'assigned').length,
     notAssigned: candidates.filter(c => c.current_stage === "assessment" && getAssessmentStatus(c) === 'not-assigned').length,
+    expired: candidates.filter(c => c.current_stage === "assessment" && getAssessmentStatus(c) === 'expired').length,
   };
 
   /**
@@ -558,11 +732,11 @@ const InvigilatorHome = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Attempted</CardTitle>
+            <CardTitle className="text-sm font-medium">Completed</CardTitle>
             <ClipboardCheck className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.attempted}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
             <p className="text-xs text-muted-foreground">Completed assessments</p>
           </CardContent>
         </Card>
@@ -588,6 +762,17 @@ const InvigilatorHome = () => {
             <p className="text-xs text-muted-foreground">Pending assignment</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Expired</CardTitle>
+            <UserX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
+            <p className="text-xs text-muted-foreground">Expired assessments</p>
+          </CardContent>
+        </Card>
+
       </div>
 
       {/* Main Content Card */}
@@ -624,10 +809,12 @@ const InvigilatorHome = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="attempted">Attempted</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
                   <SelectItem value="not-assigned">Not Assigned</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
                 </SelectContent>
+
               </Select>
             </div>
           </div>
@@ -639,6 +826,8 @@ const InvigilatorHome = () => {
                 <TableRow>
                   <TableHead>Candidate</TableHead>
                   <TableHead>Contact</TableHead>
+                  <TableHead>Current Stage</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Assessment Status</TableHead>
                   <TableHead>Registration Date</TableHead>
                   <TableHead>Actions</TableHead>
@@ -656,7 +845,7 @@ const InvigilatorHome = () => {
                           <Avatar>
                             <AvatarImage src={candidate.profile_photo_url.url} />
                             <AvatarFallback>
-                              {candidate.first_name[0]}{candidate.last_name}
+                              {candidate.first_name[0]}{candidate.last_name[0]}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -675,6 +864,28 @@ const InvigilatorHome = () => {
                         <div>
                           <div className="text-sm">{candidate.email}</div>
                           <div className="text-sm text-muted-foreground">{candidate.phone}</div>
+                        </div>
+                      </TableCell>
+
+                      {/* Current Stage Badge */}
+                      <TableCell>
+                        <Badge className={getStageColor(candidate.current_stage)}>
+                          {candidate.current_stage.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </TableCell>
+
+                      {/* Status Badge */}
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(candidate.status)}>
+                            {candidate.status.toUpperCase()}
+                          </Badge>
+                          
+                          {candidate.shortlisted && (
+                            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
+                              ⭐ SHORTLISTED
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
 
@@ -704,11 +915,15 @@ const InvigilatorHome = () => {
                           </Button>
                           
                           <Button 
-                            variant={assessmentStatus === "not-assigned" ? "default" : "secondary"}
+                            variant={
+                              assessmentStatus === "not-assigned" ? "default" : 
+                              assessmentStatus === "expired" ? "destructive" : 
+                              "secondary"
+                            }
                             size="sm"
-                            disabled={assessmentStatus === "assigned"}
+                            disabled={assessmentStatus === "assigned" || assessmentStatus === "completed"}
                             onClick={() => {
-                              if (assessmentStatus === "not-assigned") {
+                              if (assessmentStatus === "not-assigned" || assessmentStatus === "expired") {
                                 handleAssignAssessment(candidate);
                               }
                             }}
@@ -719,6 +934,11 @@ const InvigilatorHome = () => {
                                 <Plus className="h-4 w-4 mr-1" />
                                 Assign
                               </>
+                            ) : assessmentStatus === "expired" ? (
+                              <>
+                                <Plus className="h-4 w-4 mr-1" />
+                                Reassign
+                              </>
                             ) : (
                               <>
                                 <Check className="h-4 w-4 mr-1" />
@@ -726,6 +946,7 @@ const InvigilatorHome = () => {
                               </>
                             )}
                           </Button>
+
                         </div>
                       </TableCell>
                     </TableRow>
@@ -776,7 +997,7 @@ const InvigilatorHome = () => {
                       <Avatar className="w-12 h-12">
                         <AvatarImage src={targetCandidate.profile_photo_url?.url} />
                         <AvatarFallback>
-                          {targetCandidate.first_name[0]}{targetCandidate.last_name}
+                          {targetCandidate.first_name[0]}{targetCandidate.last_name[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -1042,40 +1263,137 @@ const InvigilatorHome = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Candidate Details Dialog with Enhanced Action Buttons */}
       <Dialog open={dialogOpen} onOpenChange={closeViewDialog}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Candidate Assessment Details</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Candidate Assessment Details</DialogTitle>
+            </div>
           </DialogHeader>
 
           {selectedCandidate && (
             <div className="space-y-6">
-              {/* Applied Position */}
+              {/* Personal Information Card with Action Buttons */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Applied Position</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>Personal Information</CardTitle>
+                    
+                    {/* Enhanced Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedCandidate.assessments?.length === 0 && <Button
+                        onClick={() => {
+                          closeViewDialog();
+                          handleAssignAssessment(selectedCandidate);
+                        }}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
+                      >
+                        🔬 <span className="hidden md:inline">Assign Assessment</span><span className="md:hidden">Assessment</span>
+                      </Button>}
+
+                      {selectedCandidate.status !== 'rejected' && (
+                        <Button
+                          onClick={() => {
+                            setCandidateToReject(selectedCandidate);
+                            setRejectionReason("");
+                            setRejectDialogOpen(true);
+                          }}
+                          variant="default"
+                          size="sm"
+                          className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
+                        >
+                          ❌ <span className="hidden md:inline">Reject</span>
+                        </Button>
+                      )}
+                      
+                      {selectedCandidate.status !== 'rejected' && <Button
+                        onClick={() => {
+                          setSelectedNewStage("");
+                          setStageUpdateReason("");
+                          setStageFeedback("");
+                          setStageUpdateModal(true);
+                        }}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
+                      >
+                        🔄 <span className="hidden md:inline">Update Stage</span>
+                      </Button>}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setCandidateForFeedback(selectedCandidate);
+                          setFeedbackContent("");
+                          setFeedbackType("general");
+                          setFeedbackDialogOpen(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Feedback
+                      </Button>
+                      
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                    <p className="text-lg font-bold text-purple-600 dark:text-purple-400 mb-2">
-                      {selectedCandidate.applied_job?.name}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      {selectedCandidate.applied_job?.description?.location && (
-                        <div>📍 {selectedCandidate.applied_job.description.location}</div>
-                      )}
-                      {selectedCandidate.applied_job?.description?.country && (
-                        <div>🌍 {selectedCandidate.applied_job.description.country}</div>
-                      )}
-                      {selectedCandidate.applied_job?.description?.time && (
-                        <div>⏰ {selectedCandidate.applied_job.description.time}</div>
-                      )}
-                      {selectedCandidate.applied_job?.description?.expInYears && (
-                        <div>💼 {selectedCandidate.applied_job.description.expInYears}</div>
-                      )}
-                      {selectedCandidate.applied_job?.description?.salary && (
-                        <div className="sm:col-span-2">💰 {selectedCandidate.applied_job.description.salary}</div>
-                      )}
+                
+                <CardContent className="space-y-6">
+                  {/* Profile Info */}
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 border-2 p-4 sm:p-6 rounded-xl w-full lg:w-auto">
+                      <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-gray-200 dark:ring-gray-700 flex-shrink-0">
+                        <AvatarImage src={selectedCandidate.profile_photo_url?.url} />
+                        <AvatarFallback className="text-lg font-semibold">
+                          {selectedCandidate.first_name?.[0]}{selectedCandidate.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          {selectedCandidate.first_name} {selectedCandidate.last_name}
+                        </h3>
+                        <div className="flex justify-center sm:justify-start">
+                          <Badge className={getStageColor(selectedCandidate.current_stage)} variant="outline">
+                            {selectedCandidate.current_stage?.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="break-all">📧 {selectedCandidate.email}</span>
+                          <span>📱 {selectedCandidate.phone}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Applied Position */}
+                    <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">
+                        Applied Position
+                      </h4>
+                      <p className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+                        {selectedCandidate.applied_job?.name}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        {selectedCandidate.applied_job?.description?.location && (
+                          <div>📍 {selectedCandidate.applied_job.description.location}</div>
+                        )}
+                        {selectedCandidate.applied_job?.description?.country && (
+                          <div>🌍 {selectedCandidate.applied_job.description.country}</div>
+                        )}
+                        {selectedCandidate.applied_job?.description?.time && (
+                          <div>⏰ {selectedCandidate.applied_job.description.time}</div>
+                        )}
+                        {selectedCandidate.applied_job?.description?.expInYears && (
+                          <div>💼 {selectedCandidate.applied_job.description.expInYears}</div>
+                        )}
+                        {selectedCandidate.applied_job?.description?.salary && (
+                          <div className="sm:col-span-2">💰 {selectedCandidate.applied_job.description.salary}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -1249,6 +1567,146 @@ const InvigilatorHome = () => {
                 </CardContent>
               </Card>
 
+              {/* Interviews Status */}
+              {selectedCandidate.interviews && selectedCandidate.interviews.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Scheduled Interviews</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {selectedCandidate.interviews.map((interview) => (
+                        <div key={interview._id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h4 className="font-medium">{interview.title}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {interview.type.toUpperCase()}
+                                </Badge>
+                                {interview.platform && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {interview.platform}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <Badge className={
+                              interview.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : 
+                              'bg-green-100 text-green-800'
+                            }>
+                              {interview.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          {interview.description && (
+                            <p className="text-sm text-gray-600 mb-3">{interview.description}</p>
+                          )}
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Interviewers:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {interview.interviewers.map((interviewer) => (
+                                  <Badge key={interviewer._id} variant="outline" className="text-xs">
+                                    {interviewer.name} ({interviewer.role})
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Scheduled by:</span>
+                              <div className="font-medium">{interview.scheduled_by.name}</div>
+                              <div className="text-xs text-gray-500">{interview.scheduled_by.role}</div>
+                            </div>
+                          </div>
+                          
+                          {interview.meeting_link && (
+                            <div className="mt-3 pt-3 border-t">
+                              <span className="text-gray-600 text-sm">Meeting Link:</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => window.open(interview.meeting_link, '_blank')}
+                                  className="text-xs"
+                                >
+                                  Join Meeting
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Internal Feedback Section - Enhanced with Stage Information */}
+              {selectedCandidate.internal_feedback && selectedCandidate.internal_feedback.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      💬 Internal Feedback
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedCandidate.internal_feedback.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {selectedCandidate.internal_feedback.map((feedback) => (
+                        <div
+                          key={feedback._id}
+                          className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-10 h-10">
+                                <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
+                                  {feedback.feedback_by.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                  {feedback.feedback_by.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                                    {feedback.feedback_by.role}
+                                  </Badge>
+
+                                </div>
+                              </div>
+                            </div>
+                              <div className="text-right">
+                                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
+                                  💬 Feedback
+                                </div>
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="text-xs text-gray-500">At</span>
+                                  <Badge className={`text-xs ${getStageColor(feedback.feedback_at)}`}>
+                                    {feedback.feedback_at && feedback.feedback_at.replace('_', ' ').toUpperCase()}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">stage</span>
+                                </div>
+                              </div>
+
+                          </div>
+                          
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                            <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                              "{feedback.feedback}"
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Stage History */}
               {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
                 <Card>
@@ -1307,6 +1765,364 @@ const InvigilatorHome = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Rejection Confirmation Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              ⚠️ Confirm Candidate Rejection
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Please provide a reason for rejecting this candidate.
+            </DialogDescription>
+          </DialogHeader>
+
+          {candidateToReject && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={candidateToReject.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {candidateToReject.first_name[0]}{candidateToReject.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {candidateToReject.first_name} {candidateToReject.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {candidateToReject.email}
+                    </p>
+                    <Badge className={getStageColor(candidateToReject.current_stage)} variant="outline">
+                      {candidateToReject.current_stage?.toUpperCase()}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rejection Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">
+                  Reason for Rejection <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Please provide a detailed reason for rejecting this candidate..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isRejecting}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be recorded in the candidate's history for future reference.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setCandidateToReject(null);
+                setRejectionReason("");
+              }}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (candidateToReject && rejectionReason.trim()) {
+                  rejectCandidate(candidateToReject._id, rejectionReason.trim());
+                }
+              }}
+              disabled={isRejecting || !rejectionReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isRejecting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Rejecting...
+                </>
+              ) : (
+                <>
+                  ❌ Confirm Rejection
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stage Update Dialog */}
+      <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-indigo-600">
+              🔄 Update Candidate Stage
+            </DialogTitle>
+            <DialogDescription>
+              Move this candidate to a different stage in the hiring process.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedCandidate && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={selectedCandidate.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {selectedCandidate.first_name[0]}{selectedCandidate.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {selectedCandidate.first_name} {selectedCandidate.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCandidate.email}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">Current:</span>
+                      <Badge className={getStageColor(selectedCandidate.current_stage)} variant="outline">
+                        {selectedCandidate.current_stage?.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* New Stage Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="new-stage">
+                  New Stage <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="new-stage"
+                  value={selectedNewStage}
+                  onChange={(e) => setSelectedNewStage(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-white dark:bg-gray-800"
+                  disabled={isUpdatingStage}
+                >
+                  <option value="">Select new stage</option>
+                  <option value="registered" disabled={selectedCandidate.current_stage === 'registered'}>
+                    📝 Registered
+                  </option>
+                  <option value="hr" disabled={selectedCandidate.current_stage === 'hr'}>
+                    👥 HR Review
+                  </option>
+                  <option value="assessment" disabled={selectedCandidate.current_stage === 'assessment'}>
+                    📊 Assessment
+                  </option>
+                  <option value="tech" disabled={selectedCandidate.current_stage === 'tech'}>
+                    💻 Technical Interview
+                  </option>
+                  <option value="manager" disabled={selectedCandidate.current_stage === 'manager'}>
+                    👔 Manager Review
+                  </option>
+                  <option value="feedback" disabled={selectedCandidate.current_stage === 'feedback'}>
+                    📋 Final Feedback
+                  </option>
+                </select>
+              </div>
+
+              {/* Reason for Stage Update */}
+              <div className="space-y-2">
+                <Label htmlFor="stage-reason">
+                  Reason for Stage Update
+                </Label>
+                <Textarea
+                  id="stage-reason"
+                  placeholder="Enter reason for moving candidate to this stage..."
+                  value={stageUpdateReason}
+                  onChange={(e) => setStageUpdateReason(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isUpdatingStage}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be recorded in the candidate's stage history.
+                </p>
+              </div>
+
+              {/* Internal Feedback (compulsory) */}
+              <div className="space-y-2">
+                <Label htmlFor="stage-feedback">
+                  Internal Feedback <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="stage-feedback"
+                  placeholder="Provide your feedback for this stage update..."
+                  value={stageFeedback}
+                  onChange={(e) => setStageFeedback(e.target.value)}
+                  className="min-h-[100px]"
+                  disabled={isUpdatingStage}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This feedback will be attached to the candidate's profile and visible internally.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStageUpdateModal(false);
+                setSelectedNewStage("");
+                setStageUpdateReason("");
+                setStageFeedback("");
+              }}
+              disabled={isUpdatingStage}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (selectedCandidate && selectedNewStage && stageFeedback.trim()) {
+                  updateCandidateStage(
+                    selectedCandidate._id, 
+                    selectedNewStage, 
+                    stageFeedback,
+                    stageUpdateReason.trim() || `Stage updated to ${selectedNewStage}`
+                  );
+                }
+              }}
+              disabled={isUpdatingStage || !selectedNewStage || !stageFeedback.trim()}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {isUpdatingStage ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  🔄 Update Stage
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* FIXED: Feedback Dialog */}
+      <Dialog open={feedbackDialogOpen} onOpenChange={(open) => {
+        if (!open && !isSubmittingFeedback) {
+          setFeedbackDialogOpen(false);
+          setCandidateForFeedback(null);
+          setFeedbackContent("");
+          setFeedbackType("general");
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              💬 Add Feedback
+            </DialogTitle>
+            <DialogDescription>
+              Provide feedback for this candidate's performance and evaluation.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {candidateForFeedback && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={candidateForFeedback.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {candidateForFeedback.first_name?.[0]}{candidateForFeedback.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {candidateForFeedback.first_name} {candidateForFeedback.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {candidateForFeedback.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Feedback Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="feedback-type">Feedback Type</Label>
+                <Select
+                  value={feedbackType}
+                  onValueChange={setFeedbackType}
+                  disabled={isSubmittingFeedback}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="manager_review">Manager Review</SelectItem>
+                    <SelectItem value="interview_feedback">Interview Feedback</SelectItem>
+                    <SelectItem value="technical_review">Technical Review</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Feedback Content */}
+              <div className="space-y-2">
+                <Label htmlFor="feedback-content">Feedback Content</Label>
+                <Textarea
+                  id="feedback-content"
+                  placeholder="Enter your detailed feedback about the candidate..."
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  disabled={isSubmittingFeedback}
+                  rows={6}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFeedbackDialogOpen(false);
+                setCandidateForFeedback(null);
+                setFeedbackContent("");
+                setFeedbackType("general");
+              }}
+              disabled={isSubmittingFeedback}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={submitFeedback}
+              disabled={isSubmittingFeedback || !feedbackContent.trim()}
+            >
+              {isSubmittingFeedback ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                "💬 Submit Feedback"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

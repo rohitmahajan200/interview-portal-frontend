@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import React, { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -19,43 +17,256 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Search,
   Users,
   Clock,
-  Calendar,
   Video,
-  MessageSquare,
-  ThumbsUp,
-  ThumbsDown,
-  ArrowRight,
-  ChevronDown,
-  ChevronRight,
-  Phone,
-  Mail,
   TrendingUp,
-  Copy,
-  ExternalLink,
-  MapPin,
-  CirclePause,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/app/store";
-import type {
-  ManagerCandidate,
-  ManagerStats,
-  ActionModalState,
-  ActionType,
-} from "@/types/manager.types";
+
+// Import the child components
+import ManagerStage from "./ManagerStage";
+import ManagerAllCandidates from "./ManagerAllCandidates";
+
+interface ManagerCandidate {
+  _id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  date_of_birth: string;
+  gender: "male" | "female" | "other";
+  address: string;
+  current_stage: string;
+  status: string;
+  applied_job?: {
+    _id: string;
+    name: string;
+    description?: {
+      time?: string;
+      country?: string;
+      location?: string;
+      expInYears?: string;
+      salary?: string;
+      jobId?: string;
+    };
+  };
+  profile_photo_url?: {
+    url: string;
+    publicId: string;
+    _id: string;
+  };
+  portfolio_url?: string | null;
+  documents?: string[];
+  assessments?: Array<{
+    _id: string;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+    status: string;
+  }>;
+  hrQuestionnaire?: string[];
+  interviews?: any[];
+  default_hr_responses?: Array<{
+    question_text: string;
+    response: string;
+    input_type: string;
+    _id: string;
+  }>;
+  stage_history?: string[];
+  internal_feedback?: Array<{
+    feedback_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    feedback: string;
+    _id: string;
+    feedback_at: string;
+  }>;
+  shortlisted: boolean;
+  email_verified: boolean;
+  flagged_for_deletion: boolean;
+  assigned_manager: boolean;
+  registration_date: string;
+  createdAt: string;
+  updatedAt: string;
+  last_login?: string;
+  __v: number;
+  progress_metrics?: {
+    stages_completed: number;
+    total_assessments: number;
+    completed_interviews: number;
+    pending_interviews: number;
+    documents_uploaded: number;
+    feedback_count: number;
+    hr_questionnaire_completed: boolean;
+    current_stage_duration: number;
+  };
+}
+
+interface DetailedCandidate {
+  _id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  date_of_birth: string;
+  gender: "male" | "female" | "other";
+  address: string;
+  current_stage: string;
+  status: string;
+  applied_job?: {
+    _id: string;
+    name: string;
+    description?: {
+      time?: string;
+      country?: string;
+      location?: string;
+      expInYears?: string;
+      salary?: string;
+      jobId?: string;
+    };
+  };
+  profile_photo_url?: {
+    url: string;
+    publicId: string;
+    _id: string;
+  };
+  portfolio_url?: string | null;
+  documents: Array<{
+    _id: string;
+    document_type: string;
+    document_url: string;
+  }>;
+  hrQuestionnaire: Array<{
+    _id: string;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+    status: string;
+  }>;
+  stage_history: Array<{
+    _id: string;
+    from_stage?: string;
+    to_stage: string;
+    changed_by?: string;
+    action: string;
+    remarks: string;
+    changed_at: string;
+  }>;
+  interviews: Array<{
+    _id: string;
+    title?: string;
+    status: string;
+    scheduled_at?: string;
+    type?: string;
+    platform?: string;
+    meeting_link?: string;
+    canJoinMeeting?: boolean;
+    interviewers?: Array<{
+      _id: string;
+      name: string;
+    }>;
+    remarks?: Array<{
+      provider: {
+        name: string;
+      };
+      remark: string;
+      created_at: string;
+    }>;
+  }>;
+  assessments?: Array<{
+    _id: string;
+    assigned_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    due_at: string;
+    status: string;
+  }>;
+  default_hr_responses?: Array<{
+    question_text: string;
+    response: string;
+    input_type: string;
+    _id: string;
+  }>;
+  internal_feedback?: Array<{
+    feedback_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    feedback: string;
+    _id: string;
+    feedback_at: string;
+  }>;
+  shortlisted: boolean;
+  email_verified: boolean;
+  flagged_for_deletion: boolean;
+  assigned_manager: boolean;
+  registration_date: string;
+  createdAt: string;
+  updatedAt: string;
+  last_login?: string;
+  __v: number;
+  progress_metrics?: {
+    stages_completed: number;
+    total_assessments: number;
+    completed_interviews: number;
+    pending_interviews: number;
+    documents_uploaded: number;
+    feedback_count: number;
+    hr_questionnaire_completed: boolean;
+    current_stage_duration: number;
+  };
+}
+
+interface ManagerStats {
+  total_candidates: number;
+  active_candidates: number;
+  interviewed_candidates: number;
+  pending_feedback_candidates: number;
+}
+
+interface ActionModalState {
+  open: boolean;
+  candidate: ManagerCandidate | null;
+  type: string;
+  loading: boolean;
+}
+
+type ActionType = "feedback" | "hire" | "reject" | "hold" | "stage";
 
 const ManagerDashboard: React.FC = () => {
   // State
   const [candidates, setCandidates] = useState<ManagerCandidate[]>([]);
+  const [allCandidates, setAllCandidates] = useState<ManagerCandidate[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<string>("manager-stage");
+  
+  // New states for detailed candidate data
+  const [detailedCandidates, setDetailedCandidates] = useState<Record<string, DetailedCandidate>>({});
+  const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
+  
+  // Filter states for tracking view
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  
   const [stats, setStats] = useState<ManagerStats>({
     total_candidates: 0,
     active_candidates: 0,
@@ -80,25 +291,50 @@ const ManagerDashboard: React.FC = () => {
   const user = useSelector((state: RootState) => state.orgAuth.user);
   const isAdmin = user?.role === "ADMIN";
 
-  // Effects
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Calculate progress metrics for each candidate
+  const calculateProgressMetrics = (candidate: ManagerCandidate) => {
+    const stageOrder = ["registered", "hr", "assessment", "tech", "manager", "feedback"];
+    const currentStageIndex = stageOrder.indexOf(candidate.current_stage);
+    
+    const registrationDate = new Date(candidate.registration_date);
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 3600 * 24));
+    
+    return {
+      stages_completed: Math.max(0, currentStageIndex),
+      total_assessments: candidate.assessments?.length || 0,
+      completed_interviews: candidate.interviews?.filter(i => i.status === 'completed').length || 0,
+      pending_interviews: candidate.interviews?.filter(i => i.status === 'scheduled').length || 0,
+      documents_uploaded: Array.isArray(candidate.documents) ? candidate.documents.length : 0,
+      feedback_count: candidate.internal_feedback?.length || 0,
+      hr_questionnaire_completed: Array.isArray(candidate.hrQuestionnaire) ? candidate.hrQuestionnaire.length > 0 : false,
+      current_stage_duration: daysDiff
+    };
+  };
 
-  // Data fetching
-  const fetchData = async (): Promise<void> => {
+  // Data fetching - Updated to use common endpoint with client-side filtering
+  const fetchData = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       const [candidatesRes, statsRes] = await Promise.all([
-        api.get<{ success: boolean; data: ManagerCandidate[] }>(
-          "/org/manager/candidates"
-        ),
-        api.get<{ success: boolean; data: { statistics: ManagerStats } }>(
-          "/org/dashboard/stats"
-        ),
+        api.get<{ success: boolean; data: ManagerCandidate[] }>("/org/candidates"),
+        api.get<{ success: boolean; data: { statistics: ManagerStats } }>("/org/dashboard/stats"),
       ]);
 
-      setCandidates(candidatesRes.data.data || []);
+      const allCandidatesData = candidatesRes.data.data || [];
+      
+      const candidatesWithMetrics = allCandidatesData.map(candidate => ({
+        ...candidate,
+        progress_metrics: calculateProgressMetrics(candidate)
+      }));
+      
+      const managerStageCandidates = candidatesWithMetrics.filter(
+        candidate => candidate.current_stage === "manager"
+      );
+      
+      setCandidates(managerStageCandidates);
+      setAllCandidates(candidatesWithMetrics);
+      
       if (statsRes.data.success) {
         setStats(statsRes.data.data.statistics);
       }
@@ -108,13 +344,52 @@ const ManagerDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Effects
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Fetch detailed candidate information
+  const fetchCandidateDetails = async (candidateId: string): Promise<void> => {
+    if (detailedCandidates[candidateId] || loadingDetails.has(candidateId)) {
+      return; // Already loaded or loading
+    }
+
+    try {
+      setLoadingDetails(prev => new Set([...prev, candidateId]));
+      
+      const response = await api.get<{ success: boolean; data: DetailedCandidate }>(`/org/candidates/${candidateId}`);
+      
+      if (response.data.success) {
+        setDetailedCandidates(prev => ({
+          ...prev,
+          [candidateId]: {
+            ...response.data.data,
+            progress_metrics: calculateProgressMetrics({
+              ...response.data.data,
+              documents: response.data.data.documents?.map(doc => doc._id) || [],
+              hrQuestionnaire: response.data.data.hrQuestionnaire?.map(q => q._id) || [],
+              stage_history: response.data.data.stage_history?.map(s => s._id) || []
+            })
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch candidate details:", error);
+      toast.error("Failed to load candidate details");
+    } finally {
+      setLoadingDetails(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(candidateId);
+        return newSet;
+      });
+    }
   };
 
   // Modal handlers
-  const openActionModal = (
-    candidate: ManagerCandidate,
-    type: ActionType
-  ): void => {
+  const openActionModal = (candidate: ManagerCandidate, type: ActionType): void => {
     setActionModal({ open: true, candidate, type, loading: false });
     setActionData({ feedback: "", stage: "feedback" });
   };
@@ -144,7 +419,7 @@ const ManagerDashboard: React.FC = () => {
 
       const { candidate, type } = actionModal;
       let endpoint = "";
-      let payload: Record<string, string | number> = {};
+      let payload: Record<string, any> = {};
       let method: "post" | "patch" = "post";
 
       switch (type) {
@@ -161,10 +436,11 @@ const ManagerDashboard: React.FC = () => {
         case "hold":
           endpoint = `/org/candidates/${candidate._id}/stage`;
           payload = {
-            new_stage: "feedback",
-            status:"hold",
-            action: "hold",
+            newStage: "feedback",
             remarks: actionData.feedback || "Hold for hiring",
+            internal_feedback: {
+              feedback: actionData.feedback || "Candidate put on hold"
+            }
           };
           method = "patch";
           break;
@@ -172,10 +448,11 @@ const ManagerDashboard: React.FC = () => {
         case "hire":
           endpoint = `/org/candidates/${candidate._id}/stage`;
           payload = {
-            new_stage: "feedback",
-            action: "hired",
-            status:"hired",
+            newStage: "feedback",
             remarks: actionData.feedback || "Approved by manager",
+            internal_feedback: {
+              feedback: actionData.feedback || "Candidate approved for hiring"
+            }
           };
           method = "patch";
           break;
@@ -183,9 +460,7 @@ const ManagerDashboard: React.FC = () => {
         case "reject":
           endpoint = `/org/candidates/${candidate._id}/reject`;
           payload = {
-            new_stage: "feedback",
-            action: "rejected",
-            remarks: actionData.feedback || "Rejected by manager",
+            rejection_reason: actionData.feedback || "Rejected by manager",
           };
           method = "patch";
           break;
@@ -193,34 +468,33 @@ const ManagerDashboard: React.FC = () => {
         case "stage":
           endpoint = `/org/candidates/${candidate._id}/stage`;
           payload = {
-            new_stage: actionData.stage,
-            remarks:
-              actionData.feedback || `Stage changed to ${actionData.stage}`,
+            newStage: actionData.stage,
+            remarks: actionData.feedback || `Stage changed to ${actionData.stage}`,
+            internal_feedback: {
+              feedback: actionData.feedback || `Stage updated to ${actionData.stage}`
+            }
           };
           method = "patch";
           break;
       }
 
       await api[method](endpoint, payload);
-
       toast.success(`${type} completed successfully`);
       closeActionModal();
       await fetchData();
+      
+      // Clear detailed data for this candidate to force refetch
+      if (detailedCandidates[actionModal.candidate._id]) {
+        setDetailedCandidates(prev => {
+          const newDetails = { ...prev };
+          delete newDetails[actionModal.candidate!._id];
+          return newDetails;
+        });
+      }
     } catch (error: unknown) {
       console.error(`Failed to ${actionModal.type}:`, error);
-      if (
-        error instanceof Error ||
-        (error && typeof error === "object" && "response" in error)
-      ) {
-        const apiError = error as {
-          response?: { data?: { message?: string } };
-        };
-        toast.error(
-          apiError.response?.data?.message || `Failed to ${actionModal.type}`
-        );
-      } else {
-        toast.error(`Failed to ${actionModal.type}`);
-      }
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || `Failed to ${actionModal.type}`);
     } finally {
       setActionModal((prev) => ({ ...prev, loading: false }));
     }
@@ -239,30 +513,23 @@ const ManagerDashboard: React.FC = () => {
       }
     } catch (error: unknown) {
       console.error("Failed to join meeting:", error);
-      if (
-        error instanceof Error ||
-        (error && typeof error === "object" && "response" in error)
-      ) {
-        const apiError = error as {
-          response?: { data?: { message?: string } };
-        };
-        toast.error(
-          apiError.response?.data?.message || "Failed to join meeting"
-        );
-      } else {
-        toast.error("Failed to join meeting");
-      }
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || "Failed to join meeting");
     }
   };
 
-  // UI helpers
-  const toggleCardExpansion = (candidateId: string): void => {
+  // Updated toggle function to fetch details when expanding
+  const toggleCardExpansion = async (candidateId: string): Promise<void> => {
     const newExpanded = new Set(expandedCards);
+    
     if (newExpanded.has(candidateId)) {
       newExpanded.delete(candidateId);
     } else {
       newExpanded.add(candidateId);
+      // Fetch detailed data when expanding
+      await fetchCandidateDetails(candidateId);
     }
+    
     setExpandedCards(newExpanded);
   };
 
@@ -272,8 +539,21 @@ const ManagerDashboard: React.FC = () => {
       hired: "bg-blue-100 text-blue-800",
       rejected: "bg-red-100 text-red-800",
       withdrawn: "bg-gray-100 text-gray-800",
+      hold: "bg-yellow-100 text-yellow-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getStageColor = (stage: string): string => {
+    const colors: Record<string, string> = {
+      registered: "bg-blue-100 text-blue-800",
+      hr: "bg-purple-100 text-purple-800",
+      assessment: "bg-orange-100 text-orange-800",
+      tech: "bg-indigo-100 text-indigo-800",
+      manager: "bg-green-100 text-green-800",
+      feedback: "bg-teal-100 text-teal-800",
+    };
+    return colors[stage] || "bg-gray-100 text-gray-800";
   };
 
   const formatDateTime = (dateString: string): string => {
@@ -290,19 +570,20 @@ const ManagerDashboard: React.FC = () => {
       weekday: "short",
       month: "short",
       day: "numeric",
+      year: "numeric",
     });
   };
 
-  // Filter candidates
-  const filteredCandidates = candidates.filter(
-    (candidate) =>
-      candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.applied_job?.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
+  const formatAge = (dateString: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   if (loading) {
     return (
@@ -319,8 +600,8 @@ const ManagerDashboard: React.FC = () => {
         <h1 className="text-3xl font-bold">Manager Dashboard</h1>
         <p className="text-muted-foreground">
           {isAdmin
-            ? "Admin view - All manager stage candidates"
-            : "Review and manage candidates in manager stage"}
+            ? "Admin view - Manage candidates and track their progress across all stages"
+            : "Review, manage, and track candidates throughout their journey"}
         </p>
 
         {/* Quick Stats */}
@@ -330,9 +611,7 @@ const ManagerDashboard: React.FC = () => {
               <Users className="h-5 w-5 text-blue-600" />
               <span className="text-sm font-medium text-blue-800">Total</span>
             </div>
-            <div className="text-2xl font-bold text-blue-900">
-              {stats.total_candidates}
-            </div>
+            <div className="text-2xl font-bold text-blue-900">{stats.total_candidates}</div>
           </div>
 
           <div className="bg-green-50 p-4 rounded-lg">
@@ -340,622 +619,102 @@ const ManagerDashboard: React.FC = () => {
               <TrendingUp className="h-5 w-5 text-green-600" />
               <span className="text-sm font-medium text-green-800">Active</span>
             </div>
-            <div className="text-2xl font-bold text-green-900">
-              {stats.active_candidates}
-            </div>
+            <div className="text-2xl font-bold text-green-900">{stats.active_candidates}</div>
           </div>
 
           <div className="bg-purple-50 p-4 rounded-lg">
             <div className="flex items-center gap-2">
               <Video className="h-5 w-5 text-purple-600" />
-              <span className="text-sm font-medium text-purple-800">
-                Interviewed
-              </span>
+              <span className="text-sm font-medium text-purple-800">Interviewed</span>
             </div>
-            <div className="text-2xl font-bold text-purple-900">
-              {stats.interviewed_candidates}
-            </div>
+            <div className="text-2xl font-bold text-purple-900">{stats.interviewed_candidates}</div>
           </div>
 
           <div className="bg-orange-50 p-4 rounded-lg">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-orange-600" />
-              <span className="text-sm font-medium text-orange-800">
-                Pending
-              </span>
+              <span className="text-sm font-medium text-orange-800">Pending</span>
             </div>
-            <div className="text-2xl font-bold text-orange-900">
-              {stats.pending_feedback_candidates}
-            </div>
+            <div className="text-2xl font-bold text-orange-900">{stats.pending_feedback_candidates}</div>
           </div>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search candidates by name, email, or position..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Tabs for different views */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manager-stage">Manager Stage</TabsTrigger>
+          <TabsTrigger value="tracking">All Candidates</TabsTrigger>
+        </TabsList>
 
-      {/* Candidate Cards */}
-      <div className="space-y-4">
-        {filteredCandidates.map((candidate) => {
-          const isExpanded = expandedCards.has(candidate._id);
-          //const overallScore = getOverallScore(candidate);
-          const upcomingInterview = candidate.interviews?.find(
-            (i) =>
-              new Date(i.scheduled_at) > new Date() && i.status === "scheduled"
-          );
-          const activeInterview = candidate.interviews?.find(
-            (i) => i.canJoinMeeting
-          );
+        <TabsContent value="manager-stage" className="space-y-4">
+          <ManagerStage
+            candidates={candidates}
+            detailedCandidates={detailedCandidates}
+            loadingDetails={loadingDetails}
+            expandedCards={expandedCards}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            toggleCardExpansion={toggleCardExpansion}
+            joinMeeting={joinMeeting}
+            copyMeetingLink={copyMeetingLink}
+            getStatusColor={getStatusColor}
+            getStageColor={getStageColor}
+            formatDateTime={formatDateTime}
+            formatDate={formatDate}
+            formatAge={formatAge}
+            fetchCandidates={fetchData} 
+          />
+        </TabsContent>
 
-          return (
-            <Card
-              key={candidate._id}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  {/* Left: Candidate Info */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={candidate.profile_photo_url?.url} />
-                      <AvatarFallback>
-                        {candidate.first_name[0]}
-                        {candidate.last_name}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold truncate">
-                          {candidate.first_name} {candidate.last_name}
-                        </h3>
-                        <Badge className={getStatusColor(candidate.status)}>
-                          {candidate.status}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {candidate.email}
-                        </div>
-
-                        {candidate.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {candidate.phone}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-sm font-medium text-blue-600 mt-1">
-                        {candidate.applied_job?.name}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Quick Actions */}
-                  <div className="flex items-center gap-2">
-                    {/* Active Meeting Join Button */}
-                    {activeInterview && (
-                      <Button
-                        size="sm"
-                        onClick={() => joinMeeting(activeInterview._id)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <Video className="h-4 w-4 mr-1" />
-                        Join Now
-                      </Button>
-                    )}
-
-                    {/* Upcoming Interview Badge */}
-                    {upcomingInterview && !activeInterview && (
-                      <Badge
-                        variant="outline"
-                        className="text-blue-600 border-blue-300"
-                      >
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatDateTime(upcomingInterview.scheduled_at)}
-                      </Badge>
-                    )}
-
-                    {/* Quick Action Buttons */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openActionModal(candidate, "feedback")}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      Feedback
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openActionModal(candidate, "hire")}
-                      className="text-green-600 hover:text-green-700"
-                    >
-                      Hire
-                      <ThumbsUp className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openActionModal(candidate, "reject")}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Reject
-                      <ThumbsDown className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openActionModal(candidate, "hold")}
-                      className="text-yellow-600 hover:text-red-700"
-                    >
-                      Hold
-                      <CirclePause className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleCardExpansion(candidate._id)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Quick Info Row - Fixed */}
-                <div className="flex items-center gap-6 mt-3 text-sm">
-                  {candidate.interviews && candidate.interviews.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Video className="h-4 w-4 text-green-500" />
-                      <span>
-                        {candidate.interviews.length} Interview
-                        {candidate.interviews.length > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  )}
-
-                  {candidate.feedbacks && candidate.feedbacks.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4 text-orange-500" />
-                      <span>
-                        {candidate.feedbacks.length} Feedback
-                        {candidate.feedbacks.length > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-
-              {/* Expanded Content - Full Width Layout */}
-              {isExpanded && (
-                <CardContent className="pt-0 border-t">
-                  <div className="space-y-6">
-                    {/* Interviews Section - Full Width */}
-                    {candidate.interviews &&
-                      candidate.interviews.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
-                            <Video className="h-5 w-5" />
-                            Interviews ({candidate.interviews.length})
-                          </h4>
-                          <div className="space-y-3">
-                            {candidate.interviews.map((interview) => (
-                              <div
-                                key={interview._id}
-                                className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100"
-                              >
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h5 className="font-medium text-lg">
-                                        {interview.title}
-                                      </h5>
-                                      <Badge
-                                        variant={
-                                          interview.status === "scheduled"
-                                            ? "default"
-                                            : "secondary"
-                                        }
-                                      >
-                                        {interview.status}
-                                      </Badge>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-muted-foreground">
-                                      <div className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4" />
-                                        <span>
-                                          {formatDate(interview.scheduled_at)}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="h-4 w-4" />
-                                        <span>
-                                          {new Date(
-                                            interview.scheduled_at
-                                          ).toLocaleTimeString("en-US", {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        {interview.type === "online" ? (
-                                          <Video className="h-4 w-4 text-blue-600" />
-                                        ) : (
-                                          <MapPin className="h-4 w-4 text-green-600" />
-                                        )}
-                                        <span>
-                                          {interview.type === "online"
-                                            ? interview.platform || "Online"
-                                            : "In-person"}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {interview.interviewers &&
-                                      interview.interviewers.length > 0 && (
-                                        <div className="mt-2 text-sm">
-                                          <span className="font-medium">
-                                            Interviewers:{" "}
-                                          </span>
-                                          <span className="text-muted-foreground">
-                                            {interview.interviewers
-                                              .map((i) => i.name)
-                                              .join(", ")}
-                                          </span>
-                                        </div>
-                                      )}
-                                  </div>
-
-                                  {/* Meeting Actions */}
-                                  <div className="flex gap-2 ml-4">
-                                    {interview.canJoinMeeting && (
-                                      <Button
-                                        size="sm"
-                                        onClick={() =>
-                                          joinMeeting(interview._id)
-                                        }
-                                        className="bg-green-600 hover:bg-green-700 text-white"
-                                      >
-                                        <Video className="h-4 w-4 mr-1" />
-                                        Join Now
-                                      </Button>
-                                    )}
-
-                                    {interview.meeting_link && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() =>
-                                          copyMeetingLink(
-                                            interview.meeting_link!
-                                          )
-                                        }
-                                        className="text-blue-600 hover:text-blue-700"
-                                      >
-                                        <Copy className="h-4 w-4 mr-1" />
-                                        Copy Link
-                                      </Button>
-                                    )}
-
-                                    {interview.meeting_link && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() =>
-                                          window.open(
-                                            interview.meeting_link,
-                                            "_blank"
-                                          )
-                                        }
-                                        className="text-gray-600 hover:text-gray-700"
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Interview Remarks */}
-                                {interview.remarks &&
-                                  interview.remarks.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-blue-200">
-                                      <h6 className="text-sm font-medium mb-2">
-                                        Recent Remarks:
-                                      </h6>
-                                      <div className="space-y-2 max-h-24 overflow-y-auto">
-                                        {interview.remarks
-                                          .slice(-2)
-                                          .map((remark, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="text-xs p-2 bg-white rounded border border-blue-200"
-                                            >
-                                              <div className="font-medium text-blue-700">
-                                                {remark.provider.name}:{" "}
-                                                {remark.remark}
-                                              </div>
-                                              <div className="text-muted-foreground mt-1">
-                                                {formatDateTime(
-                                                  remark.created_at
-                                                )}
-                                              </div>
-                                            </div>
-                                          ))}
-                                      </div>
-                                    </div>
-                                  )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    {/* HR Questionnaire - Compact */}
-                    
-                    {/* {candidate.hr_questionnaire &&
-                      candidate.hr_questionnaire.length > 0 && (
-                        <div>
-                          
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-purple-600" />
-                            HR Review
-                          </h4>
-                          <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                            {candidate.hr_questionnaire
-                              .slice(0, 3)
-                              .map((qa, index) => (
-                                <div
-                                  key={index}
-                                  className="flex justify-between items-center py-2 border-b border-purple-200 last:border-b-0"
-                                >
-                                  <span className="text-sm text-gray-700 truncate flex-1 mr-3">
-                                    Q{index + 1}: {qa.question.substring(0, 50)}
-                                    ...
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    {qa.score && (
-                                      <Badge
-                                        variant="outline"
-                                        className="text-purple-700 border-purple-300 text-xs"
-                                      >
-                                        {qa.score}/10
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            {candidate.hr_questionnaire.length > 3 && (
-                              <div className="text-xs text-purple-600 mt-2 text-center">
-                                +{candidate.hr_questionnaire.length - 3} more
-                                questions
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )} */}
-
-                    {/* Assessment Results - Compact */}
-                    {/* {candidate.assessments &&
-                      candidate.assessments.length > 0 && (
-                        <div>
-                          {console.log("Candiadte ree=>",candidate)}
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-indigo-600" />
-                            Assessments
-                          </h4>
-                          <div className="space-y-2">
-                            {candidate.assessments.map((assessment) => (
-                              <div
-                                key={assessment._id}
-                                className="p-3 bg-indigo-50 rounded-lg border border-indigo-100"
-                              >
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="font-medium text-sm text-indigo-800">
-                                    {assessment.assessment_type ||
-                                      assessment.title}
-                                  </span>
-                                  {assessment.overall_score && (
-                                    <Badge
-                                      variant="outline"
-                                      className={
-                                        assessment.overall_score >= 80
-                                          ? "text-green-700 border-green-300"
-                                          : assessment.overall_score >= 60
-                                          ? "text-yellow-700 border-yellow-300"
-                                          : "text-red-700 border-red-300"
-                                      }
-                                    >
-                                      {assessment.overall_score}%
-                                    </Badge>
-                                  )}
-                                </div>
-                                {assessment.remarks && (
-                                  <div className="text-xs text-indigo-600 italic">
-                                    "{assessment.remarks.substring(0, 80)}..."
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )} */}
-
-                    {/* Documents - Compact */}
-                    {candidate.documents && candidate.documents.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <ExternalLink className="h-4 w-4 text-emerald-600" />
-                          Documents
-                        </h4>
-                        <div className="space-y-2">
-                          {candidate.documents.slice(0, 5).map((document) => (
-                            <div
-                              key={document._id}
-                              className="flex items-center justify-between p-2 bg-emerald-50 rounded border border-emerald-100"
-                            >
-                              <div className="flex-1 min-w-0 mr-3">
-                                <div className="text-sm font-medium text-emerald-800 truncate">
-                                  {document.document_type || 'Document/Resume'}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {document.document_url && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      window.open(document.document_url, "_blank")
-                                    }
-                                    className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700"
-                                  >
-                                    <ExternalLink className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Stage History Section - Full Width */}
-                    {candidate.stage_history &&
-                      candidate.stage_history.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
-                            <ArrowRight className="h-5 w-5" />
-                            Stage History
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {candidate.stage_history
-                              .slice(-6)
-                              .reverse()
-                              .map((stage, idx) => (
-                                <div
-                                  key={stage._id || idx}
-                                  className="p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-200"
-                                >
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className="font-medium text-sm flex items-center gap-1">
-                                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                        {stage.from_stage || "Start"}
-                                      </span>
-                                      <ArrowRight className="h-3 w-3 text-gray-400" />
-                                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                                        {stage.to_stage}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  <div className="text-xs text-muted-foreground mb-1">
-                                    {stage.changed_by?.name} •{" "}
-                                    {formatDateTime(stage.changed_at)}
-                                  </div>
-
-                                  {stage.remarks && (
-                                    <div className="text-xs text-gray-600 italic mt-2 p-2 bg-white rounded border border-gray-100">
-                                      "{stage.remarks}"
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Feedback History Section - Full Width */}
-                    {candidate.feedbacks && candidate.feedbacks.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <MessageSquare className="h-5 w-5" />
-                          Feedback History ({candidate.feedbacks.length})
-                        </h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {candidate.feedbacks
-                            .slice(-4)
-                            .reverse()
-                            .map((feedback) => (
-                              <div
-                                key={feedback._id}
-                                className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-100"
-                              >
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="font-medium text-sm text-orange-800">
-                                    {feedback.feedback_provider.name}
-                                  </div>
-                                  <Badge variant="outline" className="text-xs">
-                                    {feedback.feedback_type}
-                                  </Badge>
-                                </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                  {feedback.content}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {formatDateTime(feedback.createdAt)}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              )}
-            </Card>
-          );
-        })}
-      </div>
+        <TabsContent value="tracking" className="space-y-4">
+          <ManagerAllCandidates
+            allCandidates={allCandidates}
+            detailedCandidates={detailedCandidates}
+            loadingDetails={loadingDetails}
+            expandedCards={expandedCards}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            stageFilter={stageFilter}
+            setStageFilter={setStageFilter}
+            toggleCardExpansion={toggleCardExpansion}
+            copyMeetingLink={copyMeetingLink}
+            getStatusColor={getStatusColor}
+            getStageColor={getStageColor}
+            formatDateTime={formatDateTime}
+            formatDate={formatDate}
+            formatAge={formatAge}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* No Candidates Found */}
-      {filteredCandidates.length === 0 && (
+      {((activeTab === "manager-stage" && candidates.length === 0) || 
+        (activeTab === "tracking" && allCandidates.length === 0)) && (
         <Card>
           <CardContent className="text-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">
-              No candidates found
-            </p>
+            <p className="text-lg font-medium text-muted-foreground">No candidates found</p>
             <p className="text-sm text-muted-foreground">
-              {searchTerm
-                ? "Try adjusting your search criteria"
-                : "No candidates in manager stage"}
+              {activeTab === "manager-stage" 
+                ? "No candidates in manager stage" 
+                : "No candidates available"}
             </p>
           </CardContent>
         </Card>
       )}
 
       {/* Quick Action Modal */}
-      <Dialog
-        open={actionModal.open}
-        onOpenChange={() => !actionModal.loading && closeActionModal()}
-      >
+      <Dialog open={actionModal.open} onOpenChange={() => !actionModal.loading && closeActionModal()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {actionModal.type === "feedback" && "Provide Feedback"}
               {actionModal.type === "hire" && "Approve Candidate"}
               {actionModal.type === "reject" && "Reject Candidate"}
+              {actionModal.type === "hold" && "Hold Candidate"}
               {actionModal.type === "stage" && "Change Stage"}
             </DialogTitle>
           </DialogHeader>
@@ -965,18 +724,15 @@ const ManagerDashboard: React.FC = () => {
             {actionModal.candidate && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <Avatar>
-                  <AvatarImage
-                    src={actionModal.candidate.profile_photo_url?.url}
-                  />
+                  <AvatarImage src={actionModal.candidate.profile_photo_url?.url} />
                   <AvatarFallback>
                     {actionModal.candidate.first_name[0]}
-                    {actionModal.candidate.last_name}
+                    {actionModal.candidate.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="font-medium">
-                    {actionModal.candidate.first_name}{" "}
-                    {actionModal.candidate.last_name}
+                    {actionModal.candidate.first_name} {actionModal.candidate.last_name}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {actionModal.candidate.applied_job?.name}
@@ -991,9 +747,7 @@ const ManagerDashboard: React.FC = () => {
                 <label className="text-sm font-medium">New Stage</label>
                 <Select
                   value={actionData.stage}
-                  onValueChange={(value) =>
-                    setActionData((prev) => ({ ...prev, stage: value }))
-                  }
+                  onValueChange={(value) => setActionData((prev) => ({ ...prev, stage: value }))}
                 >
                   <SelectTrigger className="w-full mt-1">
                     <SelectValue placeholder="Select stage" />
@@ -1015,16 +769,12 @@ const ManagerDashboard: React.FC = () => {
                 {actionModal.type === "feedback" && "Feedback *"}
                 {actionModal.type === "hire" && "Hiring Notes"}
                 {actionModal.type === "reject" && "Rejection Reason *"}
+                {actionModal.type === "hold" && "Hold Reason"}
                 {actionModal.type === "stage" && "Remarks"}
               </label>
               <Textarea
                 value={actionData.feedback}
-                onChange={(e) =>
-                  setActionData((prev) => ({
-                    ...prev,
-                    feedback: e.target.value,
-                  }))
-                }
+                onChange={(e) => setActionData((prev) => ({ ...prev, feedback: e.target.value }))}
                 placeholder={
                   actionModal.type === "feedback"
                     ? "Your detailed feedback..."
@@ -1032,6 +782,8 @@ const ManagerDashboard: React.FC = () => {
                     ? "Notes about hiring decision..."
                     : actionModal.type === "reject"
                     ? "Reason for rejection..."
+                    : actionModal.type === "hold"
+                    ? "Reason for holding..."
                     : "Reason for stage change..."
                 }
                 rows={4}
@@ -1041,21 +793,15 @@ const ManagerDashboard: React.FC = () => {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeActionModal}
-              disabled={actionModal.loading}
-            >
+            <Button variant="outline" onClick={closeActionModal} disabled={actionModal.loading}>
               Cancel
             </Button>
             <Button
               onClick={handleQuickAction}
               disabled={
                 actionModal.loading ||
-                (actionModal.type === "feedback" &&
-                  !actionData.feedback.trim()) ||
-                (actionModal.type === "reject" &&
-                  !actionData.feedback.trim()) ||
+                (actionModal.type === "feedback" && !actionData.feedback.trim()) ||
+                (actionModal.type === "reject" && !actionData.feedback.trim()) ||
                 (actionModal.type === "stage" && !actionData.stage)
               }
               className={
@@ -1063,6 +809,8 @@ const ManagerDashboard: React.FC = () => {
                   ? "bg-green-600 hover:bg-green-700"
                   : actionModal.type === "reject"
                   ? "bg-red-600 hover:bg-red-700"
+                  : actionModal.type === "hold"
+                  ? "bg-yellow-600 hover:bg-yellow-700"
                   : "bg-blue-600 hover:bg-blue-700"
               }
             >

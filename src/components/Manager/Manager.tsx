@@ -19,7 +19,6 @@ import ThemeToggle from "@/components/themeToggle";
 import { ManagerSidebar } from "./ManagerSidebar";
 import ManagerDashboard from "./ManagerDashboard";
 import ManagerCalendar from "./ManagerCalendar";
-import CandidateManagement from "./CandidateManagement";
 
 const Manager: React.FC = () => {
   const dispatch = useDispatch();
@@ -56,8 +55,6 @@ const Manager: React.FC = () => {
         return <ManagerDashboard />;
       case "manager-calendar":
         return <ManagerCalendar />;
-      case "candidate-management":
-        return <CandidateManagement />;
       default:
         return <ManagerDashboard />;
     }
