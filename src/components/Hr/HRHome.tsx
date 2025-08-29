@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, MessageSquare } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, Search, Users, UserCheck, UserX, Calendar, FileText } from "lucide-react";
@@ -165,6 +165,16 @@ type Candidate = {
     response: string | string[];
     input_type: "text" | "audio" | "date" | "mcq" | "checkbox";
   }>;
+  internal_feedback?: {
+    _id: string;
+    feedback_by: {
+      _id: string;
+      name: string;
+      role: string;
+    };
+    feedback: string;
+    feedback_at?: string; 
+  }[];
 };
 
 const HRHome = () => {
@@ -205,6 +215,46 @@ const HRHome = () => {
   const [stageFeedback, setStageFeedback] = useState("");
   const [selectedNewStage, setSelectedNewStage] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
+  // Dialog states for Feedback - Add after existing dialog states
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [candidateForFeedback, setCandidateForFeedback] = useState<Candidate | null>(null);
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [feedbackType, setFeedbackType] = useState("general");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  // Submit Feedback Handler
+  const submitFeedback = async () => {
+    if (!candidateForFeedback?._id || !feedbackContent.trim()) {
+      toast.error("Please provide feedback content");
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    try {
+      const response = await api.post(`/org/candidates/${candidateForFeedback._id}/feedback`, {
+        content: feedbackContent.trim(),
+        feedback_type: feedbackType,
+      });
+      
+      if (response.data.success) {
+        toast.success("Feedback added successfully");
+        setFeedbackDialogOpen(false);
+        setCandidateForFeedback(null);
+        setFeedbackContent("");
+        setFeedbackType("general");
+        await fetchAllData(); // Refresh data
+      }
+      setDialogOpen(false)
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || "Failed to add feedback";
+      toast.error(errorMessage);
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
+
 
   // Forms
   const hrQuestionnaireForm = useForm<HRQuestionnaireFormData>({
@@ -939,6 +989,22 @@ const HRHome = () => {
                         <Calendar className="h-4 w-4" />
                         Schedule Interview
                       </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setCandidateForFeedback(selectedCandidate);
+                          setFeedbackContent("");
+                          setFeedbackType("general");
+                          setFeedbackDialogOpen(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Feedback
+                      </Button>
+
                     </div>
                   </div>
                 </CardHeader>
@@ -1395,6 +1461,70 @@ const HRHome = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Internal Feedback Section - Enhanced with Stage Information */}
+              {selectedCandidate.internal_feedback && selectedCandidate.internal_feedback.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      💬 Internal Feedback
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedCandidate.internal_feedback.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {selectedCandidate.internal_feedback.map((feedback) => (
+                        <div
+                          key={feedback._id}
+                          className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-10 h-10">
+                                <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
+                                  {feedback.feedback_by.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                  {feedback.feedback_by.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                                    {feedback.feedback_by.role}
+                                  </Badge>
+
+                                </div>
+                              </div>
+                            </div>
+                              <div className="text-right">
+                                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
+                                  💬 Feedback
+                                </div>
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="text-xs text-gray-500">At</span>
+                                  <Badge className={`text-xs ${getStageColor(feedback.feedback_at)}`}>
+                                    {feedback.feedback_at && feedback.feedback_at.replace('_', ' ').toUpperCase()}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">stage</span>
+                                </div>
+                              </div>
+
+                          </div>
+                          
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                            <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                              "{feedback.feedback}"
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}              
 
               {/* Stage History */}
               {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
@@ -2169,6 +2299,113 @@ const HRHome = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackDialogOpen} onOpenChange={(open) => {
+        if (!open && !submittingFeedback) {
+          setFeedbackDialogOpen(false);
+          setCandidateForFeedback(null);
+          setFeedbackContent("");
+          setFeedbackType("general");
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              💬 Add Feedback
+            </DialogTitle>
+            <DialogDescription>
+              Provide feedback for this candidate's performance and evaluation.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {candidateForFeedback && (
+            <div className="space-y-4">
+              {/* Candidate Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={candidateForFeedback.profile_photo_url?.url} />
+                    <AvatarFallback>
+                      {candidateForFeedback.first_name?.[0]}{candidateForFeedback.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {candidateForFeedback.first_name} {candidateForFeedback.last_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {candidateForFeedback.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Feedback Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="feedback-type">Feedback Type</Label>
+                <Select
+                  value={feedbackType}
+                  onValueChange={setFeedbackType}
+                  disabled={submittingFeedback}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="manager_review">Manager Review</SelectItem>
+                    <SelectItem value="interview_feedback">Interview Feedback</SelectItem>
+                    <SelectItem value="technical_review">Technical Review</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Feedback Content */}
+              <div className="space-y-2">
+                <Label htmlFor="feedback-content">Feedback Content</Label>
+                <Textarea
+                  id="feedback-content"
+                  placeholder="Enter your detailed feedback about the candidate..."
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  disabled={submittingFeedback}
+                  rows={6}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFeedbackDialogOpen(false);
+                setCandidateForFeedback(null);
+                setFeedbackContent("");
+                setFeedbackType("general");
+              }}
+              disabled={submittingFeedback}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={submitFeedback}
+              disabled={submittingFeedback || !feedbackContent.trim()}
+            >
+              {submittingFeedback ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                "💬 Submit Feedback"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

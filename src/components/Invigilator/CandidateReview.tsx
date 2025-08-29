@@ -185,7 +185,7 @@ const AssessmentReview = () => {
   const updateCandidateStage = async (candidateId: string, newStage: string, internal_feedback: string, remarks?: string) => {
     setIsUpdatingStage(true);
     try {
-      const response = await api.patch(`/org/candidates/${candidateId}/update-stage`, {
+      const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
         internal_feedback: { feedback: internal_feedback }

@@ -207,7 +207,12 @@ export default function Assessments() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
-      const statusOk = filter === "all" ? true : r.status === filter;
+      const statusOk =
+      filter === "all"
+        ? true
+        : filter === "completed"
+        ? r.status === "completed" || r.status === "submitted"
+        : r.status === filter;
       const searchHaystack = `${r.kind} ${r.assessment_type ?? ""} ${
         r.status
       } ${fmtDateTime(r.assigned_at)} ${fmtDateTime(r.due_at)} ${
@@ -226,7 +231,10 @@ export default function Assessments() {
       completed: 0,
       expired: 0,
     } as Record<string, number>;
-    rows.forEach((r) => (base[r.status] = (base[r.status] || 0) + 1));
+    rows.forEach((r) => {
+      const status = r.status === "submitted" ? "completed" : r.status;
+      base[status] = (base[status] || 0) + 1;
+    });
     return base as {
       all: number;
       pending: number;
