@@ -333,7 +333,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      <Dialog open={isOpen} onOpenChange={() => {}}>
+      <Dialog open={isOpen} onOpenChange={() =>{}}>
         <DialogContent
           className="p-4 w-screen sm:w-[95vw] max-w-none sm:max-w-[95vw] h-screen sm:h-[95vh] overflow-y-auto"
           onEscapeKeyDown={(e) => e.preventDefault()}
