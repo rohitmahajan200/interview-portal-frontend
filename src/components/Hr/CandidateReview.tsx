@@ -812,7 +812,6 @@ const CandidateReview = () => {
                 <select name="stage" className="w-full p-2 border rounded mt-1" required>
                   <option value="">Select Stage</option>
                   <option value="assessment">Assessment</option>
-                  <option value="tech">Technical Interview</option>
                   <option value="manager">Manager Review</option>
                   <option value="feedback">Final Feedback</option>
                 </select>

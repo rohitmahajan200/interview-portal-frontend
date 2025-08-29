@@ -912,9 +912,6 @@ const AssessmentReview = () => {
                   <option value="assessment" disabled={selectedAssessment.candidate.current_stage === 'assessment'}>
                     📊 Assessment
                   </option>
-                  <option value="tech" disabled={selectedAssessment.candidate.current_stage === 'tech'}>
-                    💻 Technical Interview
-                  </option>
                   <option value="manager" disabled={selectedAssessment.candidate.current_stage === 'manager'}>
                     👔 Manager Review
                   </option>
