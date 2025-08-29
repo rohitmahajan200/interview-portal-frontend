@@ -791,7 +791,6 @@ const HRHome = () => {
                 <SelectItem value="registered">Registered</SelectItem>
                 <SelectItem value="hr">HR Review</SelectItem>
                 <SelectItem value="assessment">Assessment</SelectItem>
-                <SelectItem value="tech">Technical</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="feedback">Feedback</SelectItem>
               </SelectContent>
@@ -2207,9 +2206,6 @@ const HRHome = () => {
                   </option>
                   <option value="assessment" disabled={selectedCandidate.current_stage === 'assessment'}>
                     📊 Assessment
-                  </option>
-                  <option value="tech" disabled={selectedCandidate.current_stage === 'tech'}>
-                    💻 Technical Interview
                   </option>
                   <option value="manager" disabled={selectedCandidate.current_stage === 'manager'}>
                     👔 Manager Review
