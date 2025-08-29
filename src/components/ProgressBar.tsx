@@ -9,7 +9,7 @@ export interface Stage {
   comment: string;
 }
 
-// Simplified stage configuration with minimal colors
+// Simplified stage configuration with colors
 const STAGE_CONFIG: Record<string, {
   order: number;
   label: string;

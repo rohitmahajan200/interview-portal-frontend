@@ -25,12 +25,17 @@ import Profile from "./Profile";
 import Settings from "./Settings";
 import ThemeToggle from "@/components/themeToggle";
 import Spinner from "@/components/ui/spinner";
+import DocumentUploadForm from "./DocumentUploadForm";
 
 export default function Page() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [isLoading,setIsLoading]=useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [candidateData, setCandidateData] = useState<any>(null);
+  
   const currentView = useSelector((state: RootState) => state.view.currentView);
+  // const user = useSelector((state: RootState) => state.auth.user); // Get user from Redux
 
   useEffect(() => {
     const fetchCandidate = async () => {
@@ -39,12 +44,18 @@ export default function Page() {
         const res = await api.get("/candidates/me");
         if (res.data.user) {
           dispatch(setUser(res.data.user)); // Save user info in Redux store
-        } 
+          setCandidateData(res.data.user);
+          
+          // Check if candidate is hired and needs to upload documents
+          const candidate = res.data.user;
+          if (candidate.status === 'hired' && !candidate.documents_submitted) {
+            setShowDocumentUpload(true);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch candidate profile:", error);
         navigate("/login"); // Redirect to login if error occurs
-      }
-      finally{
+      } finally {
         setIsLoading(false);
       }
     };
@@ -55,6 +66,22 @@ export default function Page() {
   useEffect(() => {
     localStorage.setItem("currentView", currentView);
   }, [currentView]);
+
+  // Handle document upload completion
+  const handleDocumentSubmissionComplete = async () => {
+    try {
+      // Refresh candidate data to get updated status
+      const res = await api.get("/candidates/me");
+      if (res.data.user) {
+        dispatch(setUser(res.data.user));
+        setCandidateData(res.data.user);
+      }
+      setShowDocumentUpload(false);
+    } catch (error) {
+      console.error("Failed to refresh candidate data:", error);
+      setShowDocumentUpload(false);
+    }
+  };
 
   const renderView = (currentView: string) => {
     switch (currentView) {
@@ -70,19 +97,30 @@ export default function Page() {
         return <Profile />;
       case "settings":
         return <Settings />;
-      // case "assessmentInfo":
-      //   return <SecureAssessmentLanding />
       default:
         return <Home />;
     }
   };
 
-    if (isLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center space-y-4">
-          <Spinner></Spinner>
+          <Spinner />
         </div>
+      </div>
+    );
+  }
+
+  // Show document upload form if candidate is hired and hasn't submitted documents
+  if (showDocumentUpload && candidateData) {
+    return (
+      <div>
+        <DocumentUploadForm
+          candidateId={candidateData._id}
+          onSubmissionComplete={handleDocumentSubmissionComplete}
+          isOpen={showDocumentUpload}
+        />
       </div>
     );
   }
@@ -98,12 +136,11 @@ export default function Page() {
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
           <div className="flex items-center gap-2 px-4 justify-between w-full">
             <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" /> {/* Toggle sidebar */}
+              <SidebarTrigger className="-ml-1" />
               <Separator
                 orientation="vertical"
                 className="mr-2 data-[orientation=vertical]:h-4"
               />
-              {/* Welcome breadcrumb */}
               <Breadcrumb>
                 <BreadcrumbList>
                   <header className="px-1 rounded-xl">
@@ -121,6 +158,15 @@ export default function Page() {
         </header>
         {currentView ? renderView(currentView) : null}
       </SidebarInset>
+
+      {/* Document Upload Form Modal - Only show if needed */}
+      {showDocumentUpload && candidateData && (
+        <DocumentUploadForm
+          candidateId={candidateData._id}
+          onSubmissionComplete={handleDocumentSubmissionComplete}
+          isOpen={showDocumentUpload}
+        />
+      )}
     </SidebarProvider>
   );
 }
