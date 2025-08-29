@@ -1,241 +1,275 @@
-import { CheckCircle, Clock, Circle, User, FileText, Users, MessageSquare, UserCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import React from 'react';
+import { format, isValid } from 'date-fns';
 
-type StageStatus = "completed" | "current" | "pending" | "failed";
-
-interface Stage {
+// Types matching your data structure
+export interface Stage {
   stage: string;
-  status: StageStatus;
-  date?: string;
-  comment?: string;
+  date: string;
+  status: "completed" | "current" | "pending";
+  comment: string;
 }
 
-interface Props {
-  stages: Stage[];
-}
+// Simplified stage configuration with minimal colors
+const STAGE_CONFIG: Record<string, {
+  order: number;
+  label: string;
+  icon: string;
+}> = {
+  registered: { order: 0, label: "Registered", icon: "📝" },
+  hr: { order: 1, label: "HR Review", icon: "👥" },
+  assessment: { order: 2, label: "Assessment", icon: "📊" },
+  tech: { order: 3, label: "Technical", icon: "💻" },
+  manager: { order: 4, label: "Manager Review", icon: "👔" },
+  feedback: { order: 5, label: "Feedback", icon: "✅" }
+};
 
-// Stage mapping from backend to frontend (Removed Interview)
-const STAGE_MAPPING = {
-  registered: "Registration",
-  hr: "HR Screening",
-  assessment: "Assessment",
-  manager: "Managerial Review",
-  feedback: "Feedback",
-} as const;
-
-// All possible stages in order (Removed tech)
-const ALL_STAGES = ["registered", "hr", "assessment", "manager", "feedback"] as const;
-
-// Stage icons mapping (Removed tech)
-const stageIcons = {
-  registered: User,
-  hr: Users,
-  assessment: FileText,
-  manager: UserCheck,
-  feedback: MessageSquare,
-} as const;
-
-// Status styling
-const getStatusConfig = (status: StageStatus) => {
-  switch (status) {
-    case "completed":
-      return {
-        icon: CheckCircle,
-        iconClass: "text-white",
-        bgClass: "bg-green-500 border-green-500 shadow-green-200",
-        lineClass: "bg-green-500",
-        textClass: "text-green-700",
-        badgeVariant: "default" as const,
-      };
-    case "current":
-      return {
-        icon: Clock,
-        iconClass: "text-white",
-        bgClass: "bg-blue-500 border-blue-500 shadow-blue-200 animate-pulse",
-        lineClass: "bg-blue-500",
-        textClass: "text-blue-700",
-        badgeVariant: "secondary" as const,
-      };
-    case "failed":
-      return {
-        icon: Circle,
-        iconClass: "text-white",
-        bgClass: "bg-red-500 border-red-500 shadow-red-200",
-        lineClass: "bg-red-500",
-        textClass: "text-red-700",
-        badgeVariant: "destructive" as const,
-      };
-    default:
-      return {
-        icon: Circle,
-        iconClass: "text-gray-400",
-        bgClass: "bg-gray-100 border-gray-300 shadow-gray-100",
-        lineClass: "bg-gray-300",
-        textClass: "text-gray-500",
-        badgeVariant: "outline" as const,
-      };
+// Helper function to safely parse dates
+const safeParseDate = (dateString: string | undefined | null): Date | null => {
+  if (!dateString) return null;
+  
+  try {
+    const date = new Date(dateString);
+    if (isValid(date)) return date;
+    
+    if (typeof dateString === 'string') {
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const parts = dateString.split('-');
+        const parsedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return isValid(parsedDate) ? parsedDate : null;
+      }
+      
+      if (dateString.includes('T')) {
+        const isoDate = new Date(dateString);
+        return isValid(isoDate) ? isoDate : null;
+      }
+    }
+    
+    return null;
+  } catch {
+    return null;
   }
 };
 
-// Helper function to ensure all stages are shown
-const normalizeStages = (inputStages: Stage[]): Stage[] => {
-  const stageMap = new Map(inputStages.map((stage) => [stage.stage.toLowerCase(), stage]));
-
-  return ALL_STAGES.map((stageKey) => {
-    const mappedName = STAGE_MAPPING[stageKey];
-    const existingStage =
-      stageMap.get(mappedName.toLowerCase()) ||
-      stageMap.get(stageKey) ||
-      inputStages.find((s) => s.stage.toLowerCase().includes(stageKey));
-
-    if (existingStage) {
-      return {
-        ...existingStage,
-        stage: mappedName, // Use mapped name
-      };
-    }
-
-    return {
-      stage: mappedName,
-      status: "pending" as StageStatus,
-      date: undefined,
-      comment: undefined,
-    };
-  });
+// Helper function to safely format dates
+const safeFormatDate = (dateString: string | undefined | null, formatStr: string = 'MMM dd'): string => {
+  if (!dateString) return 'N/A';
+  
+  const date = safeParseDate(dateString);
+  if (!date) return 'Invalid';
+  
+  try {
+    return format(date, formatStr);
+  } catch {
+    return 'Invalid';
+  }
 };
 
-export const ProgressBar: React.FC<Props> = ({ stages }) => {
-  const normalizedStages = normalizeStages(stages);
+// Helper function to determine action type
+const getActionType = (currentIndex: number, stages: Stage[]): "promote" | "demote" | "maintain" | "registration" => {
+  if (currentIndex === 0) return "registration";
+  
+  const currentStage = stages[currentIndex];
+  const previousStage = stages[currentIndex - 1];
+  
+  const currentOrder = STAGE_CONFIG[currentStage.stage]?.order ?? -1;
+  const previousOrder = STAGE_CONFIG[previousStage.stage]?.order ?? -1;
+  
+  if (currentOrder > previousOrder) return "promote";
+  if (currentOrder < previousOrder) return "demote";
+  return "maintain";
+};
+
+// Props interface
+interface StageHistoryViewerProps {
+  stages: Stage[];
+}
+
+const StageHistoryViewer: React.FC<StageHistoryViewerProps> = ({ stages }) => {
+  if (!stages || stages.length === 0) {
+    return (
+      <div className="text-center py-6 text-muted-foreground">
+        <p className="text-sm">No application stages to display</p>
+      </div>
+    );
+  }
+
+  // Find current stage
+  const currentStageItem = stages.find(stage => stage.status === "current");
+  const currentStage = currentStageItem?.stage || stages[stages.length - 1]?.stage;
+  const currentStageInfo = currentStage ? STAGE_CONFIG[currentStage] : null;
+
+  // Sort stages by date (newest first)
+  const sortedStages = [...stages].sort((a, b) => {
+    const dateA = safeParseDate(a.date);
+    const dateB = safeParseDate(b.date);
+    
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  const getActionIcon = (actionType: string): string => {
+    switch (actionType) {
+      case 'promote': return '↗';
+      case 'demote': return '↙';
+      case 'registration': return '•';
+      default: return '→';
+    }
+  };
+
+  const getActionLabel = (actionType: string): string => {
+    switch (actionType) {
+      case 'promote': return 'Promoted';
+      case 'demote': return 'Demoted';
+      case 'registration': return 'Started';
+      default: return 'Updated';
+    }
+  };
+
+  const getActionTagStyle = (actionType: string): string => {
+    switch (actionType) {
+      case 'promote': 
+        return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700';
+      case 'demote': 
+        return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700';
+      case 'registration': 
+        return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700';
+      default: 
+        return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600';
+    }
+  };
+
+  // Calculate original order for action types
+  const originalOrderStages = [...stages].sort((a, b) => {
+    const dateA = safeParseDate(a.date);
+    const dateB = safeParseDate(b.date);
+    
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    
+    return dateA.getTime() - dateB.getTime();
+  });
 
   return (
-    <Card className="w-full">
-      <CardContent className="p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Application Progress</h2>
-          <p className="text-muted-foreground">
-            Track your application status through our hiring process
-          </p>
-        </div>
-
-        <div className="relative">
-          <div className="flex items-center justify-between relative">
-            {normalizedStages.map((stage, idx) => {
-              const config = getStatusConfig(stage.status);
-              const StageIcon = stageIcons[ALL_STAGES[idx]] || User;
-              const StatusIcon = config.icon;
-
-              return (
-                <div key={idx} className="relative flex flex-col items-center group">
-                  {/* Connection Line */}
-                  {idx > 0 && (
-                    <div
-                      className={cn(
-                        "absolute right-1/2 top-4 h-1 w-full -z-10 transition-all duration-500",
-                        normalizedStages[idx - 1].status === "completed" ||
-                          normalizedStages[idx - 1].status === "current"
-                          ? getStatusConfig(normalizedStages[idx - 1].status).lineClass
-                          : "bg-gray-200"
-                      )}
-                    />
-                  )}
-
-                  {/* Stage Circle */}
-                  <div className="relative mb-3">
-                    <div
-                      className={cn(
-                        "relative w-12 h-12 rounded-full border-3 flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110",
-                        config.bgClass
-                      )}
-                    >
-                      {stage.status === "completed" ? (
-                        <StatusIcon className={cn("w-6 h-6", config.iconClass)} />
-                      ) : stage.status === "current" ? (
-                        <StatusIcon className={cn("w-6 h-6", config.iconClass)} />
-                      ) : (
-                        <StageIcon className={cn("w-5 h-5", config.iconClass)} />
-                      )}
-                    </div>
-
-                    {/* Status Badge */}
-                    <Badge
-                      variant={config.badgeVariant}
-                      className="absolute -top-1 -right-1 px-1 py-0 text-xs h-5 min-w-5"
-                    >
-                      {idx + 1}
-                    </Badge>
-                  </div>
-
-                  {/* Stage Info */}
-                  <div className="text-center max-w-[120px]">
-                    <h3
-                      className={cn(
-                        "font-semibold text-sm mb-1 transition-colors",
-                        config.textClass
-                      )}
-                    >
-                      {stage.stage}
-                    </h3>
-
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {formatDate(stage.date)}
-                    </p>
-
-                    {stage.comment && (
-                      <p className="text-xs text-muted-foreground break-words leading-tight">
-                        {stage.comment}
-                      </p>
-                    )}
-
-                    {stage.status === "current" && (
-                      <div className="mt-2">
-                        <Badge variant="secondary" className="text-xs animate-pulse">
-                          In Progress
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Progress Summary */}
-          <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Progress: {normalizedStages.filter((s) => s.status === "completed").length} of{" "}
-                {normalizedStages.length} stages completed
-              </span>
-              <div className="flex gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-xs text-muted-foreground">Completed</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-xs text-muted-foreground">Current</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                  <span className="text-xs text-muted-foreground">Pending</span>
-                </div>
+    <div className="w-full">
+      {/* Current Stage - Prominent Display */}
+      {currentStageInfo && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-border">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-sm">{currentStageInfo.icon}</span>
               </div>
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  {currentStageInfo.label}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Current stage • {safeFormatDate(currentStageItem?.date, 'MMM dd, yyyy')}
+                </p>
+              </div>
+            </div>
+            <div className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-xs font-medium">
+              Active
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Stage History - Clean List */}
+      <div>
+        <h4 className="font-medium text-foreground mb-3">Application Progress</h4>
+        
+        <div className="space-y-2">
+          {sortedStages.map((stage, displayIndex) => {
+            const originalIndex = originalOrderStages.findIndex(s => s.date === stage.date && s.stage === stage.stage);
+            const actionType = getActionType(Math.max(0, originalIndex), originalOrderStages);
+            const stageConfig = STAGE_CONFIG[stage.stage];
+            
+            if (!stageConfig) return null;
+
+            return (
+              <div 
+                key={`${stage.stage}-${stage.date}-${displayIndex}`} 
+                className={`
+                  flex items-center gap-3 p-3 rounded-md transition-colors
+                  ${stage.status === 'current' 
+                    ? 'bg-primary/5 border border-primary/20' 
+                    : 'bg-card hover:bg-muted/50 border border-border/50'
+                  }
+                `}
+              >
+                {/* Progress Indicator */}
+                <div className={`
+                  w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
+                  ${stage.status === 'current' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted text-muted-foreground'
+                  }
+                `}>
+                  {stage.status === 'current' ? '•' : getActionIcon(actionType)}
+                </div>
+
+                {/* Stage Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-foreground">
+                      {stageConfig.label}
+                    </span>
+                    
+                    {/* Promotion/Demotion Tag */}
+                    {actionType !== 'registration' && (
+                      <span className={`
+                        px-2 py-0.5 rounded-full text-xs font-medium border
+                        ${getActionTagStyle(actionType)}
+                      `}>
+                        {getActionIcon(actionType)} {getActionLabel(actionType)}
+                      </span>
+                    )}
+                    
+                    {actionType === 'registration' && (
+                      <span className={`
+                        px-2 py-0.5 rounded-full text-xs font-medium border
+                        ${getActionTagStyle(actionType)}
+                      `}>
+                        {getActionIcon(actionType)} {getActionLabel(actionType)}
+                      </span>
+                    )}
+                    
+                    {stage.status === 'current' && (
+                      <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                        Current
+                      </span>
+                    )}
+                    
+                    {stage.status === 'completed' && (
+                      <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs">
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                  
+                  {stage.comment && stage.comment !== '-' && (
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {stage.comment}
+                    </p>
+                  )}
+                </div>
+
+                {/* Date */}
+                <div className="text-sm text-muted-foreground">
+                  {safeFormatDate(stage.date)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 };
 
-function formatDate(date?: string): string {
-  if (!date) return "Pending";
-  const d = new Date(date);
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "2-digit",
-  });
-}
+export default StageHistoryViewer;

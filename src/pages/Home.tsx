@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import JobList from "@/components/JobList";
-import { ProgressBar } from "@/components/ProgressBar";
+// import { ProgressBar } from "@/components/ProgressBar";
+import StageHistoryViewer from "@/components/ProgressBar";
 import EventNotificationCard from "@/components/ui/EventNotificationCard";
 import api from "@/lib/api";
 
@@ -33,7 +34,6 @@ const Home = () => {
     const sortedHistory = stageHistory.sort((a, b) => 
       new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime()
     );
-
     // Convert stage history to progress format
     const progressStages: Stage[] = sortedHistory.map((historyItem, index) => {
       const isCurrentStage = historyItem.to_stage === currentStage;
@@ -45,7 +45,6 @@ const Home = () => {
         comment: historyItem.remarks || historyItem.action || "-"
       };
     });
-
     return progressStages;
   };
 
@@ -146,7 +145,7 @@ const Home = () => {
         </div>
       </div>
       <div className="min-h-[200px] rounded-xl bg-muted/50 dark:bg-muted/30 p-4">
-        <ProgressBar stages={applicationStatus} />
+        <StageHistoryViewer stages={applicationStatus} />
       </div>
     </div>
   );
