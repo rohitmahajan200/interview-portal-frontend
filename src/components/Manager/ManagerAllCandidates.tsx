@@ -376,7 +376,7 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
           />
         </div>
 
-        {/* Compact Filters Row */}
+        {/* Compact Filters Row... */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg border">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
