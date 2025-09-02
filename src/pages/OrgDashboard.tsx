@@ -19,8 +19,6 @@ const OrgDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  const orgUser = useSelector((state: RootState) => state.orgAuth.user);
-  const currentRole = useSelector((state: RootState) => state.adminView.currentRole);
   
   useEffect(() => {
     const fetchOrgUser = async () => {
@@ -42,6 +40,10 @@ const OrgDashboard = () => {
 
     fetchOrgUser();
   }, [dispatch, navigate]);
+
+  
+  const orgUser = useSelector((state: RootState) => state.orgAuth.user);
+  const currentRole = useSelector((state: RootState) => state.adminView.currentRole);
   
    if (isLoading) {
       return (
@@ -52,7 +54,7 @@ const OrgDashboard = () => {
         </div>
       );
     }
-
+  
   // If user is not admin, show only their role dashboard
   if (orgUser && orgUser.role !== "ADMIN") {
     const renderRoleDashboard = () => {

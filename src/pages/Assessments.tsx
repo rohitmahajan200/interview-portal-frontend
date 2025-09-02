@@ -113,6 +113,7 @@ export default function Assessments() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] =
     useState<"all" | "pending" | "started" | "completed" | "expired">("all");
+  const[isDownloaded,setIsDownloaded]=useState(false);
 
   /* ------------------------------ Action logic ----------------------------- */
 
@@ -565,7 +566,7 @@ export default function Assessments() {
               computer may become locked down during the exam.
             </DialogDescription>
           </DialogHeader>
-
+          <p><input type="checkbox" onChange={()=>setIsDownloaded(prev=>!prev)} /> I have already downloaded Safe Exam Browser (SEB)</p>
           <p className="mb-2 text-sm">
             If you do not have SEB installed, download it from
             <a
@@ -585,6 +586,7 @@ export default function Assessments() {
             </Button>
 
             <Button
+              disabled={!isDownloaded}
               onClick={() => {
                 if (!showSebDialog) return;
                 const row = showSebDialog;

@@ -33,6 +33,28 @@ import type { RootState } from "@/app/store";
 import ManagerStage from "./ManagerStage";
 import ManagerAllCandidates from "./ManagerAllCandidates";
 
+interface InterviewType {
+  _id: string;
+  title?: string;
+  status: string;
+  scheduled_at?: string;
+  type?: string;
+  platform?: string;
+  meeting_link?: string;
+  canJoinMeeting?: boolean;
+  interviewers?: Array<{
+    _id: string;
+    name: string;
+  }>;
+  remarks?: Array<{
+    provider: {
+      name: string;
+    };
+    remark: string;
+    created_at: string;
+  }>;
+}
+
 interface ManagerCandidate {
   _id: string;
   first_name: string;
@@ -62,7 +84,16 @@ interface ManagerCandidate {
     _id: string;
   };
   portfolio_url?: string | null;
-  documents?: string[];
+  documents?: Array<{
+    _id: string;
+    document_type: string;
+    document_url: string;
+  }>;
+  hired_docs?: Array<{
+    _id: string;
+    document_type: string;
+    document_url: string;
+  }>;
   assessments?: Array<{
     _id: string;
     assigned_by: {
@@ -74,7 +105,7 @@ interface ManagerCandidate {
     status: string;
   }>;
   hrQuestionnaire?: string[];
-  interviews?: any[];
+  interviews?: InterviewType[];
   default_hr_responses?: Array<{
     question_text: string;
     response: string;
@@ -143,6 +174,11 @@ interface DetailedCandidate {
   };
   portfolio_url?: string | null;
   documents: Array<{
+    _id: string;
+    document_type: string;
+    document_url: string;
+  }>;
+  hired_docs: Array<{
     _id: string;
     document_type: string;
     document_url: string;
@@ -247,8 +283,6 @@ interface ActionModalState {
   type: string;
   loading: boolean;
 }
-
-type ActionType = "feedback" | "hire" | "reject" | "hold" | "stage";
 
 const ManagerDashboard: React.FC = () => {
   // State
@@ -363,16 +397,21 @@ const ManagerDashboard: React.FC = () => {
       const response = await api.get<{ success: boolean; data: DetailedCandidate }>(`/org/candidates/${candidateId}`);
       
       if (response.data.success) {
+        // Create a compatible ManagerCandidate object for calculateProgressMetrics
+        const managerCandidateForMetrics: ManagerCandidate = {
+          ...response.data.data,
+          documents: response.data.data.documents || [],
+          hired_docs: response.data.data.hired_docs || [],
+          hrQuestionnaire: response.data.data.hrQuestionnaire?.map(q => q._id) || [],
+          stage_history: response.data.data.stage_history?.map(s => s._id) || [],
+          interviews: response.data.data.interviews || []
+        };
+
         setDetailedCandidates(prev => ({
           ...prev,
           [candidateId]: {
             ...response.data.data,
-            progress_metrics: calculateProgressMetrics({
-              ...response.data.data,
-              documents: response.data.data.documents?.map(doc => doc._id) || [],
-              hrQuestionnaire: response.data.data.hrQuestionnaire?.map(q => q._id) || [],
-              stage_history: response.data.data.stage_history?.map(s => s._id) || []
-            })
+            progress_metrics: calculateProgressMetrics(managerCandidateForMetrics)
           }
         }));
       }
@@ -386,12 +425,6 @@ const ManagerDashboard: React.FC = () => {
         return newSet;
       });
     }
-  };
-
-  // Modal handlers
-  const openActionModal = (candidate: ManagerCandidate, type: ActionType): void => {
-    setActionModal({ open: true, candidate, type, loading: false });
-    setActionData({ feedback: "", stage: "feedback" });
   };
 
   const closeActionModal = (): void => {
@@ -419,7 +452,7 @@ const ManagerDashboard: React.FC = () => {
 
       const { candidate, type } = actionModal;
       let endpoint = "";
-      let payload: Record<string, any> = {};
+      let payload: Record<string, unknown> = {};
       let method: "post" | "patch" = "post";
 
       switch (type) {

@@ -26,6 +26,9 @@ import Settings from "./Settings";
 import ThemeToggle from "@/components/themeToggle";
 import Spinner from "@/components/ui/spinner";
 import DocumentUploadForm from "./DocumentUploadForm";
+import { Button } from "@/components/ui/button";
+import { Upload, CheckCircle, FileText, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Page() {
   const dispatch = useDispatch();
@@ -33,9 +36,8 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [candidateData, setCandidateData] = useState<any>(null);
-  
-  const currentView = useSelector((state: RootState) => state.view.currentView);
-  // const user = useSelector((state: RootState) => state.auth.user); // Get user from Redux
+  const [showDocumentBanner, setShowDocumentBanner] = useState(false);
+  const [documentsSubmitted, setDocumentsSubmitted] = useState(false);
 
   useEffect(() => {
     const fetchCandidate = async () => {
@@ -43,18 +45,24 @@ export default function Page() {
         setIsLoading(true);
         const res = await api.get("/candidates/me");
         if (res.data.user) {
-          dispatch(setUser(res.data.user)); // Save user info in Redux store
+          dispatch(setUser(res.data.user));
           setCandidateData(res.data.user);
           
           // Check if candidate is hired and needs to upload documents
           const candidate = res.data.user;
-          if (candidate.status === 'hired' && !candidate.documents_submitted) {
-            setShowDocumentUpload(true);
+          if (candidate.status === 'hired') {
+            if (!candidate.hired_docs_present) {
+              setShowDocumentBanner(true);
+              setDocumentsSubmitted(false);
+            } else {
+              setDocumentsSubmitted(true);
+              setShowDocumentBanner(false);
+            }
           }
         }
       } catch (error) {
         console.error("Failed to fetch candidate profile:", error);
-        navigate("/login"); // Redirect to login if error occurs
+        navigate("/login");
       } finally {
         setIsLoading(false);
       }
@@ -62,6 +70,8 @@ export default function Page() {
 
     fetchCandidate();
   }, [dispatch, navigate]);
+
+  const currentView = useSelector((state: RootState) => state.view.currentView);
 
   useEffect(() => {
     localStorage.setItem("currentView", currentView);
@@ -75,15 +85,39 @@ export default function Page() {
       if (res.data.user) {
         dispatch(setUser(res.data.user));
         setCandidateData(res.data.user);
+        setDocumentsSubmitted(true);
       }
       setShowDocumentUpload(false);
+      setShowDocumentBanner(false);
+      
+      // Show success message
+      alert("🎉 Documents submitted successfully!");
     } catch (error) {
       console.error("Failed to refresh candidate data:", error);
       setShowDocumentUpload(false);
     }
   };
 
+  const handleOpenDocumentForm = () => {
+    setShowDocumentUpload(true);
+  };
+
+  const handleCloseDocumentForm = () => {
+    setShowDocumentUpload(false);
+  };
+
+  const handleDismissBanner = () => {
+    setShowDocumentBanner(false);
+  };
+
   const renderView = (currentView: string) => {
+    const viewProps = {
+      candidateData,
+      showDocumentUpload: showDocumentBanner,
+      onOpenDocumentForm: handleOpenDocumentForm,
+      documentsSubmitted
+    };
+
     switch (currentView) {
       case "home":
         return <Home />;
@@ -112,25 +146,12 @@ export default function Page() {
     );
   }
 
-  // Show document upload form if candidate is hired and hasn't submitted documents
-  if (showDocumentUpload && candidateData) {
-    return (
-      <div>
-        <DocumentUploadForm
-          candidateId={candidateData._id}
-          onSubmissionComplete={handleDocumentSubmissionComplete}
-          isOpen={showDocumentUpload}
-        />
-      </div>
-    );
-  }
-
   return (
     <SidebarProvider>
       {/* Left navigation sidebar */}
       <AppSidebar />
 
-      {/* Main content wrapper */}
+      {/* Main content wrapper */}     
       <SidebarInset>
         {/* Top header section */}
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
@@ -156,15 +177,71 @@ export default function Page() {
             <ThemeToggle />
           </div>
         </header>
+
+        {/* Document Upload Banner */}
+        {showDocumentBanner && candidateData && (
+          <div className="mx-4 mt-4">
+            <Alert className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+              <Upload className="h-4 w-4 text-green-600" />
+              <AlertDescription className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="font-semibold text-green-800 dark:text-green-200">
+                      🎉 Congratulations! You've been hired!
+                    </span>
+                    <p className="text-green-700 dark:text-green-300 mt-1">
+                      Complete your onboarding by uploading the required documents.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleOpenDocumentForm}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Upload Documents
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDismissBanner}
+                  className="text-green-600 hover:text-green-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {/* Documents Submitted Success Banner */}
+        {documentsSubmitted && candidateData?.status === 'hired' && (
+          <div className="mx-4 mt-4">
+            <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
+              <CheckCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription>
+                <span className="font-semibold text-blue-800 dark:text-blue-200">
+                  ✅ Documents Successfully Submitted!
+                </span>
+                <p className="text-blue-700 dark:text-blue-300 mt-1">
+                  Your onboarding documents have been received.
+                </p>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         {currentView ? renderView(currentView) : null}
       </SidebarInset>
 
-      {/* Document Upload Form Modal - Only show if needed */}
+      {/* Document Upload Form Modal */}
       {showDocumentUpload && candidateData && (
         <DocumentUploadForm
           candidateId={candidateData._id}
           onSubmissionComplete={handleDocumentSubmissionComplete}
           isOpen={showDocumentUpload}
+          onClose={handleCloseDocumentForm}
         />
       )}
     </SidebarProvider>

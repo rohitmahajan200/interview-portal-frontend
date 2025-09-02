@@ -118,6 +118,7 @@ type Candidate = {
   updatedAt: string;
   __v: number;
   documents?: { _id: string; document_type: string; document_url: string }[];
+  hired_docs?:{ _id: string; document_type: string; document_url: string }[];
   hrQuestionnaire?: { 
     _id: string; 
     status: string;
@@ -1216,15 +1217,18 @@ const HRHome = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {selectedCandidate.documents.map((doc) => {
+                      {[...(selectedCandidate.documents||[]),...selectedCandidate.hired_docs||[]].map((doc) => {
                         const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document_url);
                         const isPDF = /\.pdf$/i.test(doc.document_url);
-
+                        
                         const pdfThumbUrl = isPDF
                           ? doc.document_url
                               .replace("/upload/", "/upload/pg_1/")
                               .replace(/\.pdf$/i, ".jpg")
                           : null;
+
+                          console.log("document oye==>",selectedCandidate.hired_docs)
+                          
 
                         return (
                           <div
@@ -2207,9 +2211,6 @@ const HRHome = () => {
                   </option>
                   <option value="assessment" disabled={selectedCandidate.current_stage === 'assessment'}>
                     📊 Assessment
-                  </option>
-                  <option value="tech" disabled={selectedCandidate.current_stage === 'tech'}>
-                    💻 Technical Interview
                   </option>
                   <option value="manager" disabled={selectedCandidate.current_stage === 'manager'}>
                     👔 Manager Review
