@@ -1923,9 +1923,6 @@ const InvigilatorHome = () => {
                   <option value="assessment" disabled={selectedCandidate.current_stage === 'assessment'}>
                     📊 Assessment
                   </option>
-                  <option value="tech" disabled={selectedCandidate.current_stage === 'tech'}>
-                    💻 Technical Interview
-                  </option>
                   <option value="manager" disabled={selectedCandidate.current_stage === 'manager'}>
                     👔 Manager Review
                   </option>

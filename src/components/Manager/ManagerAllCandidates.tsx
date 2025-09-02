@@ -419,27 +419,12 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">
-                    All
-                  </SelectItem>
-                  <SelectItem value="registered" className="text-xs">
-                    Registered
-                  </SelectItem>
-                  <SelectItem value="hr" className="text-xs">
-                    HR Review
-                  </SelectItem>
-                  <SelectItem value="assessment" className="text-xs">
-                    Assessment
-                  </SelectItem>
-                  <SelectItem value="tech" className="text-xs">
-                    Technical
-                  </SelectItem>
-                  <SelectItem value="manager" className="text-xs">
-                    Manager
-                  </SelectItem>
-                  <SelectItem value="feedback" className="text-xs">
-                    Feedback
-                  </SelectItem>
+                  <SelectItem value="all" className="text-xs">All</SelectItem>
+                  <SelectItem value="registered" className="text-xs">Registered</SelectItem>
+                  <SelectItem value="hr" className="text-xs">HR Review</SelectItem>
+                  <SelectItem value="assessment" className="text-xs">Assessment</SelectItem>
+                  <SelectItem value="manager" className="text-xs">Manager</SelectItem>
+                  <SelectItem value="feedback" className="text-xs">Feedback</SelectItem>
                 </SelectContent>
               </Select>
             </div>

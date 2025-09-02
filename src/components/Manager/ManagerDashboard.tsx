@@ -789,7 +789,6 @@ const ManagerDashboard: React.FC = () => {
                     <SelectItem value="registered">Registered</SelectItem>
                     <SelectItem value="hr">HR Review</SelectItem>
                     <SelectItem value="assessment">Assessment</SelectItem>
-                    <SelectItem value="tech">Technical</SelectItem>
                     <SelectItem value="feedback">Final Feedback</SelectItem>
                   </SelectContent>
                 </Select>
