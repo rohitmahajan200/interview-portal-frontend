@@ -1,0 +1,93 @@
+import { useState, useEffect } from 'react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Bell, BellOff } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from "@/lib/api";
+
+interface EmailPreferenceToggleProps {
+  className?: string;
+}
+
+export const EmailPreferenceToggle = ({ className }: EmailPreferenceToggleProps) => {
+  const [emailPreference, setEmailPreference] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Fetch current preference on component mount
+  useEffect(() => {
+    fetchEmailPreference();
+  }, []);
+
+  const fetchEmailPreference = async () => {
+    try {
+      const response = await api.get("/org/email-preference");
+      
+      if (response.data.success) {
+        setEmailPreference(response.data.data.emailPreference);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch email preference:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to load email preference';
+      toast.error(errorMessage);
+    }
+  };
+
+  const togglePreference = async () => {
+    setLoading(true);
+    
+    try {
+      const response = await api.patch("/org/email-preference/toggle");
+      
+      if (response.data.success) {
+        setEmailPreference(response.data.data.emailPreference);
+        toast.success(response.data.message);
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle email preference:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update email preference';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {emailPreference ? (
+            <Bell className="h-5 w-5 text-green-600" />
+          ) : (
+            <BellOff className="h-5 w-5 text-gray-400" />
+          )}
+          Email Notifications
+        </CardTitle>
+        <CardDescription>
+          Control whether you receive email notifications from the system
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="email-preference"
+            checked={emailPreference}
+            onCheckedChange={togglePreference}
+            disabled={loading}
+          />
+          <Label htmlFor="email-preference" className="cursor-pointer">
+            {emailPreference ? 'Email notifications enabled' : 'Email notifications disabled'}
+          </Label>
+        </div>
+        
+        {loading && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Updating preference...
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};

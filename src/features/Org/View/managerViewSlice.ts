@@ -5,10 +5,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 export type ManagerPage = 
   | "manager-home" 
   | "manager-calendar"
-  | "candidate-management"
-  | "interview-management"
-  | "feedback-management"
-  | "manager-analytics";
+    |"config";
 
 interface ManagerViewState {
   currentManagerPage: ManagerPage;

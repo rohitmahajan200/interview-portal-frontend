@@ -22,6 +22,7 @@ import InvigilatorHome from "./InvigilatorHome";
 import InvigilatorQuestionsManagement from "./InvigilatorQuestionsManagement";
 import InvigilatorQuestionnaireBuilder from "./InvigilatorQuestionnaireBuilder";
 import InvigilatorAnalytics from "./InvigilatorAnalytics";
+import SystemConfiguration from "./SystemConfiguration";
 
 export default function Invigilator() {
   const dispatch = useDispatch();
@@ -65,6 +66,8 @@ export default function Invigilator() {
         return <InterviewScheduling />;
       case "analytics":
         return <InvigilatorAnalytics />;
+      case "config":
+        return <SystemConfiguration />;
       default:
         return <InvigilatorHome />;
     }
