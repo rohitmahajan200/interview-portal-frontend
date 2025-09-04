@@ -8,7 +8,8 @@ export type HRPage =
   | "candidate-review"
   | "interview-scheduling"
   | "hr-analytics"
-  | "interview-management";
+  | "interview-management"
+  |"config";
 
 interface HRViewState {
   currentHRPage: HRPage;
