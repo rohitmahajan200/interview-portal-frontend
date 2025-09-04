@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Check, MessageSquare, Phone, Mail } from "lucide-react";
+import { Copy, Check, MessageSquare, Phone, Mail, Trash2, Plus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -327,6 +327,70 @@ const HRHome = () => {
     Record<string, boolean>
   >({});
   const [savingChecklist, setSavingChecklist] = useState(false);
+
+  interface KeyValuePair {
+    id: string;
+    key: string;
+    value: string;
+  }
+  // Default fields for HR/recruitment calling
+  const [keyValuePairs, setKeyValuePairs] = useState<KeyValuePair[]>([
+    { id: "1", key: "Current CTC", value: "" },
+    { id: "2", key: "In Hand Salary", value: "" },
+    { id: "3", key: "Expected CTC", value: "" },
+    { id: "4", key: "Reason for Change", value: "" },
+    { id: "5", key: "Notice Period", value: "" },
+    { id: "6", key: "Total Experience", value: "" },
+    { id: "7", key: "Relevant Experience", value: "" },
+    { id: "8", key: "Current Location", value: "" },
+    { id: "9", key: "Preferred Location", value: "" },
+    { id: "10", key: "Availability for Interview", value: "" },
+  ]);
+
+  const [newKey, setNewKey] = useState("");
+
+  // Add new key-value pair
+  const addNewPair = () => {
+    if (newKey.trim()) {
+      const newPair: KeyValuePair = {
+        id: Date.now().toString(),
+        key: newKey.trim(),
+        value: "",
+      };
+      setKeyValuePairs([...keyValuePairs, newPair]);
+      setNewKey("");
+    }
+  };
+
+  // Update key
+  const updateKey = (id: string, newKey: string) => {
+    setKeyValuePairs(
+      keyValuePairs.map((pair) =>
+        pair.id === id ? { ...pair, key: newKey } : pair
+      )
+    );
+  };
+
+  // Update value
+  const updateValue = (id: string, newValue: string) => {
+    setKeyValuePairs(
+      keyValuePairs.map((pair) =>
+        pair.id === id ? { ...pair, value: newValue } : pair
+      )
+    );
+  };
+
+  // Delete pair
+  const deletePair = (id: string) => {
+    setKeyValuePairs(keyValuePairs.filter((pair) => pair.id !== id));
+  };
+
+  // Handle Enter key press to add new pair
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      addNewPair();
+    }
+  };
 
   // Add this function inside your HRHome component
   const handleMarkVerified = async () => {
@@ -1551,6 +1615,118 @@ const HRHome = () => {
                       </p>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Calling details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Calling Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-4 items-center font-semibold text-sm text-gray-600 border-b pb-2">
+                      <div className="col-span-4">Field</div>
+                      <div className="col-span-7">Details</div>
+                      <div className="col-span-1">Action</div>
+                    </div>
+
+                    {/* Key-Value Pairs */}
+                    <div className="space-y-3">
+                      {keyValuePairs.map((pair) => (
+                        <div
+                          key={pair.id}
+                          className="grid grid-cols-12 gap-4 items-center"
+                        >
+                          <div className="col-span-4">
+                            <Input
+                              value={pair.key}
+                              onChange={(e) =>
+                                updateKey(pair.id, e.target.value)
+                              }
+                              placeholder="Field name"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="col-span-7">
+                            <Input
+                              value={pair.value}
+                              onChange={(e) =>
+                                updateValue(pair.id, e.target.value)
+                              }
+                              placeholder="Enter details..."
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deletePair(pair.id)}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add New Field */}
+                    <div className="border-t pt-4">
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          value={newKey}
+                          onChange={(e) => setNewKey(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          placeholder="Enter new field name..."
+                          className="flex-1 text-sm"
+                        />
+                        <Button
+                          onClick={addNewPair}
+                          disabled={!newKey.trim()}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          size="sm"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Field
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Total Fields: {keyValuePairs.length}</span>
+                        <span>
+                          Completed:{" "}
+                          {
+                            keyValuePairs.filter((pair) => pair.value.trim())
+                              .length
+                          }
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${
+                                keyValuePairs.length > 0
+                                  ? (keyValuePairs.filter((pair) =>
+                                      pair.value.trim()
+                                    ).length /
+                                      keyValuePairs.length) *
+                                    100
+                                  : 0
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -3656,4 +3832,4 @@ const HRHome = () => {
   );
 };
 
-export default HRHome;  
+export default HRHome;

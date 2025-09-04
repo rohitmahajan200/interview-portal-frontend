@@ -174,6 +174,7 @@ const InterviewCalendar = () => {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidateSearchOpen, setCandidateSearchOpen] = useState(false);
+  const [editingInterviewId, setEditingInterviewId] = useState<string | null>(null);
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const dispatch = useDispatch();
@@ -384,35 +385,43 @@ useEffect(() => {
   };
 
   const handleUpdateInterview = async () => {
-    if (!selectedInterview) return;
-
-    // Client-side validation
-    const validation = validateForm();
-    if (!validation.success) {
+    if (!editingInterviewId) {
+      toast.error("No interview selected to update.");
       return;
     }
+
+    const validation = validateForm();
+    if (!validation.success) return;
 
     setLoading(prev => ({ ...prev, submitting: true }));
 
     try {
       const payload = createInterviewPayload();
-      const response = await api.put(`/org/interviews/${selectedInterview._id}`, payload);
-      
+      const response = await api.put(`/org/interviews/${editingInterviewId}`, payload);
+
       if (response.data.success) {
         toast.success('Interview updated successfully!');
         await fetchInterviews();
         setIsEditing(false);
+        setEditingInterviewId(null); // clear
         setSelectedInterview(null);
         resetForm();
       }
     } catch (error: any) {
-      console.error('Error updating interview:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update interview';
-      toast.error(errorMessage)
+      if (error.response?.status === 409 && error.response?.data?.error?.includes("CONFLICT")) {
+        const conflictData = error.response.data;
+        const start = new Date(conflictData.requestedSlot.scheduled_at).toLocaleString();
+        const end = new Date(conflictData.requestedSlot.end_time).toLocaleString();
+        toast.error(`⛔ Conflict: ${conflictData.message}\nRequested slot: ${start} - ${end}`);
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to update interview';
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
+
 
   const handleDeleteInterview = async (interviewId: string) => {
     if (!confirm('Are you sure you want to delete this interview?')) return;
@@ -476,24 +485,17 @@ useEffect(() => {
 
   const handleEditInterview = () => {
     if (selectedInterview) {
+      setEditingInterviewId(selectedInterview._id); // keep the id
       populateFormWithInterview(selectedInterview);
       setIsEditing(true);
-      setSelectedInterview(null);
-      
-      // Focus the first input to bring form into view
+      setSelectedInterview(null); // close dialog
       setTimeout(() => {
         const titleInput = document.getElementById('main');
-        if (titleInput) {
-          titleInput.focus();
-          titleInput.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-            inline: 'nearest'
-          });
-        }
+        titleInput?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
       }, 100);
     }
   };
+
 
 
 
@@ -846,6 +848,7 @@ useEffect(() => {
                 variant="outline" 
                 onClick={() => {
                   setIsEditing(false);
+                  setEditingInterviewId(null);
                   setSelectedInterview(null);
                   resetForm();
                 }}
