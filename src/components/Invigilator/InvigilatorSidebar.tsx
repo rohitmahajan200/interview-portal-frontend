@@ -6,6 +6,7 @@ import {
   Users,
   BarChart3,
   Calendar,
+  Settings,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
@@ -30,6 +31,8 @@ export function InvigilatorSidebar(
   const { open } = useSidebar();
   const orgState = useAppSelector((s) => s.orgAuth);
   const dispatch = useDispatch();
+  const user = useAppSelector((state) => state.orgAuth.user);
+  const isAdmin = user?.role === 'ADMIN';
   
   // Get current page for highlighting
   const currentPage = useAppSelector((state) => state.invigilator.currentHRPage);
@@ -49,7 +52,8 @@ export function InvigilatorSidebar(
     navItem("Assessment", FileText, "invigilator-questionnaire"),
     navItem("Candidate Review", Users, "candidate-review"),
     navItem("Interviews", Calendar, "interview-scheduling"),
-    navItem("Analytics", BarChart3, "invigilator-analytics"), // Fixed: changed from "invigilator-analytics" to "analytics"
+    navItem("Analytics", BarChart3, "invigilator-analytics"), 
+    ...(!isAdmin ? [navItem("Config", Settings, "config")] : []),
   ] as unknown as { 
     title: string; 
     icon: React.ElementType; 

@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, Users, MapPin, Video, Loader2, Edit, Trash2, Search, ChevronsUpDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { z } from 'zod';
 import api from "@/lib/api";
 import type { RootState } from '@/app/store';
@@ -364,9 +365,20 @@ useEffect(() => {
       }
     } catch (error: any) {
       console.error('Error creating interview:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to schedule interview';
-      toast.error(errorMessage);
-    } finally {
+
+      if (error.response?.status === 409 && error.response?.data?.error === "INTERVIEW_CONFLICT") {
+        // Special handling for conflict
+        const conflictData = error.response.data;
+        toast.error(
+          `⛔ Conflict: ${conflictData.message}\n` +
+          `Requested slot: ${new Date(conflictData.requestedSlot.scheduled_at).toLocaleString()} - ${new Date(conflictData.requestedSlot.end_time).toLocaleTimeString()}`
+        );
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to schedule interview';
+        toast.error(errorMessage);
+      }
+    }
+ finally {
       setLoading(prev => ({ ...prev, submitting: false }));
     }
   };
@@ -520,6 +532,7 @@ useEffect(() => {
 
   return (
     <div className="container mx-auto p-6 overflow-y-auto mb-10" id='main'>
+    <Toaster />
       {/* Event Creation/Edit Form */}
       <Card className="mb-6">
         <CardHeader>
