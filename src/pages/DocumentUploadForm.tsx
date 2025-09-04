@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, CheckCircle2, X, Loader2, FileText } from "lucide-react";
+import { Upload, CheckCircle2, X, Loader2, FileText, Download, GraduationCap, Building, CreditCard, Users, Camera, IndianRupee, Share2 } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/clodinary";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
@@ -34,6 +34,7 @@ interface DocumentType {
   label: string;
   required: boolean;
   description?: string;
+  hasTemplate?: boolean;
 }
 
 interface UploadedDocument {
@@ -43,74 +44,185 @@ interface UploadedDocument {
   file_name: string;
 }
 
-const REQUIRED_DOCUMENTS: DocumentType[] = [
+interface CompanyReference {
+  company_name: string;
+  email: string;
+  phone: string;
+}
+
+interface Organization {
+  name: string;
+  appointment_letter?: string; // Store document URL
+  relieving_letter?: string;   // Store document URL
+}
+
+// Educational Documents Section
+const EDUCATIONAL_DOCUMENTS: DocumentType[] = [
+  {
+    key: "ssc_certificate",
+    label: "SSC Certificate",
+    required: true,
+    description: "Secondary School Certificate (10th standard)",
+    hasTemplate: false,
+  },
+  {
+    key: "hsc_certificate",
+    label: "HSC Certificate",
+    required: true,
+    description: "Higher Secondary Certificate (12th standard)",
+    hasTemplate: false,
+  },
   {
     key: "graduation_certificate",
-    label: "Graduation Certificate",
+    label: "Bachelor's Degree Certificate",
     required: true,
-    description: "Your degree/diploma certificate",
+    description: "BSc/BA/BCom or equivalent degree certificate",
+    hasTemplate: false,
   },
   {
-    key: "course_certificate",
-    label: "Course Certificate",
+    key: "post_graduation_certificate",
+    label: "Master's Degree Certificate",
     required: false,
-    description: "Any additional course certificates (if applicable)",
+    description: "MSc/MA/MCom or equivalent degree certificate (if applicable)",
+    hasTemplate: false,
   },
   {
-    key: "experience_letter",
-    label: "Experience Letter",
+    key: "other_certificates",
+    label: "Other Professional Certificates",
     required: false,
-    description: "Previous employment experience letter (if applicable)",
+    description: "Additional courses, certifications, or diplomas",
+    hasTemplate: false,
   },
+];
+
+// Organization Documents Section
+const ORGANIZATION_DOCUMENTS: DocumentType[] = [
   {
-    key: "appointment_letter",
-    label: "Previous Appointment Letter",
+    key: "current_relieving_letter",
+    label: "Current Company Relieving Letter",
     required: false,
-    description: "Letter of appointment from previous employer (if applicable)",
+    description: "Relieving letter from your current/last company",
+    hasTemplate: true,
   },
-  {
-    key: "relieving_letter",
-    label: "Relieving Letter",
-    required: false,
-    description: "Relieving letter from previous employer (if applicable)",
-  },
+];
+
+// Salary Documents Section
+const SALARY_DOCUMENTS: DocumentType[] = [
   {
     key: "salary_slip_1",
-    label: "Salary Slip (Latest Month)",
+    label: "Latest Month Salary Slip",
     required: false,
-    description: "Most recent salary slip (if applicable)",
+    description: "Most recent salary slip",
+    hasTemplate: true,
   },
   {
     key: "salary_slip_2",
-    label: "Salary Slip (Previous Month)",
+    label: "Previous Month Salary Slip",
     required: false,
-    description: "Second most recent salary slip (if applicable)",
+    description: "Second most recent salary slip",
+    hasTemplate: true,
   },
+  {
+    key: "salary_slip_3",
+    label: "Third Month Salary Slip",
+    required: false,
+    description: "Third most recent salary slip",
+    hasTemplate: true,
+  },
+  {
+    key: "form_16",
+    label: "Form 16 (Alternative)",
+    required: false,
+    description: "Form 16 can be uploaded instead of salary slips",
+    hasTemplate: true,
+  },
+];
+
+// Identity Documents Section
+const IDENTITY_DOCUMENTS: DocumentType[] = [
   {
     key: "aadhar_card",
     label: "Aadhar Card",
     required: true,
     description: "Government issued Aadhar card",
+    hasTemplate: false,
   },
   {
-    key: "bank_passbook",
-    label: "Bank Passbook/Statement",
-    required: true,
-    description: "Bank account details or statement",
-  },
-  {
-    key: "uan_passbook",
-    label: "UAN Passbook",
+    key: "pan_card",
+    label: "PAN Card",
     required: false,
-    description: "Universal Account Number passbook (if available)",
+    description: "Permanent Account Number card",
+    hasTemplate: false,
   },
   {
-    key: "passport_photo",
-    label: "Passport Size Photo",
-    required: true,
-    description: "Recent passport size photograph",
+    key: "address_proof",
+    label: "Address Proof",
+    required: false,
+    description: "Required if current address differs from Aadhar card",
+    hasTemplate: false,
   },
 ];
+
+// Photo Section
+const PHOTO_DOCUMENTS: DocumentType[] = [
+  {
+    key: "passport_photo",
+    label: "Latest Passport Size Photo",
+    required: true,
+    description: "Recent passport size color photograph",
+    hasTemplate: false,
+  },
+];
+
+// Social media handles for background verification
+const SOCIAL_MEDIA_HANDLES = [
+  { key: "linkedin", label: "LinkedIn", required: false },
+  { key: "facebook", label: "Facebook", required: false },
+  { key: "instagram", label: "Instagram", required: false },
+  { key: "youtube", label: "YouTube", required: false },
+  { key: "twitter", label: "Twitter", required: false },
+  { key: "other", label: "Any Other", required: false },
+];
+
+// Sample document templates for download
+const DOWNLOAD_TEMPLATES: Record<string, { url: string; filename: string }> = {
+  current_relieving_letter: {
+    url: "/templates/relieving_letter_sample.pdf",
+    filename: "Relieving-Letter-Sample.pdf"
+  },
+  appointment_letter: {
+    url: "/templates/appointment_letter_sample.pdf",
+    filename: "Appointment-Letter-Sample.pdf"
+  },
+  salary_slip_1: {
+    url: "/templates/salary_slip_sample.pdf",
+    filename: "Salary-Slip-Sample.pdf"
+  },
+  salary_slip_2: {
+    url: "/templates/salary_slip_sample.pdf",
+    filename: "Salary-Slip-Sample.pdf"
+  },
+  salary_slip_3: {
+    url: "/templates/salary_slip_sample.pdf",
+    filename: "Salary-Slip-Sample.pdf"
+  },
+  form_16: {
+    url: "/templates/form_16_sample.pdf",
+    filename: "Form-16-Sample.pdf"
+  },
+};
+
+// Helper function to trigger file download
+const triggerDownload = (url: string, filename: string) => {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.target = "_blank";
+  a.rel = "noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
 
 const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   candidateId,
@@ -124,6 +236,18 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, UploadedDocument>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Organization data - Updated structure
+  const [organizations, setOrganizations] = useState<Organization[]>([{ name: '' }]);
+
+  // Company references
+  const [companyReferences, setCompanyReferences] = useState<CompanyReference[]>([
+    { company_name: '', email: '', phone: '' },
+    { company_name: '', email: '', phone: '' }
+  ]);
+
+  // Social media handles
+  const [socialMediaHandles, setSocialMediaHandles] = useState<Record<string, string>>({});
 
   const handleDialogClose = (open: boolean) => {
     if (!open && onClose) {
@@ -201,21 +325,36 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       clearInterval(progressInterval);
       setUploadProgress((prev) => ({ ...prev, [documentKey]: 100 }));
 
-      // **FIX: Ensure all required fields are present and properly formatted**
       const uploadedDoc: UploadedDocument = {
         document_type: documentKey,
-        document_url: result.url, // Make sure this is the correct field from uploadToCloudinary
-        public_id: result.publicId, // Make sure this matches the field name from uploadToCloudinary
+        document_url: result.url,
+        public_id: result.publicId,
         file_name: file.name,
       };
 
-      // **DEBUGGING: Log the document structure**
-      console.log("Uploading document:", uploadedDoc);
-
-      setUploadedDocuments((prev) => ({
-        ...prev,
-        [documentKey]: uploadedDoc,
-      }));
+      // Handle organization documents differently
+      if (documentKey.startsWith('org_')) {
+        const parts = documentKey.split('_');
+        const orgIndex = parseInt(parts[1]);
+        const docType = parts[2]; // 'appointment' or 'relieving'
+        
+        // Update the organizations array with the document URL
+        setOrganizations(prev => {
+          const newOrgs = [...prev];
+          if (docType === 'appointment') {
+            newOrgs[orgIndex].appointment_letter = result.url;
+          } else if (docType === 'relieving') {
+            newOrgs[orgIndex].relieving_letter = result.url;
+          }
+          return newOrgs;
+        });
+      } else {
+        // Handle regular documents
+        setUploadedDocuments((prev) => ({
+          ...prev,
+          [documentKey]: uploadedDoc,
+        }));
+      }
 
       toast.success(`${file.name} uploaded successfully`);
     } catch (error) {
@@ -239,11 +378,28 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       return newFiles;
     });
 
-    setUploadedDocuments((prev) => {
-      const newDocs = { ...prev };
-      delete newDocs[documentKey];
-      return newDocs;
-    });
+    if (documentKey.startsWith('org_')) {
+      const parts = documentKey.split('_');
+      const orgIndex = parseInt(parts[1]);
+      const docType = parts[2];
+      
+      // Remove the document URL from organizations
+      setOrganizations(prev => {
+        const newOrgs = [...prev];
+        if (docType === 'appointment') {
+          delete newOrgs[orgIndex].appointment_letter;
+        } else if (docType === 'relieving') {
+          delete newOrgs[orgIndex].relieving_letter;
+        }
+        return newOrgs;
+      });
+    } else {
+      setUploadedDocuments((prev) => {
+        const newDocs = { ...prev };
+        delete newDocs[documentKey];
+        return newDocs;
+      });
+    }
 
     setUploadProgress((prev) => {
       const newProgress = { ...prev };
@@ -254,12 +410,93 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     toast.success("File removed");
   };
 
+  const addOrganization = () => {
+    setOrganizations([...organizations, { name: '' }]);
+  };
+
+  const removeOrganization = (index: number) => {
+    if (organizations.length > 1) {
+      const newOrgs = organizations.filter((_, i) => i !== index);
+      setOrganizations(newOrgs);
+      
+      // Clean up any uploaded files for this organization
+      Object.keys(uploadedFiles).forEach(key => {
+        if (key.startsWith(`org_${index}_`)) {
+          removeFile(key);
+        }
+      });
+    }
+  };
+
+  const updateOrganizationName = (index: number, name: string) => {
+    const newOrgs = [...organizations];
+    newOrgs[index].name = name;
+    setOrganizations(newOrgs);
+  };
+
+  const updateCompanyReference = (index: number, field: keyof CompanyReference, value: string) => {
+    const newRefs = [...companyReferences];
+    newRefs[index][field] = value;
+    setCompanyReferences(newRefs);
+  };
+
+  const handleSocialMediaChange = (platform: string, handle: string) => {
+    setSocialMediaHandles((prev) => ({
+      ...prev,
+      [platform]: handle,
+    }));
+  };
+
   const validateFiles = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    REQUIRED_DOCUMENTS.forEach((doc) => {
+    // Validate educational documents
+    EDUCATIONAL_DOCUMENTS.forEach((doc) => {
       if (doc.required && !uploadedDocuments[doc.key]) {
         newErrors[doc.key] = `${doc.label} is required`;
+      }
+    });
+
+    // Validate organization documents
+    ORGANIZATION_DOCUMENTS.forEach((doc) => {
+      if (doc.required && !uploadedDocuments[doc.key]) {
+        newErrors[doc.key] = `${doc.label} is required`;
+      }
+    });
+
+    // Validate salary documents (at least salary slips or form 16)
+    const hasSalarySlips = SALARY_DOCUMENTS.slice(0, 3).every(doc => uploadedDocuments[doc.key]);
+    const hasForm16 = uploadedDocuments['form_16'];
+    
+    if (!hasSalarySlips && !hasForm16) {
+      newErrors['salary_documents'] = 'Either upload all 3 salary slips or Form 16';
+    }
+
+    // Validate identity documents
+    IDENTITY_DOCUMENTS.forEach((doc) => {
+      if (doc.required && !uploadedDocuments[doc.key]) {
+        newErrors[doc.key] = `${doc.label} is required`;
+      }
+    });
+
+    // Validate photo
+    PHOTO_DOCUMENTS.forEach((doc) => {
+      if (doc.required && !uploadedDocuments[doc.key]) {
+        newErrors[doc.key] = `${doc.label} is required`;
+      }
+    });
+
+    // Validate organizations
+    organizations.forEach((org, index) => {
+      if (org.name.trim() && (!org.appointment_letter && !org.relieving_letter)) {
+        newErrors[`org_${index}`] = `Organization ${index + 1}: At least one document (appointment or relieving letter) is required`;
+      }
+    });
+
+    // Validate company references
+    companyReferences.forEach((ref, index) => {
+      if (!ref.company_name || !ref.email || !ref.phone) {
+        newErrors[`reference_${index}`] = `Company reference ${index + 1} is incomplete`;
       }
     });
 
@@ -271,7 +508,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     e.preventDefault();
 
     if (!validateFiles()) {
-      toast.error("Please upload all required documents");
+      toast.error("Please complete all required fields and upload all required documents");
       return;
     }
 
@@ -283,32 +520,39 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // **FIX: Prepare the documents array with proper validation**
+      // Only send regular documents (not organization documents)
       const documents = Object.values(uploadedDocuments).map(doc => ({
         document_type: doc.document_type,
         document_url: doc.document_url,
         public_id: doc.public_id,
-        file_name: doc.file_name, // This field is optional but included
+        file_name: doc.file_name,
       }));
 
-      // **DEBUGGING: Log the payload before sending**
-      console.log("Sending documents payload:", { documents });
+      // Filter organizations with names and clean up the data
+      const validOrganizations = organizations
+        .filter(org => org.name.trim())
+        .map(org => ({
+          name: org.name.trim(),
+          appointment_letter: org.appointment_letter || null,
+          relieving_letter: org.relieving_letter || null
+        }));
 
-      // **FIX: Validate each document has required fields before sending**
-      const invalidDocs = documents.filter(doc => 
-        !doc.document_type || !doc.document_url || !doc.public_id
-      );
+      const payload = {
+        documents, // Only regular documents
+        organizations: validOrganizations,
+        company_references: companyReferences.filter(ref => 
+          ref.company_name.trim() && ref.email.trim() && ref.phone.trim()
+        ),
+        social_media_handles: Object.fromEntries(
+          Object.entries(socialMediaHandles).filter(([key, value]) => value.trim())
+        )
+      };
 
-      if (invalidDocs.length > 0) {
-        console.error("Invalid documents found:", invalidDocs);
-        toast.error("Some documents are missing required information. Please try re-uploading.");
-        setIsSubmitting(false);
-        return;
-      }
+      console.log("Submitting payload:", payload); // Debug log
 
       const response = await api.post(
         `/candidates/${candidateId}/hired_docs`,
-          {documents},
+        payload
       );
 
       if (response.status === 200 || response.status === 201) {
@@ -319,7 +563,6 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       }
     } catch (error: any) {
       console.error("Error submitting documents:", error);
-      console.error("Error response:", error.response?.data);
       toast.error(
         error?.response?.data?.message ||
           "Failed to submit documents. Please try again."
@@ -329,177 +572,486 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     }
   };
 
+  const renderDocumentSection = (documents: DocumentType[], title: string, icon: React.ReactNode, bgColor: string) => (
+    <Card className={`${bgColor} border-2`}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {documents.map((doc) => (
+            <Card key={doc.key} className="bg-white border">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      {doc.label}
+                      {doc.required && <span className="text-red-500">*</span>}
+                    </CardTitle>
+                    {doc.description && (
+                      <CardDescription className="text-xs text-gray-600 mt-1">
+                        {doc.description}
+                      </CardDescription>
+                    )}
+                  </div>
+
+                  {doc.hasTemplate && DOWNLOAD_TEMPLATES[doc.key] && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        triggerDownload(
+                          DOWNLOAD_TEMPLATES[doc.key].url,
+                          DOWNLOAD_TEMPLATES[doc.key].filename
+                        )
+                      }
+                      className="whitespace-nowrap flex items-center gap-1"
+                      title="Download sample/template"
+                    >
+                      <Download className="w-3 h-3" />
+                      Sample
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!uploadedFiles[doc.key] ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center hover:border-blue-400 transition-colors">
+                    <Input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      onChange={(e) =>
+                        handleFileChange(
+                          doc.key,
+                          e.target.files?.[0] || null
+                        )
+                      }
+                      className="hidden"
+                      id={`file-${doc.key}`}
+                      disabled={uploadingStates[doc.key] || isSubmitting}
+                    />
+                    <Label
+                      htmlFor={`file-${doc.key}`}
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <Upload className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-600">
+                        Click to upload
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        PDF, JPG, PNG, DOC, DOCX (Max 10MB)
+                      </span>
+                    </Label>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {uploadingStates[doc.key] ? (
+                      <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-blue-700">
+                            Uploading...
+                          </p>
+                          <div className="w-full bg-blue-200 rounded-full h-1 mt-1">
+                            <div
+                              className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${uploadProgress[doc.key] || 0}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : uploadedDocuments[doc.key] ? (
+                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-green-700 truncate">
+                            {uploadedFiles[doc.key]?.name}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            Uploaded successfully
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(doc.key)}
+                          disabled={isSubmitting}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg">
+                        <X className="w-4 h-4 text-red-600" />
+                        <p className="text-xs text-red-700">
+                          Upload failed. Please try again.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(doc.key)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {errors[doc.key] && (
+                  <p className="text-red-500 text-xs">{errors[doc.key]}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogContent
-        className="p-4 w-screen sm:w-[95vw] max-w-none sm:max-w-[95vw] h-screen sm:h-[95vh] overflow-y-auto"
-        onEscapeKeyDown={(e) => {
-          const hasUploadsInProgress = Object.values(uploadingStates).some((state) => state);
-          if (hasUploadsInProgress) {
-            e.preventDefault();
-            toast.error("Please wait for all uploads to complete before closing.");
-          }
-        }}
-        onPointerDownOutside={(e) => {
-          const hasUploadsInProgress = Object.values(uploadingStates).some((state) => state);
-          if (hasUploadsInProgress) {
-            e.preventDefault();
-            toast.error("Please wait for all uploads to complete before closing.");
-          }
-        }}
-      >
+      <DialogContent className="p-4 w-screen sm:w-[95vw] max-w-none sm:max-w-[95vw] h-screen sm:h-[95vh] overflow-y-auto">
         <DialogHeader className="text-center space-y-4">
           <div className="text-6xl">🎉</div>
           <DialogTitle className="text-3xl font-bold text-green-600">
             Congratulations! Welcome to Our Team!
           </DialogTitle>
           <DialogDescription className="text-lg text-gray-700">
-            You have been successfully hired! To complete your onboarding
-            process, please upload the following documents. All required
-            documents must be submitted.
+            You have been successfully hired! To complete your onboarding process, 
+            please upload the following documents organized by category.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {REQUIRED_DOCUMENTS.map((doc) => (
-              <Card
-                key={doc.key}
-                className={`border-2 ${
-                  doc.required ? "border-red-200" : "border-gray-200"
-                }`}
-              >
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    {doc.label}
-                    {doc.required && <span className="text-red-500">*</span>}
-                  </CardTitle>
-                  {doc.description && (
-                    <CardDescription className="text-sm text-gray-600">
-                      {doc.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {!uploadedFiles[doc.key] ? (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-                      <Input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={(e) =>
-                          handleFileChange(
-                            doc.key,
-                            e.target.files?.[0] || null
-                          )
-                        }
-                        className="hidden"
-                        id={`file-${doc.key}`}
-                        disabled={uploadingStates[doc.key] || isSubmitting}
-                      />
-                      <Label
-                        htmlFor={`file-${doc.key}`}
-                        className="cursor-pointer flex flex-col items-center gap-2"
-                      >
-                        <Upload className="w-8 h-8 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          Click to upload or drag and drop
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          PDF, JPG, PNG, DOC, DOCX (Max 10MB)
-                        </span>
-                      </Label>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {uploadingStates[doc.key] ? (
-                        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-blue-700">
-                              Uploading {uploadedFiles[doc.key]?.name}
-                            </p>
-                            <div className="w-full bg-blue-200 rounded-full h-2 mt-1">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                style={{
-                                  width: `${uploadProgress[doc.key] || 0}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ) : uploadedDocuments[doc.key] ? (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-green-700">
-                              {uploadedFiles[doc.key]?.name}
-                            </p>
-                            <p className="text-xs text-green-600">
-                              Uploaded successfully
-                            </p>
-                          </div>
+          {/* Educational Documents Section */}
+          {renderDocumentSection(
+            EDUCATIONAL_DOCUMENTS,
+            "Educational Documents",
+            <GraduationCap className="w-5 h-5" />,
+            "bg-blue-50 border-blue-200"
+          )}
+
+          {/* Organization Documents Section */}
+          <Card className="bg-green-50 border-green-200 border-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building className="w-5 h-5" />
+                Organization Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current Company Relieving Letter */}
+              {renderDocumentSection(
+                ORGANIZATION_DOCUMENTS,
+                "",
+                null,
+                "bg-transparent border-0"
+              )}
+
+              {/* Previous Companies */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">Previous Organizations</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addOrganization}
+                    disabled={isSubmitting}
+                  >
+                    Add Organization
+                  </Button>
+                </div>
+                
+                {organizations.map((org, index) => (
+                  <Card key={index} className="bg-white border">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">
+                          Organization {index + 1}
+                        </CardTitle>
+                        {organizations.length > 1 && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => removeFile(doc.key)}
+                            onClick={() => removeOrganization(index)}
                             disabled={isSubmitting}
                           >
-                            <X className="w-4 w-4" />
+                            <X className="w-4 h-4" />
                           </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <Label htmlFor={`org-name-${index}`} className="text-sm">
+                          Organization Name *
+                        </Label>
+                        <Input
+                          id={`org-name-${index}`}
+                          value={org.name}
+                          onChange={(e) => updateOrganizationName(index, e.target.value)}
+                          placeholder="Enter organization name"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Appointment Letter */}
+                        <div className="space-y-2">
+                          <Label className="text-sm">Appointment Letter</Label>
+                          {!organizations[index]?.appointment_letter ? (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
+                              <Input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                onChange={(e) =>
+                                  handleFileChange(
+                                    `org_${index}_appointment`,
+                                    e.target.files?.[0] || null
+                                  )
+                                }
+                                className="hidden"
+                                id={`org-appointment-${index}`}
+                                disabled={uploadingStates[`org_${index}_appointment`] || isSubmitting}
+                              />
+                              <Label
+                                htmlFor={`org-appointment-${index}`}
+                                className="cursor-pointer flex flex-col items-center gap-1"
+                              >
+                                <Upload className="w-4 h-4 text-gray-400" />
+                                <span className="text-xs text-gray-600">
+                                  Upload Appointment Letter
+                                </span>
+                              </Label>
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-green-50 rounded-lg flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              <span className="text-xs text-green-700 flex-1 truncate">
+                                {uploadedFiles[`org_${index}_appointment`]?.name || "Document uploaded"}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(`org_${index}_appointment`)}
+                                disabled={isSubmitting}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-                          <X className="w-5 h-5 text-red-600" />
-                          <p className="text-sm text-red-700">
-                            Upload failed. Please try again.
-                          </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFile(doc.key)}
-                          >
-                            <X className="w-4 w-4" />
-                          </Button>
+
+                        {/* Relieving Letter */}
+                        <div className="space-y-2">
+                          <Label className="text-sm">Relieving Letter</Label>
+                          {!organizations[index]?.relieving_letter ? (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
+                              <Input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                onChange={(e) =>
+                                  handleFileChange(
+                                    `org_${index}_relieving`,
+                                    e.target.files?.[0] || null
+                                  )
+                                }
+                                className="hidden"
+                                id={`org-relieving-${index}`}
+                                disabled={uploadingStates[`org_${index}_relieving`] || isSubmitting}
+                              />
+                              <Label
+                                htmlFor={`org-relieving-${index}`}
+                                className="cursor-pointer flex flex-col items-center gap-1"
+                              >
+                                <Upload className="w-4 h-4 text-gray-400" />
+                                <span className="text-xs text-gray-600">
+                                  Upload Relieving Letter
+                                </span>
+                              </Label>
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-green-50 rounded-lg flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              <span className="text-xs text-green-700 flex-1 truncate">
+                                {uploadedFiles[`org_${index}_relieving`]?.name || "Document uploaded"}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(`org_${index}_relieving`)}
+                                disabled={isSubmitting}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
+                      </div>
+                      
+                      {/* Error display for organizations */}
+                      {errors[`org_${index}`] && (
+                        <p className="text-red-500 text-xs mt-2">{errors[`org_${index}`]}</p>
                       )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Salary Documents Section */}
+          {renderDocumentSection(
+            SALARY_DOCUMENTS,
+            "Salary Documents",
+            <IndianRupee className="w-5 h-5" />,
+            "bg-purple-50 border-purple-200"
+          )}
+          
+          {errors['salary_documents'] && (
+            <p className="text-red-500 text-sm ml-4">{errors['salary_documents']}</p>
+          )}
+
+          {/* Identity Documents Section */}
+          {renderDocumentSection(
+            IDENTITY_DOCUMENTS,
+            "Identity & Address Proof",
+            <CreditCard className="w-5 h-5" />,
+            "bg-orange-50 border-orange-200"
+          )}
+
+          {/* Company References Section */}
+          <Card className="bg-yellow-50 border-yellow-200 border-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="w-5 h-5" />
+                Last 2 Companies References
+              </CardTitle>
+              <CardDescription>
+                Provide contact details for verification from your last 2 companies
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {companyReferences.map((ref, index) => (
+                <Card key={index} className="bg-white border">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">Company Reference {index + 1}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <Label className="text-sm">Company Name *</Label>
+                      <Input
+                        value={ref.company_name}
+                        onChange={(e) => updateCompanyReference(index, 'company_name', e.target.value)}
+                        placeholder="Enter company name"
+                        disabled={isSubmitting}
+                      />
                     </div>
-                  )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm">Email ID *</Label>
+                        <Input
+                          type="email"
+                          value={ref.email}
+                          onChange={(e) => updateCompanyReference(index, 'email', e.target.value)}
+                          placeholder="contact@company.com"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Phone/Landline *</Label>
+                        <Input
+                          value={ref.phone}
+                          onChange={(e) => updateCompanyReference(index, 'phone', e.target.value)}
+                          placeholder="Phone or landline number"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </div>
+                    {errors[`reference_${index}`] && (
+                      <p className="text-red-500 text-xs">{errors[`reference_${index}`]}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </CardContent>
+          </Card>
 
-                  {errors[doc.key] && (
-                    <p className="text-red-500 text-sm">{errors[doc.key]}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {/* Social Media Handles Section */}
+          <Card className="bg-indigo-50 border-indigo-200 border-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Share2 className="w-5 h-5" />
+                Social Media Handles - Background Verification
+              </CardTitle>
+              <CardDescription className="text-indigo-700">
+                As part of background checking process, please provide your social media handles. 
+                Non-disclosure of the same would be termed as non-compliance.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {SOCIAL_MEDIA_HANDLES.map((platform) => (
+                  <div key={platform.key} className="space-y-2">
+                    <Label htmlFor={platform.key} className="text-sm font-medium">
+                      {platform.label}:
+                    </Label>
+                    <Input
+                      id={platform.key}
+                      type="text"
+                      placeholder={`Enter your ${platform.label} handle/profile`}
+                      value={socialMediaHandles[platform.key] || ""}
+                      onChange={(e) => handleSocialMediaChange(platform.key, e.target.value)}
+                      className="bg-white"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-          <Card className="bg-yellow-50 border-yellow-200">
+          {/* Photo Section */}
+          {renderDocumentSection(
+            PHOTO_DOCUMENTS,
+            "Passport Size Photo",
+            <Camera className="w-5 h-5" />,
+            "bg-pink-50 border-pink-200"
+          )}
+
+          {/* Instructions Card */}
+          <Card className="bg-gray-50 border-gray-200">
             <CardContent className="pt-6">
               <div className="flex gap-3">
                 <div className="text-2xl">⚠️</div>
                 <div>
-                  <h3 className="font-semibold text-yellow-800 mb-2">
+                  <h3 className="font-semibold text-gray-800 mb-2">
                     Important Instructions:
                   </h3>
-                  <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
-                    <li>
-                      All files must be in PDF, JPG, PNG, DOC, or DOCX format
-                    </li>
+                  <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                    <li>All files must be in PDF, JPG, PNG, DOC, or DOCX format</li>
                     <li>Maximum file size: 10MB per file</li>
-                    <li>
-                      Documents marked with * are mandatory and must be
-                      uploaded
-                    </li>
+                    <li>Documents marked with * are mandatory</li>
+                    <li>For salary documents: Upload either all 3 salary slips OR Form 16</li>
+                    <li>Social media handles are required for background verification</li>
                     <li>Ensure all documents are clear and readable</li>
-                    <li>
-                      You can close this dialog, but remember to submit your documents later
-                    </li>
+                    <li>Use the "Sample" buttons to download template formats where available</li>
                   </ul>
                 </div>
               </div>

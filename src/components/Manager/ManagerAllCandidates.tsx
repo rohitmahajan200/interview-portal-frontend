@@ -145,6 +145,25 @@ interface ManagerCandidate {
     hr_questionnaire_completed: boolean;
     current_stage_duration: number;
   };
+  company_references?: Array<{
+    _id: string;
+    company_name: string;
+    email: string;
+    phone: string;
+  }>;
+
+  organizations?: Array<{
+    _id: string;
+    name: string;
+    appointment_letter?: string;
+    relieving_letter?: string;
+  }>;
+
+  social_media_handles?: {
+    linkedin?: string;
+    facebook?: string;
+    youtube?: string;
+  };
 }
 
 interface DetailedCandidate {
@@ -180,11 +199,13 @@ interface DetailedCandidate {
     _id: string;
     document_type: string;
     document_url: string;
+    isVerified: boolean;
   }>;
   hired_docs: Array<{
     _id: string;
     document_type: string;
     document_url: string;
+    isVerified: boolean;
   }>;
   hrQuestionnaire: Array<{
     _id: string;
@@ -270,6 +291,25 @@ interface DetailedCandidate {
     feedback_count: number;
     hr_questionnaire_completed: boolean;
     current_stage_duration: number;
+  };
+  company_references?: Array<{
+    _id: string;
+    company_name: string;
+    email: string;
+    phone: string;
+  }>;
+
+  organizations?: Array<{
+    _id: string;
+    name: string;
+    appointment_letter?: string;
+    relieving_letter?: string;
+  }>;
+
+  social_media_handles?: {
+    linkedin?: string;
+    facebook?: string;
+    youtube?: string;
   };
 }
 
@@ -419,12 +459,24 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">All</SelectItem>
-                  <SelectItem value="registered" className="text-xs">Registered</SelectItem>
-                  <SelectItem value="hr" className="text-xs">HR Review</SelectItem>
-                  <SelectItem value="assessment" className="text-xs">Assessment</SelectItem>
-                  <SelectItem value="manager" className="text-xs">Manager</SelectItem>
-                  <SelectItem value="feedback" className="text-xs">Feedback</SelectItem>
+                  <SelectItem value="all" className="text-xs">
+                    All
+                  </SelectItem>
+                  <SelectItem value="registered" className="text-xs">
+                    Registered
+                  </SelectItem>
+                  <SelectItem value="hr" className="text-xs">
+                    HR Review
+                  </SelectItem>
+                  <SelectItem value="assessment" className="text-xs">
+                    Assessment
+                  </SelectItem>
+                  <SelectItem value="manager" className="text-xs">
+                    Manager
+                  </SelectItem>
+                  <SelectItem value="feedback" className="text-xs">
+                    Feedback
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1001,6 +1053,355 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                             </div>
                           </div>
                         )}
+
+                      {/* Company References Section */}
+                      {candidateData.company_references &&
+                        candidateData.company_references.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-3 flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-cyan-600" />
+                              Company References (
+                              {candidateData.company_references.length})
+                            </h4>
+                            <div className="space-y-2">
+                              {candidateData.company_references.map(
+                                (reference) => (
+                                  <div
+                                    key={reference._id}
+                                    className="p-3 bg-cyan-50 rounded border border-cyan-100"
+                                  >
+                                    <div className="flex justify-between items-start mb-2">
+                                      <div className="font-medium text-cyan-800">
+                                        {reference.company_name}
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-1 text-sm">
+                                      <div className="flex items-center gap-1 text-cyan-700">
+                                        <Mail className="h-3 w-3" />
+                                        <a
+                                          href={`mailto:${reference.email}`}
+                                          className="hover:underline"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {reference.email}
+                                        </a>
+                                      </div>
+
+                                      <div className="flex items-center gap-1 text-cyan-700">
+                                        <Phone className="h-3 w-3" />
+                                        <a
+                                          href={`tel:${reference.phone}`}
+                                          className="hover:underline"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {reference.phone}
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Work Experience/Organizations Section */}
+                      {candidateData.organizations &&
+                        candidateData.organizations.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold mb-3 flex items-center gap-2">
+                              <BarChart3 className="h-4 w-4 text-violet-600" />
+                              Work Experience (
+                              {candidateData.organizations.length})
+                            </h4>
+                            <div className="space-y-3">
+                              {candidateData.organizations.map((org) => (
+                                <div
+                                  key={org._id}
+                                  className="p-3 bg-violet-50 rounded border border-violet-100"
+                                >
+                                  <div className="font-medium text-violet-800 mb-2">
+                                    {org.name}
+                                  </div>
+
+                                  <div className="grid grid-cols-1 gap-2">
+                                    {org.appointment_letter && (
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm text-violet-700">
+                                          Appointment Letter
+                                        </span>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              copyToClipboard(
+                                                org.appointment_letter,
+                                                `${org._id}-appointment`,
+                                                e
+                                              );
+                                            }}
+                                            className="h-6 w-6 p-0 text-violet-600"
+                                            title="Copy appointment letter link"
+                                          >
+                                            {copiedDocId ===
+                                            `${org._id}-appointment` ? (
+                                              <Check className="h-3 w-3" />
+                                            ) : (
+                                              <Copy className="h-3 w-3" />
+                                            )}
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              window.open(
+                                                org.appointment_letter,
+                                                "_blank"
+                                              );
+                                            }}
+                                            className="h-6 w-6 p-0 text-violet-600"
+                                            title="View appointment letter"
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {org.relieving_letter && (
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm text-violet-700">
+                                          Relieving Letter
+                                        </span>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              copyToClipboard(
+                                                org.relieving_letter,
+                                                `${org._id}-relieving`,
+                                                e
+                                              );
+                                            }}
+                                            className="h-6 w-6 p-0 text-violet-600"
+                                            title="Copy relieving letter link"
+                                          >
+                                            {copiedDocId ===
+                                            `${org._id}-relieving` ? (
+                                              <Check className="h-3 w-3" />
+                                            ) : (
+                                              <Copy className="h-3 w-3" />
+                                            )}
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              window.open(
+                                                org.relieving_letter,
+                                                "_blank"
+                                              );
+                                            }}
+                                            className="h-6 w-6 p-0 text-violet-600"
+                                            title="View relieving letter"
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Social Media Handles Section */}
+                      {candidateData.social_media_handles && (
+                        <div className="lg:col-span-2">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <ExternalLink className="h-4 w-4 text-pink-600" />
+                            Social Media Profiles
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {candidateData.social_media_handles.linkedin && (
+                              <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+                                      <span className="text-white text-xs font-bold">
+                                        in
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-medium text-blue-800">
+                                      LinkedIn
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(
+                                          candidateData.social_media_handles
+                                            .linkedin,
+                                          "linkedin",
+                                          e
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0 text-blue-600"
+                                      title="Copy LinkedIn URL"
+                                    >
+                                      {copiedDocId === "linkedin" ? (
+                                        <Check className="h-3 w-3" />
+                                      ) : (
+                                        <Copy className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(
+                                          candidateData.social_media_handles
+                                            .linkedin,
+                                          "_blank"
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0 text-blue-600"
+                                      title="Visit LinkedIn profile"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {candidateData.social_media_handles.facebook && (
+                              <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-blue-700 rounded flex items-center justify-center">
+                                      <span className="text-white text-xs font-bold">
+                                        f
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-medium text-blue-800">
+                                      Facebook
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(
+                                          candidateData.social_media_handles
+                                            .facebook,
+                                          "facebook",
+                                          e
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0 text-blue-600"
+                                      title="Copy Facebook URL"
+                                    >
+                                      {copiedDocId === "facebook" ? (
+                                        <Check className="h-3 w-3" />
+                                      ) : (
+                                        <Copy className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(
+                                          candidateData.social_media_handles
+                                            .facebook,
+                                          "_blank"
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0 text-blue-600"
+                                      title="Visit Facebook profile"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {candidateData.social_media_handles.youtube && (
+                              <div className="p-3 bg-red-50 rounded border border-red-100">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
+                                      <span className="text-white text-xs font-bold">
+                                        ▶
+                                      </span>
+                                    </div>
+                                    <span className="text-sm font-medium text-red-800">
+                                      YouTube
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(
+                                          candidateData.social_media_handles
+                                            .youtube,
+                                          "youtube",
+                                          e
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0 text-red-600"
+                                      title="Copy YouTube URL"
+                                    >
+                                      {copiedDocId === "youtube" ? (
+                                        <Check className="h-3 w-3" />
+                                      ) : (
+                                        <Copy className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(
+                                          candidateData.social_media_handles
+                                            .youtube,
+                                          "_blank"
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0 text-red-600"
+                                      title="Visit YouTube channel"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Interviews Section - Enhanced with detailed data */}
                       {detailedCandidate?.interviews &&
