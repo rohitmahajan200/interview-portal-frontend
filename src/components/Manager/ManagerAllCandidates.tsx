@@ -37,6 +37,15 @@ import {
 import { StageCircle } from "../ui/StageCircle";
 import toast from "react-hot-toast";
 
+interface CandidateDocument {
+  _id: string;
+  document_type: string;
+  document_url: string;
+  isVerified: boolean;
+  uploaded_at?: string; // Optional for consistency with other components
+}
+
+
 interface ManagerCandidate {
   _id: string;
   first_name: string;
@@ -66,17 +75,11 @@ interface ManagerCandidate {
     _id: string;
   };
   portfolio_url?: string | null;
-  // Fixed: Changed from string[] to proper document objects
-  documents?: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-  }>;
-  hired_docs?: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-  }>;
+
+  // ✅ Use CandidateDocument type
+  documents?: CandidateDocument[];
+  hired_docs?: CandidateDocument[];
+
   assessments?: Array<{
     _id: string;
     assigned_by: {
@@ -87,6 +90,7 @@ interface ManagerCandidate {
     due_at: string;
     status: string;
   }>;
+
   hrQuestionnaire?: string[];
   interviews?: Array<{
     _id: string;
@@ -151,14 +155,12 @@ interface ManagerCandidate {
     email: string;
     phone: string;
   }>;
-
   organizations?: Array<{
     _id: string;
     name: string;
     appointment_letter?: string;
     relieving_letter?: string;
   }>;
-
   social_media_handles?: {
     linkedin?: string;
     facebook?: string;
@@ -166,6 +168,7 @@ interface ManagerCandidate {
   };
 }
 
+// DetailedCandidate type
 interface DetailedCandidate {
   _id: string;
   first_name: string;
@@ -195,18 +198,11 @@ interface DetailedCandidate {
     _id: string;
   };
   portfolio_url?: string | null;
-  documents: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-    isVerified: boolean;
-  }>;
-  hired_docs: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-    isVerified: boolean;
-  }>;
+
+  // ✅ Required arrays
+  documents: CandidateDocument[];
+  hired_docs: CandidateDocument[];
+
   hrQuestionnaire: Array<{
     _id: string;
     assigned_by: {
@@ -298,20 +294,19 @@ interface DetailedCandidate {
     email: string;
     phone: string;
   }>;
-
   organizations?: Array<{
     _id: string;
     name: string;
     appointment_letter?: string;
     relieving_letter?: string;
   }>;
-
   social_media_handles?: {
     linkedin?: string;
     facebook?: string;
     youtube?: string;
   };
 }
+
 
 interface ManagerAllCandidatesProps {
   allCandidates: ManagerCandidate[];

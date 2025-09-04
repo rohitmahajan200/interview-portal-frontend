@@ -177,12 +177,14 @@ type Candidate = {
     document_type: string;
     document_url: string;
     isVerified: boolean;
+    uploaded_at?: string;
   }[];
   hired_docs?: {
     _id: string;
     document_type: string;
     document_url: string;
     isVerified: boolean;
+    uploaded_at: string;
   }[];
 
   // ADD THESE NEW FIELDS:
@@ -321,78 +323,85 @@ const HRHome = () => {
   const [feedbackType, setFeedbackType] = useState("general");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
-const [documentChecklist, setDocumentChecklist] = useState<Record<string, boolean>>({});
-const [savingChecklist, setSavingChecklist] = useState(false);
+  const [documentChecklist, setDocumentChecklist] = useState<
+    Record<string, boolean>
+  >({});
+  const [savingChecklist, setSavingChecklist] = useState(false);
 
-// Add this function inside your HRHome component
-const handleMarkVerified = async () => {
-  if (!selectedCandidate) return;
+  // Add this function inside your HRHome component
+  const handleMarkVerified = async () => {
+    if (!selectedCandidate) return;
 
-  // Get selected document IDs (excluding 'selectAll' key)
-  const selectedDocIds = Object.keys(documentChecklist)
-    .filter(key => key !== 'selectAll' && documentChecklist[key]);
+    // Get selected document IDs (excluding 'selectAll' key)
+    const selectedDocIds = Object.keys(documentChecklist).filter(
+      (key) => key !== "selectAll" && documentChecklist[key]
+    );
 
-  if (selectedDocIds.length === 0) {
-    toast.error("Please select at least one document to verify");
-    return;
-  }
-
-  try {
-    setSavingChecklist(true);
-    
-    // Prepare updates array for backend
-    const updates = selectedDocIds.map(docId => ({
-      id: docId,
-      isVerified: true
-    }));
-
-    const response = await api.patch("/org/update-doc-status", {
-      updates
-    });
-
-    if (response.data.success) {
-      toast.success(`${selectedDocIds.length} document(s) marked as verified successfully!`);
-      
-      // Update local state
-      setSelectedCandidate(prev => {
-        if (!prev) return prev;
-        
-        const updatedDocuments = prev.documents?.map(doc =>
-          selectedDocIds.includes(doc._id)
-            ? { ...doc, isVerified: true }
-            : doc
-        );
-        
-        const updatedHiredDocs = prev.hired_docs?.map(doc =>
-          selectedDocIds.includes(doc._id)
-            ? { ...doc, isVerified: true }
-            : doc
-        );
-
-        return {
-          ...prev,
-          documents: updatedDocuments,
-          hired_docs: updatedHiredDocs
-        };
-      });
-      
-      // Clear document checklist
-      setDocumentChecklist({ selectAll: false });
-      
-      // Refresh candidates list
-      await fetchAllData();
-    } else {
-      throw new Error(response.data.message || "Failed to update documents");
+    if (selectedDocIds.length === 0) {
+      toast.error("Please select at least one document to verify");
+      return;
     }
-  } catch (error: any) {
-    console.error("Error marking documents as verified:", error);
-    const errorMessage = error?.response?.data?.message || error?.message || "Failed to mark documents as verified";
-    toast.error(errorMessage);
-  } finally {
-    setSavingChecklist(false);
-  }
-};
 
+    try {
+      setSavingChecklist(true);
+
+      // Prepare updates array for backend
+      const updates = selectedDocIds.map((docId) => ({
+        id: docId,
+        isVerified: true,
+      }));
+
+      const response = await api.patch("/org/update-doc-status", {
+        updates,
+      });
+
+      if (response.data.success) {
+        toast.success(
+          `${selectedDocIds.length} document(s) marked as verified successfully!`
+        );
+
+        // Update local state
+        setSelectedCandidate((prev) => {
+          if (!prev) return prev;
+
+          const updatedDocuments = prev.documents?.map((doc) =>
+            selectedDocIds.includes(doc._id)
+              ? { ...doc, isVerified: true }
+              : doc
+          );
+
+          const updatedHiredDocs = prev.hired_docs?.map((doc) =>
+            selectedDocIds.includes(doc._id)
+              ? { ...doc, isVerified: true }
+              : doc
+          );
+
+          return {
+            ...prev,
+            documents: updatedDocuments,
+            hired_docs: updatedHiredDocs,
+          };
+        });
+
+        // Clear document checklist
+        setDocumentChecklist({ selectAll: false });
+
+        // Refresh candidates list
+        await fetchAllData();
+      } else {
+        throw new Error(response.data.message || "Failed to update documents");
+      }
+    } catch (error: any) {
+      console.error("Error marking documents as verified:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to mark documents as verified";
+      toast.error(errorMessage);
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
 
   // Submit Feedback Handler
   const submitFeedback = async () => {
@@ -1602,185 +1611,249 @@ const handleMarkVerified = async () => {
                 </CardContent>
               </Card>
 
-            {/* Documents Section - Enhanced with Verification */}
-{selectedCandidate.documents && selectedCandidate.documents?.length > 0 && (
-  <Card>
-    <CardHeader>
-      <div className="flex items-center justify-between">
-        <CardTitle>Documents</CardTitle>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {([...selectedCandidate.documents,...selectedCandidate.hired_docs]).filter(doc => doc.isVerified).length } / {selectedCandidate.documents.length + selectedCandidate.hired_docs.length} Verified
-          </Badge>
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent>
-      {/* Mark Verified Button */}
-      <div className="mb-4 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            checked={documentChecklist.selectAll}
-            onCheckedChange={(checked) => {
-              const allDocIds = selectedCandidate.documents.map(doc => doc._id);
-              if (checked) {
-                const newChecklist = { selectAll: true };
-                allDocIds.forEach(id => newChecklist[id] = true);
-                setDocumentChecklist(newChecklist);
-              } else {
-                setDocumentChecklist({ selectAll: false });
-              }
-            }}
-          />
-          <Label className="text-sm font-medium">Select All</Label>
-        </div>
-        
-        <Button
-          onClick={handleMarkVerified}
-          disabled={savingChecklist || Object.keys(documentChecklist).filter(key => key !== 'selectAll' && documentChecklist[key]).length === 0}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          {savingChecklist ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Marking Verified...
-            </>
-          ) : (
-            <>✓ Mark Selected as Verified</>
-          )}
-        </Button>
-      </div>
+              {/* Documents Section - Enhanced with Verification */}
+              {selectedCandidate.documents &&
+                selectedCandidate.documents?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Documents</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {
+                              [
+                                ...selectedCandidate.documents,
+                                ...selectedCandidate.hired_docs,
+                              ].filter((doc) => doc.isVerified).length
+                            }{" "}
+                            /{" "}
+                            {selectedCandidate.documents.length +
+                              selectedCandidate.hired_docs.length}{" "}
+                            Verified
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Mark Verified Button */}
+                      <div className="mb-4 flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={documentChecklist.selectAll}
+                            onCheckedChange={(checked) => {
+                              const allDocIds = selectedCandidate.documents.map(
+                                (doc) => doc._id
+                              );
+                              if (checked) {
+                                const newChecklist = { selectAll: true };
+                                allDocIds.forEach(
+                                  (id) => (newChecklist[id] = true)
+                                );
+                                setDocumentChecklist(newChecklist);
+                              } else {
+                                setDocumentChecklist({ selectAll: false });
+                              }
+                            }}
+                          />
+                          <Label className="text-sm font-medium">
+                            Select All
+                          </Label>
+                        </div>
 
-      {/* Documents List View */}
-      <div className="space-y-4">
-        {[
-          ...(selectedCandidate.documents || []),
-          ...(selectedCandidate.hired_docs || []),
-        ].map((doc) => {
-          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.document_url);
-          const isPDF = /\.pdf$/i.test(doc.document_url);
-          const pdfThumbUrl = isPDF
-            ? doc.document_url
-                .replace("/upload/", "/upload/pg_1/")
-                .replace(/\.pdf$/i, ".jpg")
-            : null;
+                        <Button
+                          onClick={handleMarkVerified}
+                          disabled={
+                            savingChecklist ||
+                            Object.keys(documentChecklist).filter(
+                              (key) =>
+                                key !== "selectAll" && documentChecklist[key]
+                            ).length === 0
+                          }
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {savingChecklist ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Marking Verified...
+                            </>
+                          ) : (
+                            <>✓ Mark Selected as Verified</>
+                          )}
+                        </Button>
+                      </div>
 
-          return (
-            <div
-              key={doc._id}
-              className={`border rounded-lg p-4 ${
-                doc.isVerified 
-                  ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
-                  : 'bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={documentChecklist[doc._id] || false}
-                    onCheckedChange={(checked) => {
-                      setDocumentChecklist(prev => ({
-                        ...prev,
-                        [doc._id]: checked,
-                        selectAll: false // Uncheck select all when individual items are changed
-                      }));
-                    }}
-                  />
-                  
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-medium capitalize">
-                      {doc.document_type}
-                    </h3>
-                    
-                    {/* Verification Status Badge */}
-                    <Badge 
-                      className={
-                        doc.isVerified
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                      }
-                    >
-                      {doc.isVerified ? "✓ Verified" : "⏳ Pending"}
-                    </Badge>
-                  </div>
-                </div>
+                      {/* Documents List View */}
+                      <div className="space-y-4">
+                        {[
+                          ...(selectedCandidate.documents || []),
+                          ...(selectedCandidate.hired_docs || []),
+                        ].map((doc) => {
+                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(
+                            doc.document_url
+                          );
+                          const isPDF = /\.pdf$/i.test(doc.document_url);
+                          const pdfThumbUrl = isPDF
+                            ? doc.document_url
+                                .replace("/upload/", "/upload/pg_1/")
+                                .replace(/\.pdf$/i, ".jpg")
+                            : null;
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => copyToClipboard(doc.document_url, doc._id, e)}
-                    title="Copy document link"
-                  >
-                    {copiedDocId === doc._id ? (
-                      <Check className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-gray-600" />
-                    )}
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(doc.document_url, "_blank")}
-                    title="View document"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+                          return (
+                            <div
+                              key={doc._id}
+                              className={`border rounded-lg p-4 ${
+                                doc.isVerified
+                                  ? "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800"
+                                  : "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    checked={
+                                      documentChecklist[doc._id] || false
+                                    }
+                                    onCheckedChange={(checked) => {
+                                      setDocumentChecklist((prev) => {
+                                        const newState: Record<
+                                          string,
+                                          boolean
+                                        > = {
+                                          ...prev,
+                                          [doc._id]: checked as boolean, // Ensure it's boolean
+                                          selectAll: false,
+                                        };
+                                        return newState;
+                                      });
+                                    }}
+                                  />
 
-              {/* Document Preview */}
-              <div className="flex items-start gap-4">
-                <div className="w-24 h-32 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
-                  {isImage ? (
-                    <img
-                      src={doc.document_url}
-                      alt={doc.document_type}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : isPDF ? (
-                    <img
-                      src={pdfThumbUrl!}
-                      alt={`${doc.document_type} preview`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/96x128?text=PDF";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
-                      <FileText className="w-8 h-8 mb-1" />
-                      <span className="text-xs">Doc</span>
-                    </div>
-                  )}
-                </div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-base font-medium capitalize">
+                                      {doc.document_type}
+                                    </h3>
 
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p><span className="font-medium">Type:</span> {doc.document_type}</p>
-                    <p><span className="font-medium">Status:</span> 
-                      <span className={doc.isVerified ? "text-green-600" : "text-yellow-600"}>
-                        {doc.isVerified ? " Verified" : " Pending Verification"}
-                      </span>
-                    </p>
-                    <p className="truncate">
-                      <span className="font-medium">URL:</span> 
-                      <span className="text-xs ml-1">{doc.document_url}</span>
-                    </p>
-                    {doc.uploaded_at && (
-                      <p><span className="font-medium">Uploaded:</span> {formatDate(doc.uploaded_at)}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </CardContent>
-  </Card>
-)}
+                                    {/* Verification Status Badge */}
+                                    <Badge
+                                      className={
+                                        doc.isVerified
+                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                                      }
+                                    >
+                                      {doc.isVerified
+                                        ? "✓ Verified"
+                                        : "⏳ Pending"}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) =>
+                                      copyToClipboard(
+                                        doc.document_url,
+                                        doc._id,
+                                        e
+                                      )
+                                    }
+                                    title="Copy document link"
+                                  >
+                                    {copiedDocId === doc._id ? (
+                                      <Check className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                      <Copy className="w-4 h-4 text-gray-600" />
+                                    )}
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      window.open(doc.document_url, "_blank")
+                                    }
+                                    title="View document"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Document Preview */}
+                              <div className="flex items-start gap-4">
+                                <div className="w-24 h-32 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
+                                  {isImage ? (
+                                    <img
+                                      src={doc.document_url}
+                                      alt={doc.document_type}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : isPDF ? (
+                                    <img
+                                      src={pdfThumbUrl!}
+                                      alt={`${doc.document_type} preview`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.src =
+                                          "https://via.placeholder.com/96x128?text=PDF";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                                      <FileText className="w-8 h-8 mb-1" />
+                                      <span className="text-xs">Doc</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                    <p>
+                                      <span className="font-medium">Type:</span>{" "}
+                                      {doc.document_type}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">
+                                        Status:
+                                      </span>
+                                      <span
+                                        className={
+                                          doc.isVerified
+                                            ? "text-green-600"
+                                            : "text-yellow-600"
+                                        }
+                                      >
+                                        {doc.isVerified
+                                          ? " Verified"
+                                          : " Pending Verification"}
+                                      </span>
+                                    </p>
+                                    <p className="truncate">
+                                      <span className="font-medium">URL:</span>
+                                      <span className="text-xs ml-1">
+                                        {doc.document_url}
+                                      </span>
+                                    </p>
+                                    {doc.uploaded_at && (
+                                      <p>
+                                        <span className="font-medium">
+                                          Uploaded:
+                                        </span>{" "}
+                                        {formatDate(doc.uploaded_at)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Company References Section */}
               {selectedCandidate.company_references &&
@@ -3583,4 +3656,4 @@ const handleMarkVerified = async () => {
   );
 };
 
-export default HRHome;
+export default HRHome;  

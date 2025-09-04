@@ -33,6 +33,13 @@ import type { RootState } from "@/app/store";
 import ManagerStage from "./ManagerStage";
 import ManagerAllCandidates from "./ManagerAllCandidates";
 
+interface CandidateDocument {
+  _id: string;
+  document_type: string;
+  document_url: string;
+  isVerified: boolean;
+  uploaded_at?: string; // Optional for consistency with other components
+}
 interface InterviewType {
   _id: string;
   title?: string;
@@ -54,6 +61,7 @@ interface InterviewType {
     created_at: string;
   }>;
 }
+
 
 interface ManagerCandidate {
   _id: string;
@@ -84,16 +92,8 @@ interface ManagerCandidate {
     _id: string;
   };
   portfolio_url?: string | null;
-  documents?: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-  }>;
-  hired_docs?: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-  }>;
+  documents?: CandidateDocument[];
+  hired_docs?: CandidateDocument[];
   assessments?: Array<{
     _id: string;
     assigned_by: {
@@ -173,16 +173,8 @@ interface DetailedCandidate {
     _id: string;
   };
   portfolio_url?: string | null;
-  documents: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-  }>;
-  hired_docs: Array<{
-    _id: string;
-    document_type: string;
-    document_url: string;
-  }>;
+  documents: CandidateDocument[];
+  hired_docs: CandidateDocument[];
   hrQuestionnaire: Array<{
     _id: string;
     assigned_by: {
@@ -357,10 +349,13 @@ const ManagerDashboard: React.FC = () => {
 
       const allCandidatesData = candidatesRes.data.data || [];
       
-      const candidatesWithMetrics = allCandidatesData.map(candidate => ({
-        ...candidate,
-        progress_metrics: calculateProgressMetrics(candidate)
-      }));
+const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
+  ...candidate,
+  documents: normalizeDocuments(candidate.documents),   // ✅ normalize
+  hired_docs: normalizeDocuments(candidate.hired_docs), // ✅ normalize
+  progress_metrics: calculateProgressMetrics(candidate),
+}));
+
       
       const managerStageCandidates = candidatesWithMetrics.filter(
         candidate => candidate.current_stage === "manager"
@@ -398,22 +393,23 @@ const ManagerDashboard: React.FC = () => {
       
       if (response.data.success) {
         // Create a compatible ManagerCandidate object for calculateProgressMetrics
-        const managerCandidateForMetrics: ManagerCandidate = {
-          ...response.data.data,
-          documents: response.data.data.documents || [],
-          hired_docs: response.data.data.hired_docs || [],
-          hrQuestionnaire: response.data.data.hrQuestionnaire?.map(q => q._id) || [],
-          stage_history: response.data.data.stage_history?.map(s => s._id) || [],
-          interviews: response.data.data.interviews || []
-        };
-
-        setDetailedCandidates(prev => ({
-          ...prev,
-          [candidateId]: {
-            ...response.data.data,
-            progress_metrics: calculateProgressMetrics(managerCandidateForMetrics)
-          }
-        }));
+  const managerCandidateForMetrics: ManagerCandidate = {
+    ...response.data.data,
+    documents: normalizeDocuments(response.data.data.documents),   // ✅ normalize
+    hired_docs: normalizeDocuments(response.data.data.hired_docs), // ✅ normalize
+    hrQuestionnaire: response.data.data.hrQuestionnaire?.map((q) => q._id) || [],
+    stage_history: response.data.data.stage_history?.map((s) => s._id) || [],
+    interviews: response.data.data.interviews || [],
+  };
+  setDetailedCandidates((prev) => ({
+    ...prev,
+    [candidateId]: {
+      ...response.data.data,
+      documents: normalizeDocuments(response.data.data.documents),   // ✅ normalize
+      hired_docs: normalizeDocuments(response.data.data.hired_docs), // ✅ normalize
+      progress_metrics: calculateProgressMetrics(managerCandidateForMetrics),
+    },
+  }));
       }
     } catch (error) {
       console.error("Failed to fetch candidate details:", error);
@@ -442,6 +438,16 @@ const ManagerDashboard: React.FC = () => {
       toast.error("Failed to copy link");
     }
   };
+  // Normalize docs to always include isVerified
+  const normalizeDocuments = (
+    docs: any[] = []
+  ): Array<{ _id: string; document_type: string; document_url: string; isVerified: boolean }> => {
+    return docs.map((doc) => ({
+      ...doc,
+      isVerified: doc.isVerified !== undefined ? doc.isVerified : false,
+    }));
+  };
+
 
   // Action handler
   const handleQuickAction = async (): Promise<void> => {
