@@ -928,7 +928,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             <p className="text-red-500 text-sm ml-4">{errors['salary_documents']}</p>
           )}
 
-          {/* Identity Documents Section */}
+          {/* Identity Document Section */}
           {renderDocumentSection(
             IDENTITY_DOCUMENTS,
             "Identity & Address Proof",
