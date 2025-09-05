@@ -13,7 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Check, MessageSquare, Phone, Mail, Trash2, Plus } from "lucide-react";
+import {
+  Copy,
+  Check,
+  MessageSquare,
+  Phone,
+  Mail,
+  Trash2,
+  Plus,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -328,6 +336,8 @@ const HRHome = () => {
   >({});
   const [savingChecklist, setSavingChecklist] = useState(false);
 
+  
+
   interface KeyValuePair {
     id: string;
     key: string;
@@ -348,6 +358,9 @@ const HRHome = () => {
   ]);
 
   const [newKey, setNewKey] = useState("");
+
+  //hr Remarks
+  const [hrRemark,setHrRemark]=useState("");
 
   // Add new key-value pair
   const addNewPair = () => {
@@ -390,7 +403,8 @@ const HRHome = () => {
     if (e.key === "Enter") {
       addNewPair();
     }
-  };
+  }
+
 
   // Add this function inside your HRHome component
   const handleMarkVerified = async () => {
@@ -887,6 +901,8 @@ const HRHome = () => {
       setLoadingCandidate(true);
       const response = await api.get(`/org/candidates/${candidateId}`);
       setSelectedCandidate(response.data.data);
+      // Load calling details for this candidate
+      await loadCallingDetails(candidateId);
       setDialogOpen(true);
     } catch (error) {
       console.error("Failed to fetch candidate details:", error);
@@ -966,6 +982,146 @@ const HRHome = () => {
       day: "numeric",
     });
   };
+
+  //for calling details
+  // Function to submit calling details
+  const handleSubmitCallingDetails = async () => {
+    if (!selectedCandidate) {
+      toast.error("No candidate selected");
+      return;
+    }
+
+    // Filter out empty key-value pairs and prepare payload
+    const callingDetails = keyValuePairs
+      .filter((pair) => pair.key.trim() !== "" && pair.value.trim() !== "")
+      .map(({ key, value }) => ({ key: key.trim(), value: value.trim() }));
+
+    if (callingDetails.length === 0) {
+      toast.error("Please add at least one calling detail before submitting");
+      return;
+    }
+
+    try {
+      setSavingChecklist(true); // Reuse existing loading state or create new one
+      const response = await api.post("/org/calling-details", {
+        candidateId: selectedCandidate._id,
+        details: callingDetails,
+        hrRemarks:hrRemark//todo 
+      });
+
+      if (response.data.success) {
+        toast.success("Calling details submitted successfully!");
+      } else {
+        toast.error(
+          response.data.message || "Failed to submit calling details"
+        );
+      }
+    } catch (error: any) {
+      console.error("Error submitting calling details:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to submit calling details";
+      toast.error(errorMessage);
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
+  // Function to load existing calling details
+ const loadCallingDetails = async (candidateId: string) => {
+  try {
+    const response = await api.get(`/org/calling-details/${candidateId}`);
+    console.log(response.data);
+    
+    if (
+      response.data.success &&
+      response.data.data &&
+      Array.isArray(response.data.data.details)
+    ) {
+      // Transform API data into KeyValuePair format
+      const loadedPairs: KeyValuePair[] = response.data.data.details.map(
+        (item: any, index: number) => ({
+          id: `loaded-${index}-${Date.now()}`,
+          key: item.key || "",
+          value: item.value || "",
+        })
+      );
+
+      // Add default fields if no data exists, or merge with existing
+      const defaultFields = [
+        { id: "1", key: "Current CTC", value: "" },
+        { id: "2", key: "In Hand Salary", value: "" },
+        { id: "3", key: "Expected CTC", value: "" },
+        { id: "4", key: "Reason for Change", value: "" },
+        { id: "5", key: "Notice Period", value: "" },
+        { id: "6", key: "Total Experience", value: "" },
+        { id: "7", key: "Relevant Experience", value: "" },
+        { id: "8", key: "Current Location", value: "" },
+        { id: "9", key: "Preferred Location", value: "" },
+        { id: "10", key: "Availability for Interview", value: "" },
+      ];
+
+      // Merge loaded data with default fields, prioritizing loaded data
+      const mergedPairs = defaultFields.map((defaultField) => {
+        const loadedPair = loadedPairs.find(
+          (loaded) => loaded.key === defaultField.key
+        );
+        return loadedPair || defaultField;
+      });
+
+      // Add any additional loaded pairs that don't match default fields
+      const additionalPairs = loadedPairs.filter(
+        (loaded) =>
+          !defaultFields.some(
+            (defaultField) => defaultField.key === loaded.key
+          )
+      );
+
+      setKeyValuePairs([...mergedPairs, ...additionalPairs]);
+
+      // Set HR remarks if present
+      if (response.data.data.hrRemarks) {
+        setHrRemark(response.data.data.hrRemarks);
+      }
+    } else {
+      // If no data exists, reset to default fields and clear HR remarks
+      const defaultFields = [
+        { id: "1", key: "Current CTC", value: "" },
+        { id: "2", key: "In Hand Salary", value: "" },
+        { id: "3", key: "Expected CTC", value: "" },
+        { id: "4", key: "Reason for Change", value: "" },
+        { id: "5", key: "Notice Period", value: "" },
+        { id: "6", key: "Total Experience", value: "" },
+        { id: "7", key: "Relevant Experience", value: "" },
+        { id: "8", key: "Current Location", value: "" },
+        { id: "9", key: "Preferred Location", value: "" },
+        { id: "10", key: "Availability for Interview", value: "" },
+      ];
+      setKeyValuePairs(defaultFields);
+      setHrRemark("");
+    }
+  } catch (error: any) {
+    console.error("Error loading calling details:", error);
+    // Don't show error toast for loading as it might not exist for new candidates
+    // Reset to default state on error
+    const defaultFields = [
+      { id: "1", key: "Current CTC", value: "" },
+      { id: "2", key: "In Hand Salary", value: "" },
+      { id: "3", key: "Expected CTC", value: "" },
+      { id: "4", key: "Reason for Change", value: "" },
+      { id: "5", key: "Notice Period", value: "" },
+      { id: "6", key: "Total Experience", value: "" },
+      { id: "7", key: "Relevant Experience", value: "" },
+      { id: "8", key: "Current Location", value: "" },
+      { id: "9", key: "Preferred Location", value: "" },
+      { id: "10", key: "Availability for Interview", value: "" },
+    ];
+    setKeyValuePairs(defaultFields);
+    setHrRemark("");
+  }
+};
+
 
   // Effects
   useEffect(() => {
@@ -1694,6 +1850,16 @@ const HRHome = () => {
                         </Button>
                       </div>
                     </div>
+                    {/* HR Remarks */}
+                      <div className="border-t pt-4">
+                        <h2>Calling Remarks</h2>
+                        <Input
+                          value={hrRemark}
+                          onChange={(e) => setHrRemark(e.target.value)}
+                          placeholder="Enter Remarks here..."
+                          className="flex-1 text-sm"
+                        />
+                      </div>
 
                     {/* Quick Stats */}
                     <div className="border-t pt-4">
@@ -1726,6 +1892,20 @@ const HRHome = () => {
                         </div>
                       </div>
                     </div>
+                    <Button
+                      className="bg-green-400 hover:bg-green-500"
+                      onClick={handleSubmitCallingDetails}
+                      disabled={savingChecklist}
+                    >
+                      {savingChecklist ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit Details"
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
