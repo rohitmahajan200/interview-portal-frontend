@@ -1001,8 +1001,8 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                 Social Media Handles - Background Verification
               </CardTitle>
               <CardDescription className="text-indigo-700">
-                As part of background checking process, please provide your social media handles. 
-                Non-disclosure of the same would be termed as non-compliance.
+                Please provide your social media handles. 
+              
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -8,6 +8,7 @@ import {
   FileText,
   Plug,
   LayoutDashboard,
+  Briefcase,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
@@ -41,11 +42,12 @@ export function AdminSidebar(
   });
 
   /*  IMPORTANT:  use one-word titles that match the slice keys
-      so that you can ALSO fall back to the default NavMain logic
-      (lower-casing / slugging the title) if ever needed.          */
+  so that you can ALSO fall back to the default NavMain logic
+  (lower-casing / slugging the title) if ever needed.          */
   const adminNav = [
     navItem("home",         LayoutDashboard, "home"),
     navItem("users",        Users,           "users"),
+    navItem("Jobs", Briefcase,  "JobManagement"),
     navItem("roles",        Shield,          "roles"),
     navItem("config",       Settings,        "config"),
     navItem("analytics",    BarChart3,       "analytics"),

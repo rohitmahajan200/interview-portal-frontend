@@ -9,7 +9,8 @@ export type AdminPage =
   | "config"
   | "analytics"
   | "audit"
-  | "integrations";
+  | "integrations"
+  | "JobManagement";
 
 interface AdminViewState {
   currentRole: AdminViewRole;

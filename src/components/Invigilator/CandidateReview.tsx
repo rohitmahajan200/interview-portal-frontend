@@ -140,6 +140,7 @@ const AssessmentReview = () => {
   const [statistics, setStatistics] = useState<AssessmentStatistics | null>(null);
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({});
   const [stageUpdateModal, setStageUpdateModal] = useState(false);
+  const [editingResponse, setEditingResponse] = useState<string | null>(null);
   
   // Rejection related state
   const [isRejecting, setIsRejecting] = useState(false);
@@ -154,13 +155,14 @@ const AssessmentReview = () => {
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
   const fetchStatistics = async () => {
-    try {
-      const response = await api.get<StatisticsAPIResponse>('/org/assessment/statistics');
-      setStatistics(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch statistics:', error);
-    }
-  };
+  try {
+    const response = await api.get('/org/assessment-responses/statistics'); // ✅ Correct endpoint
+    setStatistics(response.data.data);
+  } catch (error) {
+    console.error('Failed to fetch statistics:', error);
+  }
+};
+
 
   const triggerAIEvaluation = async (responseId: string, event?: React.MouseEvent) => {
     if (event) event.stopPropagation();
@@ -232,29 +234,29 @@ const AssessmentReview = () => {
   };
 
   const fetchAssessmentsList = async () => {
-    setLoadingList(true);
-    try {
-      const response = await api.get('/org/assessment-responses');
-      setAssessmentsList(response.data.data || []);
-    } catch (error) {
-      console.error('Failed to fetch assessments list:', error);
-    } finally {
-      setLoadingList(false);
-    }
-  };
+  setLoadingList(true);
+  try {
+    const response = await api.get('/org/assessment-responses'); // ✅ Correct endpoint
+    setAssessmentsList(response.data.data || []);
+  } catch (error) {
+    console.error('Failed to fetch assessments list:', error);
+  } finally {
+    setLoadingList(false);
+  }
+};
 
-  const fetchAssessmentDetail = async (id: string) => {
-    setLoadingDetail(true);
-    try {
-      const response = await api.get(`/org/assessment-responses/${id}`);
-      setSelectedAssessment(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch assessment details:', error);
-      setSelectedAssessment(null);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
+const fetchAssessmentDetail = async (id: string) => {
+  setLoadingDetail(true);
+  try {
+    const response = await api.get(`/org/assessment-responses/${id}`); // ✅ Correct endpoint
+    setSelectedAssessment(response.data.data);
+  } catch (error) {
+    console.error('Failed to fetch assessment details:', error);
+    setSelectedAssessment(null);
+  } finally {
+    setLoadingDetail(false);
+  }
+};
 
   const openAssessmentDialog = async (id: string) => {
     setIsDialogOpen(true);
@@ -341,6 +343,48 @@ const AssessmentReview = () => {
         return <p className="whitespace-pre-wrap text-sm">{String(answer)}</p>;
     }
   };
+
+  const updateResponseReview = async (responseId: string, questionId: string, updates: {
+  flagged?: boolean;
+  ai_score?: number;
+  remarks?: string;
+}) => {
+  setLoadingActions(prev => ({ ...prev, [`review_${questionId}`]: true }));
+  try {
+    const response = await api.patch(`/org/assessment-responses/${responseId}/review`, {
+      questionId,
+      ...updates
+    });
+    
+    if (response.data.success) {
+      // Update local state with the new values
+      setSelectedAssessment(prev => {
+        if (!prev) return prev;
+        
+        const updatedResponses = prev.responses.map(r => {
+          if (r.question_id === questionId) {
+            return {
+              ...r,
+              ...response.data.data.updatedFields
+            };
+          }
+          return r;
+        });
+        
+        return { ...prev, responses: updatedResponses };
+      });
+      
+      toast.success('Review updated successfully');
+      setEditingResponse(null);
+    }
+  } catch (error: any) {
+    console.error('Failed to update review:', error);
+    toast.error(error?.response?.data?.message || 'Failed to update review');
+  } finally {
+    setLoadingActions(prev => ({ ...prev, [`review_${questionId}`]: false }));
+  }
+};
+
 
   const getScoreColor = (score: number, maxScore: number) => {
     const percentage = (score / maxScore) * 100;
@@ -755,7 +799,59 @@ const AssessmentReview = () => {
                                     </p>
                                   </div>
                                 )}
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditingResponse(editingResponse === response.question_id ? null : response.question_id)}
+                                      // disabled={response.question.input_type === 'audio'}
+                                    >
+                                      {editingResponse === response.question_id ? 'Cancel' : 'Review'}
+                                    </Button>
+                                    
+                                  </div>
                               </div>
+                                {editingResponse === response.question_id && (
+                                  <div className="bg-muted/30 p-3 rounded-lg border space-y-3">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <label className="text-sm font-medium">Score (0-{response.max_score})</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max={response.max_score}
+                                          defaultValue={response.ai_score || 0}
+                                          className="w-full px-3 py-1 border rounded text-sm"
+                                          onBlur={(e) => {
+                                            const score = parseInt(e.target.value);
+                                            if (score >= 0 && score <= response.max_score) {
+                                              updateResponseReview(selectedAssessment!._id, response.question_id, { ai_score: score });
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          id={`flag-${response.question_id}`}
+                                          defaultChecked={response.flagged}
+                                          onChange={(e) => updateResponseReview(selectedAssessment!._id, response.question_id, { flagged: e.target.checked })}
+                                        />
+                                        <label htmlFor={`flag-${response.question_id}`} className="text-sm">Flag for review</label>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-medium">Remarks</label>
+                                      <textarea
+                                        defaultValue={response.remarks || ''}
+                                        placeholder="Add your feedback..."
+                                        className="w-full px-3 py-2 border rounded text-sm"
+                                        rows={3}
+                                        onBlur={(e) => updateResponseReview(selectedAssessment!._id, response.question_id, { remarks: e.target.value })}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                           ))}
                         </div>

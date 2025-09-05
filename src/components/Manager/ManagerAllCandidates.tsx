@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { StageCircle } from "../ui/StageCircle";
 import toast from "react-hot-toast";
+import HRCallingDetailsDisplay from "../HRCallingDetailsDisplay";
 
 interface CandidateDocument {
   _id: string;
@@ -44,7 +45,6 @@ interface CandidateDocument {
   isVerified: boolean;
   uploaded_at?: string; // Optional for consistency with other components
 }
-
 
 interface ManagerCandidate {
   _id: string;
@@ -306,7 +306,6 @@ interface DetailedCandidate {
     youtube?: string;
   };
 }
-
 
 interface ManagerAllCandidatesProps {
   allCandidates: ManagerCandidate[];
@@ -923,6 +922,19 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                             </div>
                           </div>
                         )}
+
+                      {/* HR Calling Details */}
+                      {/* <div className="lg:col-span-2">
+                        <HRCallingDetailsDisplay
+                          candidateId={candidateData._id}
+                          candidateName={`${candidateData.first_name} ${candidateData.last_name}`}
+                        />
+                      </div> */}
+                      <HRCallingDetailsDisplay
+                        candidateId={candidate._id}
+                        candidateName={`${candidate.first_name} ${candidate.last_name}`}
+                        userRole="manager" // Manager gets read-only access
+                      />
 
                       {/* Documents */}
                       {candidateData.documents &&

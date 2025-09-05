@@ -25,6 +25,7 @@ import ReportsAnalytics from "./ReportsAnalytics";
 import AuditLogs from "./AuditLogs";
 import PlatformIntegration from "./PlatformIntegration";
 import ThemeToggle from "@/components/themeToggle";
+import JobManagement from "./JobManagement";
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
@@ -67,6 +68,8 @@ export default function AdminDashboard() {
         return <AuditLogs />;
       case "integrations":
         return <PlatformIntegration />;
+      case "JobManagement":
+        return <JobManagement />
       default:
         return <AdminHome />;
     }
