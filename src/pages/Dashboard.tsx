@@ -1,8 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
@@ -12,8 +9,9 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { setUser } from "@/features/Candidate/auth/authSlice";
+import { setNotifications } from "@/features/Candidate/notifications/notificationSlice";
 import api from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Importing page views
@@ -29,15 +27,40 @@ import DocumentUploadForm from "./DocumentUploadForm";
 import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle, FileText, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import NotificationsPage from "./NotificationsPage";
+
+interface CandidateData {
+  _id: string;
+  status: string;
+  hired_docs_present?: boolean;
+  [key: string]: unknown;
+}
 
 export default function Page() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
-  const [candidateData, setCandidateData] = useState<any>(null);
+  const [candidateData, setCandidateData] = useState<CandidateData | null>(
+    null
+  );
   const [showDocumentBanner, setShowDocumentBanner] = useState(false);
   const [documentsSubmitted, setDocumentsSubmitted] = useState(false);
+
+  // 🔔 Ref for notification polling
+  const notificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 🔔 Fetch notifications function
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await api.get("/candidates/notifications");
+      if (res.data.success) {
+        dispatch(setNotifications(res.data.data || []));
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchCandidate = async () => {
@@ -47,10 +70,10 @@ export default function Page() {
         if (res.data.user) {
           dispatch(setUser(res.data.user));
           setCandidateData(res.data.user);
-          
+
           // Check if candidate is hired and needs to upload documents
           const candidate = res.data.user;
-          if (candidate.status === 'hired') {
+          if (candidate.status === "hired") {
             if (!candidate.hired_docs_present) {
               setShowDocumentBanner(true);
               setDocumentsSubmitted(false);
@@ -59,6 +82,15 @@ export default function Page() {
               setShowDocumentBanner(false);
             }
           }
+
+          // 🔔 Fetch notifications initially
+          await fetchNotifications();
+
+          // 🔔 Start polling every 1 min
+          notificationIntervalRef.current = setInterval(
+            fetchNotifications,
+            60000
+          );
         }
       } catch (error) {
         console.error("Failed to fetch candidate profile:", error);
@@ -69,7 +101,14 @@ export default function Page() {
     };
 
     fetchCandidate();
-  }, [dispatch, navigate]);
+
+    // Cleanup interval on unmount
+    return () => {
+      if (notificationIntervalRef.current) {
+        clearInterval(notificationIntervalRef.current);
+      }
+    };
+  }, [dispatch, navigate, fetchNotifications]);
 
   const currentView = useSelector((state: RootState) => state.view.currentView);
 
@@ -89,8 +128,7 @@ export default function Page() {
       }
       setShowDocumentUpload(false);
       setShowDocumentBanner(false);
-      
-      // Show success message
+
       alert("🎉 Documents submitted successfully!");
     } catch (error) {
       console.error("Failed to refresh candidate data:", error);
@@ -111,16 +149,11 @@ export default function Page() {
   };
 
   const renderView = (currentView: string) => {
-    const viewProps = {
-      candidateData,
-      showDocumentUpload: showDocumentBanner,
-      onOpenDocumentForm: handleOpenDocumentForm,
-      documentsSubmitted
-    };
-
     switch (currentView) {
       case "home":
         return <Home />;
+      case "notifications":
+        return <NotificationsPage />;
       case "assessments":
         return <Assessments />;
       case "interviews":
@@ -151,7 +184,7 @@ export default function Page() {
       {/* Left navigation sidebar */}
       <AppSidebar />
 
-      {/* Main content wrapper */}     
+      {/* Main content wrapper */}
       <SidebarInset>
         {/* Top header section */}
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
@@ -190,7 +223,8 @@ export default function Page() {
                       🎉 Congratulations! You've been hired!
                     </span>
                     <p className="text-green-700 dark:text-green-300 mt-1">
-                      Complete your onboarding by uploading the required documents.
+                      Complete your onboarding by uploading the required
+                      documents.
                     </p>
                   </div>
                   <Button
@@ -216,7 +250,7 @@ export default function Page() {
         )}
 
         {/* Documents Submitted Success Banner */}
-        {documentsSubmitted && candidateData?.status === 'hired' && (
+        {documentsSubmitted && candidateData?.status === "hired" && (
           <div className="mx-4 mt-4">
             <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
               <CheckCircle className="h-4 w-4 text-blue-600" />

@@ -9,6 +9,7 @@ export type AdminPage =
   | "config"
   | "analytics"
   | "audit"
+  | "notifications" // Add this line
   | "integrations"
   | "JobManagement";
 

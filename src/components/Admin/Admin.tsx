@@ -1,8 +1,5 @@
 import { AdminSidebar } from "./AdminSidebar";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
@@ -12,26 +9,43 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { setUser } from "@/features/Org/Auth/orgAuthSlice";
+import { setAdminNotifications } from "@/features/Org/Notifications/AdminNotificationSlice"; // Changed import
 import api from "@/lib/api";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useCallback } from "react";
 
-// Importing admin page views
+// Admin page views
 import AdminHome from "./AdminHome";
 import UserManagement from "./UserManagement";
 import RolePermissions from "./RolePermissions";
 import SystemConfiguration from "./SystemConfiguration";
 import ReportsAnalytics from "./ReportsAnalytics";
 import AuditLogs from "./AuditLogs";
-import PlatformIntegration from "./PlatformIntegration";
+import AdminNotifications from "./AdminNotifications"; // Changed from OrgNotifications
 import ThemeToggle from "@/components/themeToggle";
 import JobManagement from "./JobManagement";
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const currentView = useSelector((state: RootState) => state.adminView.currentAdminPage);
-  const orgUser = useSelector((state: RootState) => state.orgAuth.user);
+  const currentView = useSelector(
+    (state: RootState) => state.adminView.currentAdminPage
+  );
+
+  // Updated to fetch admin notifications
+  const fetchAdminNotifications = useCallback(async () => {
+    try {
+      const response = await api.get("/org/admin/notifications"); // Changed endpoint
+      if (response.data?.success) {
+        dispatch(
+          setAdminNotifications({
+            notificationsByRole: response.data.data.notificationsByRole,
+            roleBreakdown: response.data.data.roleBreakdown,
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch admin notifications:", error);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchOrgUser = async () => {
@@ -46,14 +60,23 @@ export default function AdminDashboard() {
     };
 
     fetchOrgUser();
-  }, [dispatch, navigate]);
+    fetchAdminNotifications(); // Initial fetch
+  }, [dispatch, fetchAdminNotifications]);
+
+  // Periodic notification fetching (every 2 minutes for admin)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAdminNotifications();
+    }, 120000); // Increased to 2 minutes for admin
+    return () => clearInterval(interval);
+  }, [fetchAdminNotifications]);
 
   useEffect(() => {
     localStorage.setItem("adminCurrentView", currentView);
   }, [currentView]);
 
-  const renderAdminView = (currentView: string) => {
-    switch (currentView) {
+  const renderAdminView = (view: string) => {
+    switch (view) {
       case "home":
         return <AdminHome />;
       case "users":
@@ -66,10 +89,10 @@ export default function AdminDashboard() {
         return <ReportsAnalytics />;
       case "audit":
         return <AuditLogs />;
-      case "integrations":
-        return <PlatformIntegration />;
+      case "notifications":
+        return <AdminNotifications />; // Changed component
       case "JobManagement":
-        return <JobManagement />
+        return <JobManagement />;
       default:
         return <AdminHome />;
     }
@@ -78,12 +101,8 @@ export default function AdminDashboard() {
   return (
     <div className="h-full flex overflow-hidden">
       <SidebarProvider>
-        {/* Fixed Width Sidebar */}
         <AdminSidebar className="w-64 h-full flex-shrink-0" />
-        
-        {/* Main Content Area */}
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
-          {/* Fixed Header */}
           <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background dark:bg-gray-900">
             <div className="flex items-center gap-2 px-4 justify-between w-full">
               <div className="flex items-center gap-2 px-4">
@@ -104,8 +123,6 @@ export default function AdminDashboard() {
               <ThemeToggle />
             </div>
           </header>
-          
-          {/* Scrollable Content Area */}
           <div className="flex-1 overflow-y-auto p-6">
             {currentView ? renderAdminView(currentView) : null}
           </div>

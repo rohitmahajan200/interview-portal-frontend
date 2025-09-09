@@ -1,9 +1,6 @@
 // src/components/Manager/Manager.tsx
-import React, { useEffect } from "react";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
+import React, { useCallback, useEffect } from "react"; // Added useCallback
+import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
@@ -13,12 +10,14 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { setUser } from "@/features/Org/Auth/orgAuthSlice";
+import { setNotifications } from "@/features/Org/Notifications/orgNotificationSlice"; // Added import
 import api from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/themeToggle";
 import { ManagerSidebar } from "./ManagerSidebar";
 import ManagerDashboard from "./ManagerDashboard";
 import ManagerCalendar from "./ManagerCalendar";
+import ManagerNotifications from "./ManagerNotifications"; // Added import
 import SystemConfiguration from "./SystemConfiguration";
 
 const Manager: React.FC = () => {
@@ -29,7 +28,18 @@ const Manager: React.FC = () => {
     (state: RootState) => state.managerView.currentManagerPage
   );
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
-  const isAdmin = orgUser?.role === 'ADMIN';
+  const isAdmin = orgUser?.role === "ADMIN";
+
+  const fetchOrgNotifications = useCallback(async () => {
+    try {
+      const response = await api.get("/org/notifications");
+      if (response.data?.success) {
+        dispatch(setNotifications(response.data.data || []));
+      }
+    } catch (e) {
+      console.error("Failed to fetch org notifications:", e);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchOrgUser = async () => {
@@ -44,7 +54,8 @@ const Manager: React.FC = () => {
     };
 
     fetchOrgUser();
-  }, [dispatch, navigate]);
+    fetchOrgNotifications(); // Load notifications so badge shows
+  }, [dispatch, navigate, fetchOrgNotifications]);
 
   useEffect(() => {
     localStorage.setItem("managerCurrentView", currentView);
@@ -56,6 +67,8 @@ const Manager: React.FC = () => {
         return <ManagerDashboard />;
       case "manager-calendar":
         return <ManagerCalendar />;
+      case "notifications":
+        return <ManagerNotifications />;
       case "config":
         return <SystemConfiguration />;
       default:
@@ -82,7 +95,9 @@ const Manager: React.FC = () => {
                     <header className="px-1 rounded-xl">
                       <div className="flex items-center space-x-2">
                         <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                          {isAdmin ? 'Manager Portal - Admin View' : 'Manager Portal'}
+                          {isAdmin
+                            ? "Manager Portal - Admin View"
+                            : "Manager Portal"}
                         </span>
                         {isAdmin && (
                           <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
