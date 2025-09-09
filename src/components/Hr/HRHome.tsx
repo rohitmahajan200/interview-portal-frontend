@@ -18,9 +18,7 @@ import {
   Check,
   MessageSquare,
   Phone,
-  Mail,
-  Trash2,
-  Plus,
+  Mail
 } from "lucide-react";
 import {
   Table,
@@ -58,6 +56,10 @@ import { Label } from "@radix-ui/react-label";
 import { Textarea } from "../ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import HRCallingDetailsDisplay from "../HRCallingDetailsDisplay";
+import GloryDialog from "../GloryDialog";
+import GloryButton from "../GloryButton";
+import { useGlory } from "@/hooks/useGlory";
+import GloryDisplay from "../GloryDisplay";
 
 type StageHistory = {
   _id: string;
@@ -134,6 +136,15 @@ interface HRQuestionnaireFormData {
   days_to_complete: number;
 }
 
+// Updated Glory interfaces
+interface GloryRoleData {
+  graderId?: string;
+  graderName?: string;
+  graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+  grades: { [key: string]: string } | Map<string, string>;
+  gradedAt: string;
+}
+
 type Candidate = {
   _id: string;
   first_name: string;
@@ -158,6 +169,7 @@ type Candidate = {
       expInYears: string;
       salary: string;
       jobId: string;
+      gradingParameters: string[];
     };
   };
   current_stage:
@@ -214,7 +226,8 @@ type Candidate = {
     facebook?: string;
     youtube?: string;
   };
-
+  // Updated Glory field with role-based structure
+  glory?: { [role: string]: GloryRoleData };
   hrQuestionnaire?: {
     _id: string;
     status: string;
@@ -275,6 +288,23 @@ type Candidate = {
 };
 
 const HRHome = () => {
+  
+const {
+    gloryDialogOpen,
+    candidateForGlory,
+    gloryGrades,
+    selectedRole, // This will always be 'hr'
+    submittingGlory,
+    loadingGlory,
+    gradeOptions,
+    currentUser,
+    openGloryDialog,
+    closeGloryDialog,
+    handleGloryGradeChange,
+    submitGloryGrades,
+    getGradingParameters,
+  } = useGlory('hr');
+
   // Basic state
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
@@ -337,8 +367,6 @@ const HRHome = () => {
   >({});
   const [savingChecklist, setSavingChecklist] = useState(false);
 
-  
-
   interface KeyValuePair {
     id: string;
     key: string;
@@ -361,7 +389,7 @@ const HRHome = () => {
   const [newKey, setNewKey] = useState("");
 
   //hr Remarks
-  const [hrRemark,setHrRemark]=useState("");
+  const [hrRemark, setHrRemark] = useState("");
 
   // Add new key-value pair
   const addNewPair = () => {
@@ -404,8 +432,7 @@ const HRHome = () => {
     if (e.key === "Enter") {
       addNewPair();
     }
-  }
-
+  };
 
   // Add this function inside your HRHome component
   const handleMarkVerified = async () => {
@@ -657,6 +684,145 @@ const HRHome = () => {
       toast.error("Failed to reload data");
     }
   };
+
+  // Updated Glory helper functions
+  const renderGloryGrades = (glory: any) => {
+    if (!glory || (glory instanceof Map && glory.size === 0) || (typeof glory === 'object' && Object.keys(glory).length === 0)) {
+      return <span className="text-xs text-muted-foreground">No grades</span>;
+    }
+
+    // Convert Map to Object if needed
+    let gloryObj = glory;
+    if (glory instanceof Map) {
+      gloryObj = Object.fromEntries(glory);
+    }
+
+    // Get the first role that has grades to display in table
+    const firstRoleWithGrades = Object.entries(gloryObj).find(([, data]: [string, any]) => {
+      const grades = data?.grades instanceof Map ? Object.fromEntries(data.grades) : data?.grades || {};
+      return Object.keys(grades).length > 0;
+    });
+
+    if (!firstRoleWithGrades) {
+      return <span className="text-xs text-muted-foreground">No grades</span>;
+    }
+
+    const [role, roleData] = firstRoleWithGrades;
+    const typedRoleData = roleData as { grades?: Record<string, string> | Map<string, string> };
+    const grades = typedRoleData?.grades instanceof Map ? Object.fromEntries(typedRoleData.grades) : typedRoleData?.grades || {};
+    
+    // Show overall grade if available, otherwise show first grade
+    const displayGrade = grades.Overall || Object.values(grades)[0] || 'N/A';
+    
+    return (
+      <div className="flex items-center gap-1">
+        <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
+          {role.toUpperCase()}
+        </Badge>
+        <span className="text-sm font-medium text-blue-600">
+          {displayGrade}
+        </span>
+      </div>
+    );
+  };
+
+  // Helper function to render full Glory display in details
+  const renderFullGloryDisplay = (glory: any) => {
+    if (!glory || (glory instanceof Map && glory.size === 0) || (typeof glory === 'object' && Object.keys(glory).length === 0)) {
+      return null;
+    }
+
+    // Convert Map to Object if needed
+    let gloryObj = glory;
+    if (glory instanceof Map) {
+      gloryObj = Object.fromEntries(glory);
+    }
+
+    return(
+      <>
+      <GloryDisplay glory={gloryObj} />
+      </>
+    )
+    
+    // return (
+    //   <Card>
+    //     <CardHeader>
+    //       <CardTitle className="flex items-center gap-2">
+    //         <Star className="h-4 w-4 text-purple-600" />
+    //         Glory Grades
+    //       </CardTitle>
+    //     </CardHeader>
+    //     <CardContent>
+    //       <div className="space-y-4">
+    //         {Object.entries(gloryObj).map(([role, roleData]: [string, any]) => {
+    //           if (!roleData || !roleData.grades) return null;
+              
+    //           const grades = roleData.grades instanceof Map ? 
+    //             Object.fromEntries(roleData.grades) : 
+    //             roleData.grades || {};
+              
+    //           if (Object.keys(grades).length === 0) return null;
+
+    //           return (
+    //             <div
+    //               key={role}
+    //               className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800"
+    //             >
+    //               <div className="flex items-center justify-between mb-3">
+    //                 <div className="flex items-center gap-2">
+    //                   <Badge className={getRoleColor(role)} variant="outline">
+    //                     {role.toUpperCase()}
+    //                   </Badge>
+    //                   {roleData.graderName && (
+    //                     <span className="text-sm text-muted-foreground">
+    //                       by {roleData.graderName}
+    //                     </span>
+    //                   )}
+    //                 </div>
+    //                 {roleData.gradedAt && (
+    //                   <span className="text-xs text-muted-foreground">
+    //                     {formatDate(roleData.gradedAt)}
+    //                   </span>
+    //                 )}
+    //               </div>
+                  
+    //               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+    //                 {Object.entries(grades).map(([parameter, grade]) => (
+    //                   <div
+    //                     key={parameter}
+    //                     className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
+    //                   >
+    //                     <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+    //                       {parameter}
+    //                     </span>
+    //                     <Badge
+    //                       className={`text-xs font-bold ${getGradeColor(grade as string)}`}
+    //                     >
+    //                       {grade}
+    //                     </Badge>
+    //                   </div>
+    //                 ))}
+    //               </div>
+    //             </div>
+    //           );
+    //         })}
+    //       </div>
+    //     </CardContent>
+    //   </Card>
+    // );
+  };
+
+  // Helper function to get role color
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "hr": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "manager": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "invigilator": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "admin": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
+  };
+
 
   // Dialog Handlers
   const openHRQuestionnaireDialog = (candidate: Candidate) => {
@@ -984,109 +1150,84 @@ const HRHome = () => {
     });
   };
 
-  //for calling details
-  // Function to submit calling details
-  const handleSubmitCallingDetails = async () => {
-    if (!selectedCandidate) {
-      toast.error("No candidate selected");
-      return;
-    }
-
-    // Filter out empty key-value pairs and prepare payload
-    const callingDetails = keyValuePairs
-      .filter((pair) => pair.key.trim() !== "" && pair.value.trim() !== "")
-      .map(({ key, value }) => ({ key: key.trim(), value: value.trim() }));
-
-    if (callingDetails.length === 0) {
-      toast.error("Please add at least one calling detail before submitting");
-      return;
-    }
-
-    try {
-      setSavingChecklist(true); // Reuse existing loading state or create new one
-      const response = await api.post("/org/calling-details", {
-        candidateId: selectedCandidate._id,
-        details: callingDetails,
-        hrRemarks:hrRemark//todo 
-      });
-
-      if (response.data.success) {
-        toast.success("Calling details submitted successfully!");
-      } else {
-        toast.error(
-          response.data.message || "Failed to submit calling details"
-        );
-      }
-    } catch (error: any) {
-      console.error("Error submitting calling details:", error);
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Failed to submit calling details";
-      toast.error(errorMessage);
-    } finally {
-      setSavingChecklist(false);
-    }
-  };
 
   // Function to load existing calling details
- const loadCallingDetails = async (candidateId: string) => {
-  try {
-    const response = await api.get(`/org/calling-details/${candidateId}`);
-    console.log(response.data);
-    
-    if (
-      response.data.success &&
-      response.data.data &&
-      Array.isArray(response.data.data.details)
-    ) {
-      // Transform API data into KeyValuePair format
-      const loadedPairs: KeyValuePair[] = response.data.data.details.map(
-        (item: any, index: number) => ({
-          id: `loaded-${index}-${Date.now()}`,
-          key: item.key || "",
-          value: item.value || "",
-        })
-      );
+  const loadCallingDetails = async (candidateId: string) => {
+    try {
+      const response = await api.get(`/org/calling-details/${candidateId}`);
+      console.log(response.data);
 
-      // Add default fields if no data exists, or merge with existing
-      const defaultFields = [
-        { id: "1", key: "Current CTC", value: "" },
-        { id: "2", key: "In Hand Salary", value: "" },
-        { id: "3", key: "Expected CTC", value: "" },
-        { id: "4", key: "Reason for Change", value: "" },
-        { id: "5", key: "Notice Period", value: "" },
-        { id: "6", key: "Total Experience", value: "" },
-        { id: "7", key: "Relevant Experience", value: "" },
-        { id: "8", key: "Current Location", value: "" },
-        { id: "9", key: "Preferred Location", value: "" },
-        { id: "10", key: "Availability for Interview", value: "" },
-      ];
-
-      // Merge loaded data with default fields, prioritizing loaded data
-      const mergedPairs = defaultFields.map((defaultField) => {
-        const loadedPair = loadedPairs.find(
-          (loaded) => loaded.key === defaultField.key
+      if (
+        response.data.success &&
+        response.data.data &&
+        Array.isArray(response.data.data.details)
+      ) {
+        // Transform API data into KeyValuePair format
+        const loadedPairs: KeyValuePair[] = response.data.data.details.map(
+          (item: any, index: number) => ({
+            id: `loaded-${index}-${Date.now()}`,
+            key: item.key || "",
+            value: item.value || "",
+          })
         );
-        return loadedPair || defaultField;
-      });
 
-      // Add any additional loaded pairs that don't match default fields
-      const additionalPairs = loadedPairs.filter(
-        (loaded) =>
-          !defaultFields.some(
-            (defaultField) => defaultField.key === loaded.key
-          )
-      );
+        // Add default fields if no data exists, or merge with existing
+        const defaultFields = [
+          { id: "1", key: "Current CTC", value: "" },
+          { id: "2", key: "In Hand Salary", value: "" },
+          { id: "3", key: "Expected CTC", value: "" },
+          { id: "4", key: "Reason for Change", value: "" },
+          { id: "5", key: "Notice Period", value: "" },
+          { id: "6", key: "Total Experience", value: "" },
+          { id: "7", key: "Relevant Experience", value: "" },
+          { id: "8", key: "Current Location", value: "" },
+          { id: "9", key: "Preferred Location", value: "" },
+          { id: "10", key: "Availability for Interview", value: "" },
+        ];
 
-      setKeyValuePairs([...mergedPairs, ...additionalPairs]);
+        // Merge loaded data with default fields, prioritizing loaded data
+        const mergedPairs = defaultFields.map((defaultField) => {
+          const loadedPair = loadedPairs.find(
+            (loaded) => loaded.key === defaultField.key
+          );
+          return loadedPair || defaultField;
+        });
 
-      // Set HR remarks if present
-      if (response.data.data.hrRemarks) {
-        setHrRemark(response.data.data.hrRemarks);
+        // Add any additional loaded pairs that don't match default fields
+        const additionalPairs = loadedPairs.filter(
+          (loaded) =>
+            !defaultFields.some(
+              (defaultField) => defaultField.key === loaded.key
+            )
+        );
+
+        setKeyValuePairs([...mergedPairs, ...additionalPairs]);
+
+        // Set HR remarks if present
+        if (response.data.data.hrRemarks) {
+          setHrRemark(response.data.data.hrRemarks);
+        }
+      } else {
+        // If no data exists, reset to default fields and clear HR remarks
+        const defaultFields = [
+          { id: "1", key: "Current CTC", value: "" },
+          { id: "2", key: "In Hand Salary", value: "" },
+          { id: "3", key: "Expected CTC", value: "" },
+          { id: "4", key: "Reason for Change", value: "" },
+          { id: "5", key: "Notice Period", value: "" },
+          { id: "6", key: "Total Experience", value: "" },
+          { id: "7", key: "Relevant Experience", value: "" },
+          { id: "8", key: "Current Location", value: "" },
+          { id: "9", key: "Preferred Location", value: "" },
+          { id: "10", key: "Availability for Interview", value: "" },
+        ];
+        setKeyValuePairs(defaultFields);
+        setHrRemark("");
       }
-    } else {
-      // If no data exists, reset to default fields and clear HR remarks
+    } catch (error: any) {
+      console.error("Error loading calling details:", error);
+      // Don't show error toast for loading as it might not exist for new candidates
+      // Reset to default state on error
       const defaultFields = [
         { id: "1", key: "Current CTC", value: "" },
         { id: "2", key: "In Hand Salary", value: "" },
@@ -1102,26 +1243,7 @@ const HRHome = () => {
       setKeyValuePairs(defaultFields);
       setHrRemark("");
     }
-  } catch (error: any) {
-    console.error("Error loading calling details:", error);
-    // Don't show error toast for loading as it might not exist for new candidates
-    // Reset to default state on error
-    const defaultFields = [
-      { id: "1", key: "Current CTC", value: "" },
-      { id: "2", key: "In Hand Salary", value: "" },
-      { id: "3", key: "Expected CTC", value: "" },
-      { id: "4", key: "Reason for Change", value: "" },
-      { id: "5", key: "Notice Period", value: "" },
-      { id: "6", key: "Total Experience", value: "" },
-      { id: "7", key: "Relevant Experience", value: "" },
-      { id: "8", key: "Current Location", value: "" },
-      { id: "9", key: "Preferred Location", value: "" },
-      { id: "10", key: "Availability for Interview", value: "" },
-    ];
-    setKeyValuePairs(defaultFields);
-    setHrRemark("");
-  }
-};
+  };
 
   // Effects
   useEffect(() => {
@@ -1316,7 +1438,7 @@ const HRHome = () => {
             </Select>
           </div>
 
-          {/* Candidates Table */}
+          {/* Candidates Table - Updated Glory Column */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
@@ -1326,7 +1448,7 @@ const HRHome = () => {
                   <TableHead>Current Stage</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Registration Date</TableHead>
-                  <TableHead>Last Login</TableHead>
+                  <TableHead>Glory</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1339,7 +1461,7 @@ const HRHome = () => {
                           <AvatarImage src={candidate.profile_photo_url.url} />
                           <AvatarFallback>
                             {candidate.first_name[0]}
-                            {candidate.last_name}
+                            {candidate.last_name[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -1373,21 +1495,13 @@ const HRHome = () => {
                         <Badge className={getStatusColor(candidate.status)}>
                           {candidate.status.toUpperCase()}
                         </Badge>
-
-                        {candidate.shortlisted && (
-                          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
-                            ⭐ SHORTLISTED
-                          </Badge>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
                       {formatDate(candidate.registration_date)}
                     </TableCell>
                     <TableCell>
-                      {candidate.last_login
-                        ? formatDate(candidate.last_login)
-                        : "Never"}
+                      {renderGloryGrades(candidate.glory)}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
@@ -1435,105 +1549,126 @@ const HRHome = () => {
                     <CardTitle>Personal Information</CardTitle>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        onClick={() =>
-                          openHRQuestionnaireDialog(selectedCandidate)
-                        }
-                        variant="default"
-                        size="sm"
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
-                      >
-                        📋{" "}
-                        <span className="hidden md:inline">
-                          Assign HR Questionnaire
-                        </span>
-                        <span className="md:hidden">HR</span>
-                      </Button>
-
-                      <Button
-                        onClick={() => openAssessmentDialog(selectedCandidate)}
-                        variant="default"
-                        size="sm"
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
-                      >
-                        🔬{" "}
-                        <span className="hidden md:inline">
-                          Assign Assessment
-                        </span>
-                        <span className="md:hidden">Tech</span>
-                      </Button>
-
-                      {!selectedCandidate.shortlisted &&
-                        selectedCandidate.status !== "rejected" && (
+                    {
+                      <div className="flex flex-wrap items-center gap-2">
+                        {selectedCandidate.current_stage === "registered" && (
                           <Button
                             onClick={() =>
-                              shortlistCandidate(
-                                selectedCandidate._id,
-                                "Shortlisted from candidate review"
-                              )
+                              openHRQuestionnaireDialog(selectedCandidate)
                             }
                             variant="default"
                             size="sm"
-                            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
+                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
                           >
-                            ⭐{" "}
-                            <span className="hidden md:inline">Shortlist</span>
+                            📋{" "}
+                            <span className="hidden md:inline">
+                              Assign HR Questionnaire
+                            </span>
+                            <span className="md:hidden">HR</span>
                           </Button>
                         )}
 
-                      {selectedCandidate.status !== "rejected" && (
+                        {selectedCandidate.current_stage === "hr" && (
+                          <Button
+                            onClick={() =>
+                              openAssessmentDialog(selectedCandidate)
+                            }
+                            variant="default"
+                            size="sm"
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
+                          >
+                            🔬{" "}
+                            <span className="hidden md:inline">
+                              Assign Assessment
+                            </span>
+                            <span className="md:hidden">Tech</span>
+                          </Button>
+                        )}
+
+                        {!selectedCandidate.shortlisted &&
+                          selectedCandidate.status !== "rejected" &&
+                          selectedCandidate.current_stage === "registered" && (
+                            <Button
+                              onClick={() =>
+                                shortlistCandidate(
+                                  selectedCandidate._id,
+                                  "Shortlisted from candidate review"
+                                )
+                              }
+                              variant="default"
+                              size="sm"
+                              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
+                            >
+                              ⭐{" "}
+                              <span className="hidden md:inline">
+                                Shortlist
+                              </span>
+                            </Button>
+                          )}
+
+                        {selectedCandidate.status !== "rejected" && (
+                          <Button
+                            onClick={() => {
+                              setCandidateToReject(selectedCandidate);
+                              setRejectionReason("");
+                              setRejectDialogOpen(true);
+                            }}
+                            variant="default"
+                            size="sm"
+                            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
+                          >
+                            ❌ <span className="hidden md:inline">Reject</span>
+                          </Button>
+                        )}
+
                         <Button
                           onClick={() => {
-                            setCandidateToReject(selectedCandidate);
-                            setRejectionReason("");
-                            setRejectDialogOpen(true);
+                            setSelectedNewStage("");
+                            setStageUpdateReason("");
+                            setStageUpdateModal(true);
                           }}
                           variant="default"
                           size="sm"
-                          className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
+                          className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
                         >
-                          ❌ <span className="hidden md:inline">Reject</span>
+                          🔄{" "}
+                          <span className="hidden md:inline">Update Stage</span>
                         </Button>
-                      )}
 
-                      <Button
-                        onClick={() => {
-                          setSelectedNewStage("");
-                          setStageUpdateReason("");
-                          setStageUpdateModal(true);
-                        }}
-                        variant="default"
-                        size="sm"
-                        className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
-                      >
-                        🔄{" "}
-                        <span className="hidden md:inline">Update Stage</span>
-                      </Button>
+                        <Button
+                          onClick={() =>
+                            handleAssignInterview(selectedCandidate)
+                          }
+                          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        >
+                          <Calendar className="h-4 w-4" />
+                          Schedule Interview
+                        </Button>
 
-                      <Button
-                        onClick={() => handleAssignInterview(selectedCandidate)}
-                        className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                      >
-                        <Calendar className="h-4 w-4" />
-                        Schedule Interview
-                      </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setCandidateForFeedback(selectedCandidate);
+                            setFeedbackContent("");
+                            setFeedbackType("general");
+                            setFeedbackDialogOpen(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          Feedback
+                        </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setCandidateForFeedback(selectedCandidate);
-                          setFeedbackContent("");
-                          setFeedbackType("general");
-                          setFeedbackDialogOpen(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Feedback
-                      </Button>
-                    </div>
+                        <GloryButton
+                          candidate={selectedCandidate}
+                          onOpenGlory={openGloryDialog} // Pass the function as prop
+                          variant="outline"
+                          size="sm"
+                          className="text-purple-600 hover:text-purple-700"
+                        />
+                      </div>
+                    }
                   </div>
                 </CardHeader>
 
@@ -1721,6 +1856,9 @@ const HRHome = () => {
                       </div>
                     )}
 
+                  {/* Updated Glory Grades Display */}
+                  {selectedCandidate.glory && renderFullGloryDisplay(selectedCandidate.glory)}
+
                   {/* Personal Details Grid */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
@@ -1775,11 +1913,11 @@ const HRHome = () => {
               </Card>
 
               {/* Calling details */}
-              <HRCallingDetailsDisplay 
-  candidateId={selectedCandidate._id}
-  candidateName={`${selectedCandidate.first_name} ${selectedCandidate.last_name}`}
-  userRole="hr" // HR gets full CRUD access
-/>
+              <HRCallingDetailsDisplay
+                candidateId={selectedCandidate._id}
+                candidateName={`${selectedCandidate.first_name} ${selectedCandidate.last_name}`}
+                userRole="hr" // HR gets full CRUD access
+              />
 
               {/* Status Information */}
               <Card>
@@ -1850,12 +1988,12 @@ const HRHome = () => {
                             {
                               [
                                 ...selectedCandidate.documents,
-                                ...selectedCandidate.hired_docs,
+                                ...(selectedCandidate.hired_docs || []),
                               ].filter((doc) => doc.isVerified).length
                             }{" "}
                             /{" "}
                             {selectedCandidate.documents.length +
-                              selectedCandidate.hired_docs.length}{" "}
+                              (selectedCandidate.hired_docs?.length || 0)}{" "}
                             Verified
                           </Badge>
                         </div>
@@ -2585,7 +2723,7 @@ const HRHome = () => {
                   <CardTitle>Scheduled Interviews</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {selectedCandidate.interviews &&
+                                    {selectedCandidate.interviews &&
                   selectedCandidate.interviews.length > 0 ? (
                     <div className="space-y-4">
                       {selectedCandidate.interviews.map((interview) => (
@@ -2832,6 +2970,22 @@ const HRHome = () => {
         </DialogContent>
       </Dialog>
 
+<GloryDialog
+        isOpen={gloryDialogOpen}
+        candidate={candidateForGlory}
+        gloryGrades={gloryGrades}
+        selectedRole={selectedRole} // This will always be 'hr'
+        submittingGlory={submittingGlory}
+        loadingGlory={loadingGlory}
+        gradeOptions={gradeOptions}
+        currentUser={currentUser}
+        onClose={closeGloryDialog}
+        role="hr" // Pass hardcoded role instead of onRoleChange
+        onGradeChange={handleGloryGradeChange}
+        onSubmit={() => submitGloryGrades(fetchAllData)}
+        getGradingParameters={getGradingParameters}
+      />
+
       {/* HR Questionnaire Assignment Dialog */}
       <Dialog
         open={assignHRQuestionnaireOpen}
@@ -2861,7 +3015,7 @@ const HRHome = () => {
                       />
                       <AvatarFallback>
                         {targetCandidateForHR.first_name[0]}
-                        {targetCandidateForHR.last_name}
+                        {targetCandidateForHR.last_name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div>
@@ -3086,7 +3240,7 @@ const HRHome = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Assignment Dialog - FIXED with uniform 4-field layout and reactive total marks */}
+      {/* Assessment Assignment Dialog */}
       <Dialog
         open={assignAssessmentOpen}
         onOpenChange={setAssignAssessmentOpen}
@@ -3127,7 +3281,7 @@ const HRHome = () => {
                         />
                         <AvatarFallback>
                           {targetCandidateForAssessment.first_name[0]}
-                          {targetCandidateForAssessment.last_name}
+                          {targetCandidateForAssessment.last_name[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -3151,7 +3305,7 @@ const HRHome = () => {
                   </div>
                 )}
 
-                {/*Questions Selection - FILTERED for specific types only */}
+                {/* Questions Selection - FILTERED for specific types only */}
                 <div className="space-y-3">
                   <Label>
                     Select Questions
@@ -3337,7 +3491,7 @@ const HRHome = () => {
                   />
                 </div>
 
-                {/* FIXED: Assessment Configuration with Uniform 4-Field Layout */}
+                {/* Assessment Configuration with Uniform 4-Field Layout */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* SEB Field */}
                   <div className="space-y-2">
@@ -3406,7 +3560,7 @@ const HRHome = () => {
                     )}
                   </div>
 
-                  {/* Total Marks Field - FIXED with Uniform Styling */}
+                  {/* Total Marks Field */}
                   <div className="space-y-2">
                     <Label htmlFor="total_marks">Total Marks</Label>
                     <Input
@@ -3760,6 +3914,7 @@ const HRHome = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Feedback Dialog */}
       <Dialog
         open={feedbackDialogOpen}
@@ -3884,3 +4039,4 @@ const HRHome = () => {
 };
 
 export default HRHome;
+

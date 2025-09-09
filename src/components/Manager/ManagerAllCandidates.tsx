@@ -37,6 +37,15 @@ import {
 import { StageCircle } from "../ui/StageCircle";
 import toast from "react-hot-toast";
 import HRCallingDetailsDisplay from "../HRCallingDetailsDisplay";
+import GloryDisplay from "../GloryDisplay";
+
+interface GloryRoleData {
+  graderId?: string;
+  graderName?: string;
+  graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+  grades: { [key: string]: string } | Map<string, string>;
+  gradedAt: string;
+}
 
 interface CandidateDocument {
   _id: string;
@@ -57,6 +66,7 @@ interface ManagerCandidate {
   address: string;
   current_stage: string;
   status: string;
+  glory?: { [role: string]: GloryRoleData };
   applied_job?: {
     _id: string;
     name: string;
@@ -180,6 +190,7 @@ interface DetailedCandidate {
   address: string;
   current_stage: string;
   status: string;
+  glory?: { [role: string]: GloryRoleData };
   applied_job?: {
     _id: string;
     name: string;
@@ -738,6 +749,9 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Glory */}
+                      <GloryDisplay glory={candidate.glory}/>
 
                       {/* HR Responses - Compact */}
                       {candidateData.default_hr_responses &&

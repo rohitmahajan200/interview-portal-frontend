@@ -935,7 +935,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             <CreditCard className="w-5 h-5" />,
             "bg-orange-50 border-orange-200"
           )}
-
+          
           {/* Company References Section */}
           <Card className="bg-yellow-50 border-yellow-200 border-2">
             <CardHeader>

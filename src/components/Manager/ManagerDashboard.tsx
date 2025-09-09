@@ -85,6 +85,7 @@ interface ManagerCandidate {
       salary?: string;
       jobId?: string;
     };
+    gradingParameters: string[];
   };
   profile_photo_url?: {
     url: string;
@@ -146,6 +147,7 @@ interface ManagerCandidate {
 
 interface DetailedCandidate {
   _id: string;
+  name: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -166,7 +168,9 @@ interface DetailedCandidate {
       salary?: string;
       jobId?: string;
     };
+    gradingParameters: string[];
   };
+  
   profile_photo_url?: {
     url: string;
     publicId: string;

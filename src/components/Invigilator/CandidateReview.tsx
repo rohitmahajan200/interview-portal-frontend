@@ -13,6 +13,26 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import toast, { Toaster } from "react-hot-toast";
+import GloryDialog from "../GloryDialog";
+import GloryButton from "../GloryButton";
+import { useGlory } from "@/hooks/useGlory";
+import GloryDisplay from "../GloryDisplay";
+
+interface GloryData {
+  [parameter: string]: string;
+}
+
+interface GloryRoleData {
+  graderId?: string;
+  graderName?: string;
+  graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+  grades: GloryData; // ✅ Use plain object instead of Map
+  gradedAt: string;
+}
+
+interface CandidateGlory {
+  [role: string]: GloryRoleData;
+}
 
 // TypeScript interfaces for Assessment Review
 interface AssessmentStatistics {
@@ -33,11 +53,6 @@ interface RecentEvaluation {
   evaluatedAt: string;
 }
 
-interface StatisticsAPIResponse {
-  success: boolean;
-  data: AssessmentStatistics;
-}
-
 interface AssessmentListItem {
   _id: string;
   candidate: {
@@ -47,6 +62,7 @@ interface AssessmentListItem {
       url: string;
       publicId: string;
     };
+    glory?: { [role: string]: GloryRoleData };
     name: string;
     status: string;
   };
@@ -96,6 +112,7 @@ interface AssessmentDetail {
     };
     current_stage?: string;
     status?: string;
+    glory?: CandidateGlory;
   };
   assessment: {
     _id: string;
@@ -132,8 +149,25 @@ interface CandidateToReject {
 }
 
 const AssessmentReview = () => {
+
+  const {
+    gloryDialogOpen,
+    candidateForGlory,
+    gloryGrades,
+    selectedRole,
+    submittingGlory,
+    loadingGlory,
+    gradeOptions,
+    currentUser,
+    openGloryDialog,
+    closeGloryDialog,
+    handleGloryGradeChange,
+    submitGloryGrades,
+    getGradingParameters,
+  } = useGlory('invigilator');
+
   const [assessmentsList, setAssessmentsList] = useState<AssessmentListItem[]>([]);
-  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentDetail | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentDetail  |null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -153,6 +187,22 @@ const AssessmentReview = () => {
   const [stageFeedback, setStageFeedback] = useState("");
   const [selectedNewStage, setSelectedNewStage] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
+   // ✅ FIXED: Helper function to safely render Glory grades
+  const renderFullGloryDisplay = (glory: CandidateGlory | undefined) => {
+    if (!glory || Object.keys(glory).length === 0) {
+      return null;
+    }
+  const gloryObj = glory instanceof Map ? Object.fromEntries(glory) : glory;
+   return(
+        <>
+        <GloryDisplay glory={gloryObj} />
+        </>
+      )
+  };
+  
+  // ✅ FIXED: Transform CandidateDetail to match Glory's expected candidate structure
+
 
   const fetchStatistics = async () => {
   try {
@@ -330,7 +380,7 @@ const fetchAssessmentDetail = async (id: string) => {
     );
   };
 
-  const renderAnswer = (response: AssessmentResponse) => {
+  const renderAnswer = (response: AssessmentResponse ) => {
     const { type, answer } = response;
     if (!answer) return <span className="text-muted-foreground italic">No answer provided</span>;
     switch (type) {
@@ -531,6 +581,7 @@ const fetchAssessmentDetail = async (id: string) => {
                     <TableHead>Candidate</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Score</TableHead>
+                    <TableHead>Glory</TableHead>
                     <TableHead>Completed</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -580,6 +631,22 @@ const fetchAssessmentDetail = async (id: string) => {
                           </Badge>
                         )}
                       </TableCell>
+                        
+                      <TableCell>
+                                            {item.candidate.glory &&
+                                            Object.keys(item.candidate.glory).length > 0 ? (
+                                              <div className="flex items-center gap-1">
+                                                <span className="text-xl text-blue-600">
+                                                  {JSON.stringify(item.candidate.glory.Overall)}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-xs text-muted-foreground">
+                                                No grades
+                                              </span>
+                                            )}
+                                    </TableCell>
+
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -712,6 +779,9 @@ const fetchAssessmentDetail = async (id: string) => {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* ✅ FIXED: Glory Grades Display with proper rendering */}
+                    {selectedAssessment.candidate.glory && renderFullGloryDisplay(selectedAssessment.candidate.glory)}
 
                     {/* Assessment Timeline */}
                     <Card>
@@ -929,6 +999,15 @@ const fetchAssessmentDetail = async (id: string) => {
                     </Button>
                   )}
                   
+                  <GloryButton
+  candidate={selectedAssessment.candidate} // Pass your candidate object
+  onOpenGlory={openGloryDialog} // Pass the function from hook
+  variant="outline"
+  size="sm"
+  className="text-purple-600 hover:text-purple-700"
+/>
+
+
                   {/* Only show Update Stage if AI evaluated */}
                   {selectedAssessment && selectedAssessment.ai_score !== undefined && (
                     <Button
@@ -949,6 +1028,25 @@ const fetchAssessmentDetail = async (id: string) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ✅ Add Glory Dialog */}
+<GloryDialog
+
+          isOpen={gloryDialogOpen}
+        candidate={candidateForGlory}
+        gloryGrades={gloryGrades}
+        selectedRole={selectedRole}
+        submittingGlory={submittingGlory}
+        loadingGlory={loadingGlory}
+        gradeOptions={gradeOptions}
+        currentUser={currentUser}
+        onClose={closeGloryDialog}
+        role="hr" // Hardcoded role
+        onGradeChange={handleGloryGradeChange}
+        onSubmit={() => submitGloryGrades(fetchAssessmentsList)}
+        getGradingParameters={getGradingParameters}
+/>
+
 
       {/* Stage Update Modal - Updated with HR Home logic */}
       <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
@@ -981,6 +1079,7 @@ const fetchAssessmentDetail = async (id: string) => {
                       <Badge className={getStageColor(selectedAssessment.candidate.current_stage || '')} variant="outline">
                         {selectedAssessment.candidate.current_stage?.toUpperCase()}
                       </Badge>
+
                     </div>
                   </div>
                 </div>

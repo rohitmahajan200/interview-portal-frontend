@@ -46,6 +46,24 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import GloryDisplay from "../GloryDisplay";
+import GloryButton from "../GloryButton";
+import { useGlory } from "@/hooks/useGlory";
+import GloryDialog from "../GloryDialog";
+
+
+interface GloryData {
+  [parameter: string]: string;
+}
+
+interface GloryRoleData {
+  graderId?: string;
+  graderName?: string;
+  graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+  grades: GloryData; // ✅ Use plain object instead of Map
+  gradedAt: string;
+}
+
 
 interface ManagerCandidate {
   _id: string;
@@ -58,6 +76,7 @@ interface ManagerCandidate {
   address: string;
   current_stage: string;
   status: string;
+  glory?: { [role: string]: GloryRoleData };
   applied_job?: {
     _id: string;
     name: string;
@@ -140,6 +159,7 @@ interface DetailedCandidate {
   _id: string;
   first_name: string;
   last_name: string;
+  name:string;      
   email: string;
   phone?: string;
   date_of_birth: string;
@@ -147,6 +167,7 @@ interface DetailedCandidate {
   address: string;
   current_stage: string;
   status: string;
+  glory?: { [role: string]: GloryRoleData };
   applied_job?: {
     _id: string;
     name: string;
@@ -158,6 +179,7 @@ interface DetailedCandidate {
       salary?: string;
       jobId?: string;
     };
+    gradingParameters: string[];
   };
   profile_photo_url?: {
     url: string;
@@ -309,6 +331,23 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   formatAge,
   fetchCandidates,
 }) => {
+
+    const {
+      gloryDialogOpen,
+      candidateForGlory,
+      gloryGrades,
+      selectedRole,
+      submittingGlory,
+      loadingGlory,
+      gradeOptions,
+      currentUser,
+      openGloryDialog,
+      closeGloryDialog,
+      handleGloryGradeChange,
+      submitGloryGrades,
+      getGradingParameters,
+    } = useGlory('manager');
+
   // Dialog states for Reject
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [candidateToReject, setCandidateToReject] =
@@ -732,6 +771,13 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       🔄 <span className="hidden md:inline">Update Stage</span>
                     </Button>
 
+                    <GloryButton
+                      candidate={candidate} // Pass your candidate object
+  onOpenGlory={openGloryDialog} // Pass the function from hook
+  variant="outline"
+  size="sm"
+  className="text-purple-600 hover:text-purple-700" />
+
                     <Button
                       size="sm"
                       variant="outline"
@@ -883,6 +929,9 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                         </div>
                       </div>
 
+                      {/* Glory */}
+                                            <GloryDisplay glory={candidateData.glory}/>
+
                       {/* HR Responses Section */}
                       {candidateData.default_hr_responses &&
                         candidateData.default_hr_responses.length > 0 && (
@@ -893,7 +942,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                             </h4>
                             <div className="space-y-3">
                               {candidateData.default_hr_responses.map(
-                                (response, index) => (
+                                (response) => (
                                   <div
                                     key={response._id}
                                     className="p-3 bg-purple-50 rounded-lg border border-purple-100"
@@ -1552,6 +1601,24 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           );
         })}
       </div>
+
+            {/* Glory Dialog */}
+      <GloryDialog
+              isOpen={gloryDialogOpen}
+              candidate={candidateForGlory}
+              gloryGrades={gloryGrades}
+              selectedRole={selectedRole} 
+              submittingGlory={submittingGlory}
+              loadingGlory={loadingGlory}
+              gradeOptions={gradeOptions}
+              currentUser={currentUser}
+              onClose={closeGloryDialog}
+              role="manager" // Pass hardcoded role instead of onRoleChange
+              onGradeChange={handleGloryGradeChange}
+              onSubmit={() => submitGloryGrades(fetchCandidates)}
+              getGradingParameters={getGradingParameters}
+            />
+      
 
       {/* Stage Update Dialog - Fixed */}
       <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>

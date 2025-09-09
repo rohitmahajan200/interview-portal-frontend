@@ -31,9 +31,10 @@ import {
   Save,
   Eye,
   Calendar,
-  Filter,
   X,
   PlusCircle,
+  Award,
+  Star,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
@@ -43,6 +44,7 @@ export interface IJob {
   name: string;
   description: string | object;
   long_description?: string | object;
+  gradingParameters?: string[]; // New field for grading parameters
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +52,22 @@ export interface IJob {
 interface KeyValuePair {
   key: string;
   value: string;
+}
+
+interface BulletPoint {
+  id: string;
+  text: string;
+}
+
+interface BulletSection {
+  id: string;
+  name: string;
+  bullets: BulletPoint[];
+}
+
+interface GradingParameter {
+  id: string;
+  name: string;
 }
 
 const JobManagement = () => {
@@ -62,7 +80,7 @@ const JobManagement = () => {
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
 
-  // Form states
+  // Form states - Support BOTH key-value pairs AND bullet sections simultaneously
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -70,6 +88,15 @@ const JobManagement = () => {
   const [longDescriptionPairs, setLongDescriptionPairs] = useState<
     KeyValuePair[]
   >([{ key: "", value: "" }]);
+  const [bulletSections, setBulletSections] = useState<BulletSection[]>([
+    { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
+  ]);
+
+  // New: Grading Parameters State
+  const [gradingParameters, setGradingParameters] = useState<GradingParameter[]>([
+    { id: "overall", name: "Overall" }, // Default parameter
+    { id: "1", name: "" }
+  ]);
 
   const [editingJob, setEditingJob] = useState<IJob | null>(null);
   const [viewingJob, setViewingJob] = useState<IJob | null>(null);
@@ -136,27 +163,180 @@ const JobManagement = () => {
     );
   };
 
-  const convertPairsToObject = (pairs: KeyValuePair[]) => {
-    const result: { [key: string]: string } = {};
+  // Bullet sections handlers
+  const addBulletSection = () => {
+    const newId = Date.now().toString();
+    setBulletSections((prev) => [
+      ...prev,
+      {
+        id: newId,
+        name: "",
+        bullets: [{ id: "1", text: "" }],
+      },
+    ]);
+  };
+
+  const removeBulletSection = (sectionId: string) => {
+    setBulletSections((prev) =>
+      prev.filter((section) => section.id !== sectionId)
+    );
+  };
+
+  const updateBulletSectionName = (sectionId: string, name: string) => {
+    setBulletSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId ? { ...section, name } : section
+      )
+    );
+  };
+
+  const addBulletToSection = (sectionId: string) => {
+    const newBulletId = Date.now().toString();
+    setBulletSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              bullets: [...section.bullets, { id: newBulletId, text: "" }],
+            }
+          : section
+      )
+    );
+  };
+
+  const removeBulletFromSection = (sectionId: string, bulletId: string) => {
+    setBulletSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              bullets: section.bullets.filter(
+                (bullet) => bullet.id !== bulletId
+              ),
+            }
+          : section
+      )
+    );
+  };
+
+  const updateBulletInSection = (
+    sectionId: string,
+    bulletId: string,
+    text: string
+  ) => {
+    setBulletSections((prev) =>
+      prev.map((section) =>
+        section.id === sectionId
+          ? {
+              ...section,
+              bullets: section.bullets.map((bullet) =>
+                bullet.id === bulletId ? { ...bullet, text } : bullet
+              ),
+            }
+          : section
+      )
+    );
+  };
+
+  // New: Grading Parameters Handlers
+  const addGradingParameter = () => {
+    const newId = Date.now().toString();
+    setGradingParameters((prev) => [...prev, { id: newId, name: "" }]);
+  };
+
+const removeGradingParameter = (id: string) => {
+  // Prevent removing the default "Overall" parameter
+  if (id === "overall") {
+    return;
+  }
+  setGradingParameters((prev) => prev.filter((param) => param.id !== id));
+};
+
+  const updateGradingParameter = (id: string, name: string) => {
+    setGradingParameters((prev) =>
+      prev.map((param) => (param.id === id ? { ...param, name } : param))
+    );
+  };
+
+  // Combined conversion function - handles BOTH key-value pairs AND bullet sections
+  const convertToMixedObject = (
+    pairs: KeyValuePair[],
+    sections: BulletSection[]
+  ) => {
+    const result: { [key: string]: string | string[] } = {};
+
+    // Add key-value pairs
     pairs.forEach((pair) => {
       if (pair.key.trim() && pair.value.trim()) {
         result[pair.key.trim()] = pair.value.trim();
       }
     });
+
+    // Add bullet sections
+    sections.forEach((section) => {
+      if (section.name.trim()) {
+        const validBullets = section.bullets.filter((bullet) =>
+          bullet.text.trim()
+        );
+        if (validBullets.length > 0) {
+          result[section.name.trim()] = validBullets.map((bullet) =>
+            bullet.text.trim()
+          );
+        }
+      }
+    });
+
     return Object.keys(result).length > 0 ? result : null;
   };
 
-  const convertObjectToPairs = (obj: any): KeyValuePair[] => {
+  // Convert mixed object back to separate arrays
+  const convertMixedObjectToArrays = (
+    obj: any
+  ): { pairs: KeyValuePair[]; sections: BulletSection[] } => {
+    const pairs: KeyValuePair[] = [];
+    const sections: BulletSection[] = [];
+    let sectionIdCounter = 1;
+
     if (!obj || typeof obj !== "object") {
-      return [{ key: "", value: "" }];
+      return {
+        pairs: [{ key: "", value: "" }],
+        sections: [{ id: "1", name: "", bullets: [{ id: "1", text: "" }] }],
+      };
     }
 
-    const pairs = Object.entries(obj).map(([key, value]) => ({
-      key,
-      value: String(value),
-    }));
+    Object.entries(obj).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        // It's a bullet section
+        const sectionBullets = value.map((text, index) => ({
+          id: `${sectionIdCounter}-${index + 1}`,
+          text: String(text),
+        }));
 
-    return pairs.length > 0 ? pairs : [{ key: "", value: "" }];
+        sections.push({
+          id: sectionIdCounter.toString(),
+          name: key,
+          bullets:
+            sectionBullets.length > 0
+              ? sectionBullets
+              : [{ id: `${sectionIdCounter}-1`, text: "" }],
+        });
+        sectionIdCounter++;
+      } else {
+        // It's a key-value pair
+        pairs.push({
+          key,
+          value: String(value),
+        });
+      }
+    });
+
+    return {
+      pairs: pairs.length > 0 ? pairs : [{ key: "", value: "" }],
+      sections:
+        sections.length > 0
+          ? sections
+          : [{ id: "1", name: "", bullets: [{ id: "1", text: "" }] }],
+    };
   };
 
   const handleCreateJob = async () => {
@@ -167,15 +347,28 @@ const JobManagement = () => {
 
     try {
       setIsCreating(true);
-      const longDescObj = convertPairsToObject(longDescriptionPairs);
 
       const jobData: any = {
         name: formData.name.trim(),
         description: formData.description.trim(),
       };
 
-      if (longDescObj) {
-        jobData.long_description = longDescObj;
+      // Combine both key-value pairs and bullet sections
+      const mixedObj = convertToMixedObject(
+        longDescriptionPairs,
+        bulletSections
+      );
+      if (mixedObj) {
+        jobData.long_description = mixedObj;
+      }
+
+      // Add grading parameters
+      const validGradingParams = gradingParameters
+        .filter((param) => param.name.trim() !== "")
+        .map((param) => param.name.trim());
+
+      if (validGradingParams.length > 0) {
+        jobData.gradingParameters = validGradingParams;
       }
 
       const response = await api.post("/org/jobs", jobData);
@@ -197,27 +390,6 @@ const JobManagement = () => {
     }
   };
 
-  const getOptimalLayout = (longDescription: any) => {
-    if (!longDescription || typeof longDescription !== "object") return "none";
-
-    const entries = Object.entries(longDescription);
-    const totalLength = entries.reduce(
-      (acc, [key, value]) => acc + key.length + String(value).length,
-      0
-    );
-
-    const hasLongValues = entries.some(
-      ([_, value]) => String(value).length > 30
-    );
-    const hasMany = entries.length > 4;
-
-    // Use rows for long content or many fields, grid for compact content
-    if (hasLongValues || hasMany || totalLength > 150) {
-      return "rows";
-    }
-    return "grid";
-  };
-
   const handleEditJob = async () => {
     if (!editingJob || !formData.name.trim() || !formData.description.trim()) {
       toast.error("Name and description are required");
@@ -226,15 +398,28 @@ const JobManagement = () => {
 
     try {
       setIsEditing(true);
-      const longDescObj = convertPairsToObject(longDescriptionPairs);
 
       const updateData: any = {
         name: formData.name.trim(),
         description: formData.description.trim(),
       };
 
-      if (longDescObj) {
-        updateData.long_description = longDescObj;
+      // Combine both key-value pairs and bullet sections
+      const mixedObj = convertToMixedObject(
+        longDescriptionPairs,
+        bulletSections
+      );
+      if (mixedObj) {
+        updateData.long_description = mixedObj;
+      }
+
+      // Add grading parameters
+      const validGradingParams = gradingParameters
+        .filter((param) => param.name.trim() !== "")
+        .map((param) => param.name.trim());
+
+      if (validGradingParams.length > 0) {
+        updateData.gradingParameters = validGradingParams;
       }
 
       const response = await api.put(`/org/jobs/${editingJob._id}`, updateData);
@@ -255,6 +440,37 @@ const JobManagement = () => {
     } finally {
       setIsEditing(false);
     }
+  };
+
+  const getOptimalLayout = (longDescription: any) => {
+    if (!longDescription || typeof longDescription !== "object") return "none";
+    // Check if it has any array values (bullet sections)
+    const hasArrayValues = Object.values(longDescription).some((value) =>
+      Array.isArray(value)
+    );
+    // Mixed content or bullets only
+    if (hasArrayValues) {
+      return "mixed";
+    }
+
+    // Key-value pairs only
+    const entries = Object.entries(longDescription).filter(
+      ([_, value]) => !Array.isArray(value)
+    );
+    const totalLength = entries.reduce(
+      (acc, [key, value]) => acc + key.length + String(value).length,
+      0
+    );
+
+    const hasLongValues = entries.some(
+      ([_, value]) => String(value).length > 30
+    );
+    const hasMany = entries.length > 4;
+
+    if (hasLongValues || hasMany || totalLength > 150) {
+      return "rows";
+    }
+    return "grid";
   };
 
   const handleDeleteJob = async (jobId: string) => {
@@ -308,31 +524,60 @@ const JobManagement = () => {
     }
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setShowCreateDialog(true);
-  };
+ // Update the openEditDialog function (around line 330)
+const openEditDialog = (job: IJob) => {
+  setEditingJob(job);
+  setFormData({
+    name: job.name,
+    description:
+      typeof job.description === "string"
+        ? job.description
+        : JSON.stringify(job.description),
+  });
 
-  const openEditDialog = (job: IJob) => {
-    setEditingJob(job);
-    setFormData({
-      name: job.name,
-      description:
-        typeof job.description === "string"
-          ? job.description
-          : JSON.stringify(job.description),
-    });
+  // Convert mixed data to separate arrays
+  if (job.long_description && typeof job.long_description === "object") {
+    const { pairs, sections } = convertMixedObjectToArrays(
+      job.long_description
+    );
+    setLongDescriptionPairs(pairs);
+    setBulletSections(sections);
+  } else {
+    setLongDescriptionPairs([{ key: "", value: "" }]);
+    setBulletSections([
+      { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
+    ]);
+  }
 
-    // Convert long_description to key-value pairs
-    if (job.long_description) {
-      const pairs = convertObjectToPairs(job.long_description);
-      setLongDescriptionPairs(pairs);
-    } else {
-      setLongDescriptionPairs([{ key: "", value: "" }]);
+  // Convert grading parameters - always ensure "Overall" is included
+  if (job.gradingParameters && job.gradingParameters.length > 0) {
+    const gradingParams = job.gradingParameters.map((param, index) => ({
+      id: param === "Overall" ? "overall" : (index + 1).toString(),
+      name: param,
+    }));
+    
+    // Ensure "Overall" is always present
+    const hasOverall = gradingParams.some(param => param.name === "Overall");
+    if (!hasOverall) {
+      gradingParams.unshift({ id: "overall", name: "Overall" });
     }
+    
+    // Add empty parameter if needed
+    if (gradingParams.length === 1 || !gradingParams.some(param => param.name === "")) {
+      gradingParams.push({ id: Date.now().toString(), name: "" });
+    }
+    
+    setGradingParameters(gradingParams);
+  } else {
+    setGradingParameters([
+      { id: "overall", name: "Overall" },
+      { id: "1", name: "" }
+    ]);
+  }
 
-    setShowEditDialog(true);
-  };
+  setShowEditDialog(true);
+};
+
 
   const openViewDialog = (job: IJob) => {
     setViewingJob(job);
@@ -340,12 +585,26 @@ const JobManagement = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      name: "",
-      description: "",
-    });
-    setLongDescriptionPairs([{ key: "", value: "" }]);
-  };
+  setFormData({
+    name: "",
+    description: "",
+  });
+  setLongDescriptionPairs([{ key: "", value: "" }]);
+  setBulletSections([
+    { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
+  ]);
+  // ✅ FIXED: Always include "Overall" parameter
+  setGradingParameters([
+    { id: "overall", name: "Overall" },
+    { id: "1", name: "" }
+  ]);
+};
+
+const openCreateDialog = () => {
+  resetForm();
+  setShowCreateDialog(true);
+};
+
 
   const handleJobSelect = (jobId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -417,10 +676,11 @@ const JobManagement = () => {
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
-            Job Management
+            Job Management with Glory System
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Create, view, edit, and delete job postings
+            Create, view, edit, and delete job postings with candidate grading
+            parameters
           </p>
         </div>
 
@@ -461,13 +721,19 @@ const JobManagement = () => {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Filter className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
+                <Award className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
                 <div className="ml-3 sm:ml-4">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    Filtered
+                    Jobs with Grading
                   </p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    {filteredJobs.length}
+                    {
+                      jobs.filter(
+                        (job) =>
+                          job.gradingParameters &&
+                          job.gradingParameters.length > 0
+                      ).length
+                    }
                   </p>
                 </div>
               </div>
@@ -610,6 +876,13 @@ const JobManagement = () => {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
                               <h3 className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg truncate pr-2">
                                 {job.name}
+                                {job.gradingParameters &&
+                                  job.gradingParameters.length > 0 && (
+                                    <span className="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                                      <Award className="h-3 w-3 mr-1" />
+                                      {job.gradingParameters.length} params
+                                    </span>
+                                  )}
                               </h3>
                               <div className="flex items-center space-x-1 mt-2 sm:mt-0">
                                 <Button
@@ -646,86 +919,177 @@ const JobManagement = () => {
                               {getContentPreview(job.description, 120)}
                             </p>
 
-                            {/* Flexible Key-Value Display */}
+                            {/* Display Grading Parameters */}
+                            {job.gradingParameters &&
+                              job.gradingParameters.length > 0 && (
+                                <div className="mb-3">
+                                  <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">
+                                    Glory Parameters:
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {job.gradingParameters
+                                      .slice(0, 5)
+                                      .map((param, index) => (
+                                        <span
+                                          key={index}
+                                          className="inline-flex items-center px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded"
+                                        >
+                                          {param}
+                                        </span>
+                                      ))}
+                                    {job.gradingParameters.length > 5 && (
+                                      <span className="text-xs text-muted-foreground">
+                                        +{job.gradingParameters.length - 5} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                            {/* Unified Bullet Display - Both key-value pairs AND bullet sections as bullets */}
                             {job.long_description &&
                               typeof job.long_description === "object" && (
                                 <div className="mb-3">
-                                  {layout === "grid" ? (
-                                    // Compact Grid Layout for short content
-                                    <>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                        {Object.entries(job.long_description)
-                                          .slice(0, 6)
-                                          .map(([key, value]) => (
-                                            <div
-                                              key={key}
-                                              className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md border text-xs"
-                                            >
-                                              <span className="font-medium text-gray-600 dark:text-gray-300 capitalize mr-2">
-                                                {key
-                                                  .replace(/([A-Z])/g, " $1")
-                                                  .trim()}
-                                                :
-                                              </span>
-                                              <span className="text-gray-900 dark:text-gray-100 truncate flex-1 text-right">
-                                                {String(value)}
-                                              </span>
-                                            </div>
-                                          ))}
-                                      </div>
-                                      {Object.keys(job.long_description)
-                                        .length > 6 && (
-                                        <div className="mt-2 text-center">
-                                          <span className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
-                                            +
-                                            {Object.keys(job.long_description)
-                                              .length - 6}{" "}
-                                            more fields
-                                          </span>
-                                        </div>
-                                      )}
-                                    </>
-                                  ) : (
-                                    // Row Layout for longer content
-                                    <div className="space-y-2">
-                                      {Object.entries(job.long_description)
-                                        .slice(0, 4)
-                                        .map(([key, value]) => (
+                                  <div className="space-y-2">
+                                    {/* Bullet Sections - render as bullets */}
+                                    {Object.entries(job.long_description)
+                                      .filter(([_, value]) =>
+                                        Array.isArray(value)
+                                      )
+                                      .slice(0, 2)
+                                      .map(
+                                        ([sectionName, bullets]: [
+                                          string,
+                                          any
+                                        ]) => (
                                           <div
-                                            key={key}
-                                            className="flex flex-col p-2 bg-gray-50 dark:bg-gray-800 rounded-md border"
+                                            key={sectionName}
+                                            className="space-y-1"
                                           >
-                                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 capitalize mb-1">
-                                              {key
-                                                .replace(/([A-Z])/g, " $1")
-                                                .trim()}
-                                            </span>
-                                            <span className="text-sm text-gray-900 dark:text-gray-100 break-words">
-                                              {String(value).length > 80
-                                                ? `${String(value).substring(
-                                                    0,
-                                                    80
-                                                  )}...`
-                                                : String(value)}
-                                            </span>
+                                            <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 capitalize mb-1">
+                                              {sectionName}:
+                                            </div>
+                                            <ul className="space-y-1 ml-2">
+                                              {bullets
+                                                .slice(0, 3)
+                                                .map(
+                                                  (
+                                                    bullet: string,
+                                                    index: number
+                                                  ) => (
+                                                    <li
+                                                      key={index}
+                                                      className="flex items-start text-sm"
+                                                    >
+                                                      <span className="text-blue-600 mr-2 mt-0.5 flex-shrink-0">
+                                                        •
+                                                      </span>
+                                                      <span className="text-gray-900 dark:text-gray-100 break-words">
+                                                        {bullet.length > 50
+                                                          ? `${bullet.substring(
+                                                              0,
+                                                              50
+                                                            )}...`
+                                                          : bullet}
+                                                      </span>
+                                                    </li>
+                                                  )
+                                                )}
+                                            </ul>
+                                            {bullets.length > 3 && (
+                                              <div className="text-xs text-muted-foreground ml-4">
+                                                +{bullets.length - 3} more
+                                                points
+                                              </div>
+                                            )}
                                           </div>
-                                        ))}
-                                      {Object.keys(job.long_description)
-                                        .length > 4 && (
-                                        <div className="text-center">
-                                          <button
-                                            onClick={() => openViewDialog(job)}
-                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full"
-                                          >
-                                            View{" "}
-                                            {Object.keys(job.long_description)
-                                              .length - 4}{" "}
-                                            more details
-                                          </button>
-                                        </div>
+                                        )
                                       )}
-                                    </div>
-                                  )}
+
+                                    {/* Key-Value Pairs - render as bullets too */}
+                                    {Object.entries(
+                                      job.long_description
+                                    ).filter(
+                                      ([_, value]) => !Array.isArray(value)
+                                    ).length > 0 && (
+                                      <div className="space-y-1">
+                                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                                          Extra Details:
+                                        </div>
+                                        <ul className="space-y-1 ml-2">
+                                          {Object.entries(job.long_description)
+                                            .filter(
+                                              ([_, value]) =>
+                                                !Array.isArray(value)
+                                            )
+                                            .slice(0, 4)
+                                            .map(([key, value]) => (
+                                              <li
+                                                key={key}
+                                                className="flex items-start text-sm"
+                                              >
+                                                <span className="text-blue-600 mr-2 mt-0.5 flex-shrink-0">
+                                                  •
+                                                </span>
+                                                <span className="text-gray-900 dark:text-gray-100 break-words">
+                                                  <span className="font-medium capitalize">
+                                                    {key
+                                                      .replace(
+                                                        /([A-Z])/g,
+                                                        " $1"
+                                                      )
+                                                      .trim()}
+                                                    :
+                                                  </span>{" "}
+                                                  {String(value).length > 40
+                                                    ? `${String(
+                                                        value
+                                                      ).substring(0, 40)}...`
+                                                    : String(value)}
+                                                </span>
+                                              </li>
+                                            ))}
+                                        </ul>
+                                        {Object.entries(
+                                          job.long_description
+                                        ).filter(
+                                          ([_, value]) => !Array.isArray(value)
+                                        ).length > 4 && (
+                                          <div className="text-xs text-muted-foreground ml-4">
+                                            +
+                                            {Object.entries(
+                                              job.long_description
+                                            ).filter(
+                                              ([_, value]) =>
+                                                !Array.isArray(value)
+                                            ).length - 4}{" "}
+                                            more details
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* View More Button */}
+                                    {(Object.keys(job.long_description).filter(
+                                      (key) =>
+                                        Array.isArray(job.long_description[key])
+                                    ).length > 2 ||
+                                      Object.keys(job.long_description).filter(
+                                        (key) =>
+                                          !Array.isArray(
+                                            job.long_description[key]
+                                          )
+                                      ).length > 4) && (
+                                      <div className="text-center mt-3">
+                                        <button
+                                          onClick={() => openViewDialog(job)}
+                                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full"
+                                        >
+                                          View all details
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
@@ -751,7 +1115,7 @@ const JobManagement = () => {
           <DialogHeader>
             <DialogTitle>Create New Job</DialogTitle>
             <DialogDescription>
-              Add a new job posting to your organization
+              Add a new job posting to your organization with glory parameters
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -781,9 +1145,57 @@ const JobManagement = () => {
                 rows={4}
               />
             </div>
+
+            {/* Grading Parameters Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Additional Details (Key-Value Pairs)</Label>
+                <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">
+                  <Award className="inline h-4 w-4 mr-2" />
+                  Add Glory Parameters
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addGradingParameter}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Parameter
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                {gradingParameters.map((param, index) => (
+                  <div key={param.id} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="Parameter name (e.g., Technical Skills, Communication, Problem Solving)"
+                      value={param.name}
+                      onChange={(e) =>
+                        updateGradingParameter(param.id, e.target.value)
+                      }
+                      className="flex-1"
+                    />
+                    {gradingParameters.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeGradingParameter(param.id)}
+                        className="p-2 text-red-600 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Key-Value Pairs Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">
+                  Key-Value Details
+                </Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -798,7 +1210,7 @@ const JobManagement = () => {
                 {longDescriptionPairs.map((pair, index) => (
                   <div key={index} className="flex gap-2 items-center">
                     <Input
-                      placeholder="Field name"
+                      placeholder="Field name (e.g., Salary, Location)"
                       value={pair.key}
                       onChange={(e) =>
                         updateKeyValuePair(index, "key", e.target.value)
@@ -824,6 +1236,106 @@ const JobManagement = () => {
                         <X className="h-4 w-4" />
                       </Button>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bullet Sections */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">
+                  Bullet Point Sections
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addBulletSection}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Section
+                </Button>
+              </div>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {bulletSections.map((section) => (
+                  <div
+                    key={section.id}
+                    className="border rounded-lg p-3 space-y-3 bg-gray-50 dark:bg-gray-800"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Section name (e.g., Responsibilities, Requirements, Benefits)"
+                        value={section.name}
+                        onChange={(e) =>
+                          updateBulletSectionName(section.id, e.target.value)
+                        }
+                        className="flex-1 font-medium"
+                      />
+                      {bulletSections.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBulletSection(section.id)}
+                          className="p-2 text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 ml-2">
+                      {section.bullets.map((bullet, bulletIndex) => (
+                        <div key={bullet.id} className="flex gap-2 items-start">
+                          <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground">
+                            •
+                          </div>
+                          <Textarea
+                            placeholder={`Point ${bulletIndex + 1}`}
+                            value={bullet.text}
+                            onChange={(e) =>
+                              updateBulletInSection(
+                                section.id,
+                                bullet.id,
+                                e.target.value
+                              )
+                            }
+                            className="flex-1 min-h-[36px] resize-none"
+                            rows={1}
+                            onInput={(e) => {
+                              const target = e.target as HTMLTextAreaElement;
+                              target.style.height = "auto";
+                              target.style.height = target.scrollHeight + "px";
+                            }}
+                          />
+                          {section.bullets.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                removeBulletFromSection(section.id, bullet.id)
+                              }
+                              className="p-2 text-red-600 hover:text-red-700 mt-1"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addBulletToSection(section.id)}
+                        className="ml-6 mt-2"
+                      >
+                        <PlusCircle className="h-3 w-3 mr-1" />
+                        Add Point
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -854,13 +1366,13 @@ const JobManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Job Dialog */}
+      {/* Edit Job Dialog - Similar to Create but with editing state */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto mx-4">
           <DialogHeader>
             <DialogTitle>Edit Job</DialogTitle>
             <DialogDescription>
-              Update the job posting details
+              Update the job posting details and glory parameters
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -890,9 +1402,57 @@ const JobManagement = () => {
                 rows={4}
               />
             </div>
+
+            {/* Grading Parameters Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Additional Details (Key-Value Pairs)</Label>
+                <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">
+                  <Award className="inline h-4 w-4 mr-2" />
+                  Glory Parameters (A+, A, B, C, D, E)
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addGradingParameter}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Parameter
+                </Button>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                {gradingParameters.map((param, index) => (
+                  <div key={param.id} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="Parameter name (e.g., Technical Skills, Communication, Problem Solving)"
+                      value={param.name}
+                      onChange={(e) =>
+                        updateGradingParameter(param.id, e.target.value)
+                      }
+                      className="flex-1"
+                    />
+                    {gradingParameters.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeGradingParameter(param.id)}
+                        className="p-2 text-red-600 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Key-Value Pairs Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">
+                  Key-Value Details
+                </Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -907,7 +1467,7 @@ const JobManagement = () => {
                 {longDescriptionPairs.map((pair, index) => (
                   <div key={index} className="flex gap-2 items-center">
                     <Input
-                      placeholder="Field name"
+                      placeholder="Field name (e.g., Salary, Location)"
                       value={pair.key}
                       onChange={(e) =>
                         updateKeyValuePair(index, "key", e.target.value)
@@ -933,6 +1493,106 @@ const JobManagement = () => {
                         <X className="h-4 w-4" />
                       </Button>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bullet Sections */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">
+                  Bullet Point Sections
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addBulletSection}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Add Section
+                </Button>
+              </div>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {bulletSections.map((section, sectionIndex) => (
+                  <div
+                    key={section.id}
+                    className="border rounded-lg p-3 space-y-3 bg-gray-50 dark:bg-gray-800"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Section name (e.g., Responsibilities, Requirements, Benefits)"
+                        value={section.name}
+                        onChange={(e) =>
+                          updateBulletSectionName(section.id, e.target.value)
+                        }
+                        className="flex-1 font-medium"
+                      />
+                      {bulletSections.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBulletSection(section.id)}
+                          className="p-2 text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 ml-2">
+                      {section.bullets.map((bullet, bulletIndex) => (
+                        <div key={bullet.id} className="flex gap-2 items-start">
+                          <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground">
+                            •
+                          </div>
+                          <Textarea
+                            placeholder={`Point ${bulletIndex + 1}`}
+                            value={bullet.text}
+                            onChange={(e) =>
+                              updateBulletInSection(
+                                section.id,
+                                bullet.id,
+                                e.target.value
+                              )
+                            }
+                            className="flex-1 min-h-[36px] resize-none"
+                            rows={1}
+                            onInput={(e) => {
+                              const target = e.target as HTMLTextAreaElement;
+                              target.style.height = "auto";
+                              target.style.height = target.scrollHeight + "px";
+                            }}
+                          />
+                          {section.bullets.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                removeBulletFromSection(section.id, bullet.id)
+                              }
+                              className="p-2 text-red-600 hover:text-red-700 mt-1"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addBulletToSection(section.id)}
+                        className="ml-6 mt-2"
+                      >
+                        <PlusCircle className="h-3 w-3 mr-1" />
+                        Add Point
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -987,33 +1647,98 @@ const JobManagement = () => {
                 </div>
               </div>
 
-              {viewingJob.long_description && (
-                <div className="space-y-2">
-                  <Label className="font-semibold">Additional Details</Label>
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                    {typeof viewingJob.long_description === "object" ? (
-                      <div className="space-y-2">
-                        {Object.entries(viewingJob.long_description).map(
-                          ([key, value]) => (
-                            <div
-                              key={key}
-                              className="flex flex-col sm:flex-row gap-1 sm:gap-3"
-                            >
-                              <span className="font-medium text-sm min-w-0 sm:min-w-[120px]">
-                                {key}:
-                              </span>
-                              <span className="text-sm break-words flex-1">
-                                {String(value)}
-                              </span>
-                            </div>
-                          )
-                        )}
+              {/* Display Grading Parameters */}
+              {viewingJob.gradingParameters &&
+                viewingJob.gradingParameters.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="font-semibold text-purple-700 dark:text-purple-400">
+                      <Award className="inline h-4 w-4 mr-2" />
+                      Grading Parameters
+                    </Label>
+                    <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-md">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {viewingJob.gradingParameters.map((param, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center p-2 bg-white dark:bg-purple-800/30 rounded border"
+                          >
+                            <Star className="h-3 w-3 text-purple-600 mr-2" />
+                            <span className="text-sm font-medium">{param}</span>
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap">
-                        {String(viewingJob.long_description)}
-                      </p>
-                    )}
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Candidates will be graded on these parameters using A+,
+                        A, B, C, D, E scale
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              {viewingJob.long_description && (
+                <div className="space-y-4">
+                  {/* Unified Bullet Display in View Dialog */}
+                  <div className="space-y-2">
+                    <Label className="font-semibold">Additional Details</Label>
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                      <div className="space-y-4">
+                        {/* Key-Value Pairs as Bullets */}
+                        {Object.entries(viewingJob.long_description).filter(
+                          ([_, value]) => !Array.isArray(value)
+                        ).length > 0 && (
+                          <div className="space-y-2">
+                            <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">
+                              Additional Details
+                            </div>
+                            <ul className="space-y-2 ml-2">
+                              {Object.entries(viewingJob.long_description)
+                                .filter(([_, value]) => !Array.isArray(value))
+                                .map(([key, value]) => (
+                                  <li key={key} className="flex items-start">
+                                    <span className="text-green-600 mr-2 mt-1 flex-shrink-0">
+                                      •
+                                    </span>
+                                    <span className="text-sm break-words flex-1">
+                                      <span className="font-medium capitalize">
+                                        {key.replace(/([A-Z])/g, " $1").trim()}:
+                                      </span>{" "}
+                                      {String(value)}
+                                    </span>
+                                  </li>
+                                ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Bullet Sections */}
+                        {Object.entries(viewingJob.long_description)
+                          .filter(([_, value]) => Array.isArray(value))
+                          .map(([sectionName, bullets]: [string, any]) => (
+                            <div key={sectionName} className="space-y-2">
+                              <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 capitalize border-b pb-1">
+                                {sectionName}
+                              </div>
+                              <ul className="space-y-2 ml-2">
+                                {bullets.map(
+                                  (bullet: string, index: number) => (
+                                    <li
+                                      key={index}
+                                      className="flex items-start"
+                                    >
+                                      <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">
+                                        •
+                                      </span>
+                                      <span className="text-sm break-words flex-1">
+                                        {bullet}
+                                      </span>
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
