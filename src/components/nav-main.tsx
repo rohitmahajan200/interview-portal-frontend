@@ -9,16 +9,20 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export function NavMain({
   items,
 }: {
-  items: { title: string; icon: React.ElementType }[];
+  items: {
+    title: string;
+    icon: React.ElementType;
+    badge?: number;
+  }[];
 }) {
   const currentView = useSelector((state: RootState) => state.view.currentView);
   const dispatch = useDispatch();
-  
 
   return (
     <SidebarGroup>
@@ -35,11 +39,21 @@ export function NavMain({
                 onClick={() => dispatch(setCurrentView(viewKey))}
                 className={cn(
                   "flex items-center gap-2 w-full text-sm transition-colors",
-                  isActive ? "text-primary font-medium" : "text-muted-foreground hover:text-primary"
+                  isActive
+                    ? "text-primary font-medium"
+                    : "text-muted-foreground hover:text-primary"
                 )}
               >
                 <item.icon className="w-4 h-4" />
-                <span>{item.title}</span>
+                <span className="flex-1">{item.title}</span>
+                {item.badge && (
+                  <Badge
+                    variant="destructive"
+                    className="ml-auto text-xs px-1 py-0 min-w-[16px] h-4"
+                  >
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </Badge>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           );

@@ -1,11 +1,12 @@
 // src/features/Org/View/managerViewSlice.ts
-import { createSlice } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
+import type { PayloadAction } from "@reduxjs/toolkit";
 
-export type ManagerPage = 
-  | "manager-home" 
+export type ManagerPage =
+  | "manager-home"
   | "manager-calendar"
-    |"config";
+  | "notifications" // Added notifications page
+  | "config";
 
 interface ManagerViewState {
   currentManagerPage: ManagerPage;
@@ -16,7 +17,7 @@ const initialState: ManagerViewState = {
 };
 
 const managerViewSlice = createSlice({
-  name: 'managerView',
+  name: "managerView",
   initialState,
   reducers: {
     setCurrentManagerPage: (state, action: PayloadAction<ManagerPage>) => {

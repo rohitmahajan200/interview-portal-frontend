@@ -7,10 +7,10 @@ import {
   Users,
   Calendar,
   BarChart3,
+  Bell,
   Settings,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -18,40 +18,54 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { useAppSelector } from "@/hooks/useAuth";
-import { useDispatch } from "react-redux";
-import {
-  type HRPage,
-  setCurrentHRPage,
-} from "@/features/Org/View/HrViewSlice.js"
 import Logo from "../logo";
-import { NavMainHR } from "./NavMainHR";
+import NavMainHR from "./NavMainHR";
+import type { HRPage } from "@/features/Org/View/HrViewSlice";
+import { NavOrgUser } from "../NavOrgUser";
 
-export function HRSidebar(
-  props: React.ComponentProps<typeof Sidebar>,
-) {
+export function HRSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { open } = useSidebar();
   const orgState = useAppSelector((s) => s.orgAuth);
-  const dispatch = useDispatch();
+  const orgNotifications = useAppSelector((s) => s.orgNotifications);
   const user = useAppSelector((state) => state.orgAuth.user);
-    const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === "ADMIN";
 
-  // Updated to use HRPage type and setCurrentHRPage action
-  const navItem = (title: string, icon: React.ElementType, page: HRPage) => ({
+  const navItem = (
+    title: string,
+    icon: React.ElementType,
+    page: HRPage,
+    badge?: number
+  ) => ({
     title,
     icon,
-    onClick: () => dispatch(setCurrentHRPage(page)),
+    page,
+    badge,
   });
 
   const hrNav = [
-    navItem("HR Home",               Home,        "hr-home"),
-    navItem("HR Questions",          HelpCircle,  "hr-questions"),
-    navItem("HR Questionnaire",      FileText,    "hr-questionnaire"),
-    navItem("Candidate Review",      Users,       "candidate-review"),
-    navItem("Interview Scheduling",  Calendar,    "interview-scheduling"),
-    navItem("HR Analytics",          BarChart3,   "hr-analytics"),
-    ...(!isAdmin ? [navItem("Config", Settings, "config")] : []),
-  ] as unknown as { title: string; icon: React.ElementType }[];
- return (
+    navItem("home", Home, "hr-home"),
+    navItem("questions", HelpCircle, "hr-questions"),
+    navItem("questionnaire", FileText, "hr-questionnaire"),
+    navItem("candidates", Users, "candidate-review"),
+    navItem("interviews", Calendar, "interview-scheduling"),
+    navItem("analytics", BarChart3, "hr-analytics"),
+    // Only add notifications and config for non-admin users
+    ...(!isAdmin
+      ? [
+          navItem(
+            "notifications",
+            Bell,
+            "notifications",
+            orgNotifications.unreadCount > 0
+              ? orgNotifications.unreadCount
+              : undefined
+          ),
+          navItem("config", Settings, "config"),
+        ]
+      : []),
+  ];
+
+  return (
     <Sidebar
       collapsible="icon"
       className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700 h-full"
@@ -62,15 +76,12 @@ export function HRSidebar(
           <Logo />
         </SidebarHeader>
       )}
-
-      {/* Scrollable Content Area */}
       <SidebarContent className="bg-white dark:bg-gray-900 flex-1 overflow-y-auto">
-        <NavMainHR items={hrNav} />
+        <NavMainHR items={hrNav as any} />
       </SidebarContent>
-
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
         {orgState.user && (
-          <NavUser
+          <NavOrgUser
             user={{
               name: orgState.user.name,
               email: orgState.user.email,

@@ -1,7 +1,7 @@
-// src/components/nav-main-hr.tsx
+// src/components/HR/NavMainHR.tsx
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/app/store";
-import { setCurrentHRPage } from "@/features/Org/View/HrViewSlice";
+import { setCurrentHRPage, type HRPage } from "@/features/Org/View/HrViewSlice";
 
 import {
   SidebarGroup,
@@ -10,14 +10,20 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export function NavMainHR({
-  items,
-}: {
-  items: { title: string; icon: React.ElementType; onClick?: () => void }[];
-}) {
-  const currentView = useSelector((state: RootState) => state.hrView.currentHRPage);
+type NavItem = {
+  title: string;
+  icon: React.ElementType;
+  page: HRPage;
+  badge?: number;
+};
+
+export default function NavMainHR({ items }: { items: NavItem[] }) {
+  const currentView = useSelector(
+    (state: RootState) => state.hrView.currentHRPage
+  );
   const dispatch = useDispatch();
 
   return (
@@ -25,27 +31,30 @@ export function NavMainHR({
       <SidebarGroupLabel>HR Menu</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const viewKey = item.title.toLowerCase().replace(/\s+/g, "-");
-          const isActive = currentView === viewKey;
-          
+          const isActive = currentView === item.page;
+
           return (
-            <SidebarMenuItem key={viewKey}>
+            <SidebarMenuItem key={item.page}>
               <SidebarMenuButton
                 tooltip={item.title}
-                onClick={() => {
-                  if (item.onClick) {
-                    item.onClick(); // Use custom onClick if provided
-                  } else {
-                    dispatch(setCurrentHRPage(viewKey as any)); // Fallback
-                  }
-                }}
+                onClick={() => dispatch(setCurrentHRPage(item.page))}
                 className={cn(
-                  "flex items-center gap-2 w-full text-sm transition-colors",
-                  isActive ? "text-primary font-medium" : "text-muted-foreground hover:text-primary"
+                  "flex items-center gap-2 w-full text-sm transition-colors justify-between",
+                  isActive
+                    ? "text-primary font-medium"
+                    : "text-muted-foreground hover:text-primary"
                 )}
               >
-                <item.icon className="w-4 h-4" />
-                <span>{item.title}</span>
+                <span className="flex items-center gap-2">
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.title}</span>
+                </span>
+
+                {typeof item.badge === "number" && item.badge > 0 && (
+                  <Badge variant="destructive" className="ml-2 px-1.5 py-0 h-5">
+                    {item.badge}
+                  </Badge>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           );

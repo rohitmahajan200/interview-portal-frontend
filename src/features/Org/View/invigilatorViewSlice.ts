@@ -7,7 +7,8 @@ export type InvigilatorPage =
   | "candidate-review"
   | "invigilator-analytics"
   | "interview-scheduling"
-  |"config";
+  | "notifications" // Added notifications page
+  | "config";
 
 interface InvigilatorViewState {
   currentHRPage: InvigilatorPage;
@@ -17,11 +18,14 @@ const initialState: InvigilatorViewState = {
   currentHRPage: "invigilator-home",
 };
 
-const invigilatorViewSlice = createSlice({ // Fix: was hrViewSlice
+const invigilatorViewSlice = createSlice({
   name: "invigilatorView",
   initialState,
   reducers: {
-    setCurrentInvigilatorPage: (state, action: PayloadAction<InvigilatorPage>) => {
+    setCurrentInvigilatorPage: (
+      state,
+      action: PayloadAction<InvigilatorPage>
+    ) => {
       state.currentHRPage = action.payload;
     },
   },

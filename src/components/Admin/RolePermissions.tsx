@@ -213,10 +213,8 @@ const UnifiedAssignmentDashboard = () => {
   };
 
   const handleManagerAssignment = async () => {
-    if (!selectedManager || (selectedCandidates || []).length === 0) {
-      const errorMessage = "Please select a manager and at least one candidate";
-      setError(errorMessage);
-      toast.error(errorMessage);
+    if (!selectedManager || selectedCandidates.length === 0) {
+      toast.error("Please select a manager and at least one candidate");
       return;
     }
 
@@ -225,15 +223,16 @@ const UnifiedAssignmentDashboard = () => {
       setError("");
       setSuccess("");
 
-      const response = await api.post("/org/assign-to-manager", {
+      /* 🔑 one route for everything */
+      const response = await api.post("/org/bulk-assign", {
         managerId: selectedManager,
         candidateIds: selectedCandidates,
       });
 
       if (response.data.success) {
-        const successMessage = response.data.message;
-        setSuccess(successMessage);
-        toast.success(successMessage);
+        const msg = response.data.message;
+        setSuccess(msg);
+        toast.success(msg);
 
         setSelectedCandidates([]);
         setSelectedManager("");
@@ -241,12 +240,12 @@ const UnifiedAssignmentDashboard = () => {
 
         await fetchInitialData();
       }
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message ||
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
         "Failed to assign candidates to manager";
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsAssigningToManager(false);
     }

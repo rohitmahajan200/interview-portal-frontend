@@ -1,7 +1,5 @@
-import {
-  Breadcrumb,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
+// src/components/HR/index (your Hr component file)
+import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
@@ -11,8 +9,9 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { setUser } from "@/features/Org/Auth/orgAuthSlice";
+import { setNotifications } from "@/features/Org/Notifications/orgNotificationSlice"; // ← add
 import api from "@/lib/api";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react"; // ← useCallback
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/themeToggle";
 import HRHome from "./HRHome";
@@ -21,14 +20,28 @@ import HRQuestionnaireBuilder from "./HRQuestionnaireBuilder";
 import CandidateReview from "./CandidateReview";
 import InterviewScheduling from "./InterviewScheduling";
 import HRAnalytics from "./HRAnalytics";
+import HRNotifications from "./HRNotifications";
 import { HRSidebar } from "./HRSidebar";
 import SystemConfiguration from "./SystemConfiguration";
+
 export default function Hr() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  const currentView = useSelector((state: RootState) => state.hrView.currentHRPage);
-  const orgUser = useSelector((state: RootState) => state.orgAuth.user);
+
+  const currentView = useSelector(
+    (state: RootState) => state.hrView.currentHRPage
+  );
+
+  const fetchOrgNotifications = useCallback(async () => {
+    try {
+      const response = await api.get("/org/notifications");
+      if (response.data?.success) {
+        dispatch(setNotifications(response.data.data || []));
+      }
+    } catch (e) {
+      console.error("Failed to fetch org notifications:", e);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchOrgUser = async () => {
@@ -43,7 +56,8 @@ export default function Hr() {
     };
 
     fetchOrgUser();
-  }, [dispatch, navigate]);
+    fetchOrgNotifications(); // load notifications so badge shows
+  }, [dispatch, navigate, fetchOrgNotifications]);
 
   useEffect(() => {
     localStorage.setItem("hrCurrentView", currentView);
@@ -63,6 +77,8 @@ export default function Hr() {
         return <InterviewScheduling />;
       case "hr-analytics":
         return <HRAnalytics />;
+      case "notifications":
+        return <HRNotifications />;
       case "config":
         return <SystemConfiguration />;
       default:
@@ -73,12 +89,8 @@ export default function Hr() {
   return (
     <div className="h-full flex overflow-hidden">
       <SidebarProvider>
-        {/* Fixed Width Sidebar */}
         <HRSidebar className="w-64 h-full flex-shrink-0" />
-        
-        {/* Main Content Area */}
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
-          {/* Fixed Header */}
           <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
             <div className="flex items-center gap-2 px-4 justify-between w-full">
               <div className="flex items-center gap-2 px-4">
@@ -99,8 +111,7 @@ export default function Hr() {
               <ThemeToggle />
             </div>
           </header>
-          
-          {/* Scrollable Content Area */}
+
           <div className="flex-1 overflow-y-auto p-6">
             {currentView ? renderHRView(currentView) : null}
           </div>

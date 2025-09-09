@@ -1,7 +1,5 @@
-import {
-  Breadcrumb,
-  BreadcrumbList,
-} from "@/components/ui/breadcrumb";
+// src/components/Invigilator/Invigilator.tsx
+import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
@@ -11,17 +9,19 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { setUser } from "@/features/Org/Auth/orgAuthSlice";
+import { setNotifications } from "@/features/Org/Notifications/orgNotificationSlice"; // Added import
 import api from "@/lib/api";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react"; // Added useCallback
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "@/components/themeToggle";
 import CandidateReview from "./CandidateReview";
 import InterviewScheduling from "./InterviewScheduling";
-import { InvigilatorSidebar } from "./InvigilatorSidebar"; // Fixed import path
+import { InvigilatorSidebar } from "./InvigilatorSidebar";
 import InvigilatorHome from "./InvigilatorHome";
 import InvigilatorQuestionsManagement from "./InvigilatorQuestionsManagement";
 import InvigilatorQuestionnaireBuilder from "./InvigilatorQuestionnaireBuilder";
 import InvigilatorAnalytics from "./InvigilatorAnalytics";
+import InvigilatorNotifications from "./InvigilatorNotifications"; // Added import
 import SystemConfiguration from "./SystemConfiguration";
 
 export default function Invigilator() {
@@ -32,6 +32,17 @@ export default function Invigilator() {
     (state: RootState) => state.invigilator.currentHRPage
   );
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
+
+  const fetchOrgNotifications = useCallback(async () => {
+    try {
+      const response = await api.get("/org/notifications");
+      if (response.data?.success) {
+        dispatch(setNotifications(response.data.data || []));
+      }
+    } catch (e) {
+      console.error("Failed to fetch org notifications:", e);
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     const fetchOrgUser = async () => {
@@ -46,13 +57,14 @@ export default function Invigilator() {
     };
 
     fetchOrgUser();
-  }, [dispatch, navigate]);
+    fetchOrgNotifications(); // Load notifications so badge shows
+  }, [dispatch, navigate, fetchOrgNotifications]);
 
   useEffect(() => {
     localStorage.setItem("invigilatorCurrentView", currentView);
   }, [currentView]);
 
-  const renderHRView = (currentView: string) => {
+  const renderInvigilatorView = (currentView: string) => {
     switch (currentView) {
       case "invigilator-home":
         return <InvigilatorHome />;
@@ -64,8 +76,10 @@ export default function Invigilator() {
         return <CandidateReview />;
       case "interview-scheduling":
         return <InterviewScheduling />;
-      case "analytics":
+      case "invigilator-analytics":
         return <InvigilatorAnalytics />;
+      case "notifications":
+        return <InvigilatorNotifications />;
       case "config":
         return <SystemConfiguration />;
       default:
@@ -76,41 +90,41 @@ export default function Invigilator() {
   return (
     <div className="h-full flex overflow-hidden">
       <SidebarProvider>
-          {/* Sidebar */}
-          <InvigilatorSidebar className="w-64 h-full flex-shrink-0" />
+        {/* Sidebar */}
+        <InvigilatorSidebar className="w-64 h-full flex-shrink-0" />
 
-          {/* Main Content Area */}
-          <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
-            {/* Header */}
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <div className="flex items-center gap-2 px-4 justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <SidebarTrigger className="-ml-1" />
-                  <Separator
-                    orientation="vertical"
-                    className="mr-2 data-[orientation=vertical]:h-4"
-                  />
-                  <Breadcrumb>
-                    <BreadcrumbList>
-                      <header className="px-1 rounded-xl">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                            Invigilator Portal - Change Networks
-                          </span>
-                        </div>
-                      </header>
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                </div>
-                <ThemeToggle />
+        {/* Main Content Area */}
+        <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
+          {/* Header */}
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-2 px-4 justify-between w-full">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="-ml-1" />
+                <Separator
+                  orientation="vertical"
+                  className="mr-2 data-[orientation=vertical]:h-4"
+                />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <header className="px-1 rounded-xl">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                          Invigilator Portal - Change Networks
+                        </span>
+                      </div>
+                    </header>
+                  </BreadcrumbList>
+                </Breadcrumb>
               </div>
-            </header>
+              <ThemeToggle />
+            </div>
+          </header>
 
-            {/* Scrollable Content */}
-            <main className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-950">
-              {currentView ? renderHRView(currentView) : null}
-            </main>
-          </SidebarInset>
+          {/* Scrollable Content */}
+          <main className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-950">
+            {currentView ? renderInvigilatorView(currentView) : null}
+          </main>
+        </SidebarInset>
       </SidebarProvider>
     </div>
   );

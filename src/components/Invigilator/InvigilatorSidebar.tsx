@@ -1,3 +1,4 @@
+// src/components/Invigilator/InvigilatorSidebar.tsx
 import * as React from "react";
 import {
   Home,
@@ -6,10 +7,10 @@ import {
   Users,
   BarChart3,
   Calendar,
+  Bell, // Added Bell icon
   Settings,
 } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -21,43 +22,66 @@ import { useDispatch } from "react-redux";
 import {
   type InvigilatorPage,
   setCurrentInvigilatorPage,
-} from "@/features/Org/View/invigilatorViewSlice"
+} from "@/features/Org/View/invigilatorViewSlice";
 import Logo from "../logo";
-import { NavMainINVIGILATOR } from "./NavMainInvigilator";
-
+import NavMainINVIGILATOR from "./NavMainInvigilator";
+import { NavOrgUser } from "../NavOrgUser";
 export function InvigilatorSidebar(
-  props: React.ComponentProps<typeof Sidebar>,
+  props: React.ComponentProps<typeof Sidebar>
 ) {
   const { open } = useSidebar();
   const orgState = useAppSelector((s) => s.orgAuth);
+  const orgNotifications = useAppSelector((s) => s.orgNotifications); // Added notifications state
   const dispatch = useDispatch();
   const user = useAppSelector((state) => state.orgAuth.user);
-  const isAdmin = user?.role === 'ADMIN';
-  
-  // Get current page for highlighting
-  const currentPage = useAppSelector((state) => state.invigilator.currentHRPage);
+  const isAdmin = user?.role === "ADMIN";
 
-  const navItem = (title: string, icon: React.ElementType, page: InvigilatorPage) => ({
+  // Get current page for highlighting
+  const currentPage = useAppSelector(
+    (state) => state.invigilator.currentHRPage
+  );
+
+  const navItem = (
+    title: string,
+    icon: React.ElementType,
+    page: InvigilatorPage,
+    badge?: number
+  ) => ({
     title,
     icon,
-    page, // Add page property for NavMainINVIGILATOR to use
-    isActive: currentPage === page, // Add active state
+    page,
+    badge,
+    isActive: currentPage === page,
     onClick: () => dispatch(setCurrentInvigilatorPage(page)),
   });
 
-  // Updated to include ALL available components
+  // Updated to include notifications with badge support
   const invigilatorNav = [
-    navItem("Home", Home, "invigilator-home"),
-    navItem("Questions", HelpCircle, "invigilator-questions"),
-    navItem("Assessment", FileText, "invigilator-questionnaire"),
-    navItem("Candidate Review", Users, "candidate-review"),
-    navItem("Interviews", Calendar, "interview-scheduling"),
-    navItem("Analytics", BarChart3, "invigilator-analytics"), 
-    ...(!isAdmin ? [navItem("Config", Settings, "config")] : []),
-  ] as unknown as { 
-    title: string; 
-    icon: React.ElementType; 
+    navItem("home", Home, "invigilator-home"),
+    navItem("questions", HelpCircle, "invigilator-questions"),
+    navItem("assessment", FileText, "invigilator-questionnaire"),
+    navItem("candidates", Users, "candidate-review"),
+    navItem("interviews", Calendar, "interview-scheduling"),
+    navItem("analytics", BarChart3, "invigilator-analytics"),
+    // Only add notifications and config for non-admin users
+    ...(!isAdmin
+      ? [
+          navItem(
+            "notifications",
+            Bell,
+            "notifications",
+            orgNotifications.unreadCount > 0
+              ? orgNotifications.unreadCount
+              : undefined
+          ),
+          navItem("config", Settings, "config"),
+        ]
+      : []),
+  ] as {
+    title: string;
+    icon: React.ElementType;
     page: InvigilatorPage;
+    badge?: number;
     isActive: boolean;
     onClick: () => void;
   }[];
@@ -82,7 +106,7 @@ export function InvigilatorSidebar(
       {/* Sticky footer */}
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 shrink-0">
         {orgState.user && (
-          <NavUser
+          <NavOrgUser
             user={{
               name: orgState.user.name,
               email: orgState.user.email,

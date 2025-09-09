@@ -9,7 +9,8 @@ export type HRPage =
   | "interview-scheduling"
   | "hr-analytics"
   | "interview-management"
-  |"config";
+  | "notifications" // Added notifications page
+  | "config";
 
 interface HRViewState {
   currentHRPage: HRPage;

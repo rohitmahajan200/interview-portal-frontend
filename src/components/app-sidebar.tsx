@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from "react";
 import {
   BookOpen,
   Bot,
@@ -6,23 +6,28 @@ import {
   Map,
   Settings2,
   SquareTerminal,
-} from "lucide-react"
+  Bell, // Add Bell icon for notifications
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { useSidebar } from "@/components/ui/sidebar"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/nav-main";
+import { useSidebar } from "@/components/ui/sidebar";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-} from "@/components/ui/sidebar"
-import { useAppSelector } from "@/hooks/useAuth"
-import Logo from "./logo"
+} from "@/components/ui/sidebar";
+import { useAppSelector } from "@/hooks/useAuth";
+import Logo from "./logo";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { open } = useSidebar()
-  const state = useAppSelector((state) => state.auth)
+  const { open } = useSidebar();
+  const state = useAppSelector((state) => state.auth);
+  const notifications = useAppSelector(
+    (state) => state.notifications?.items || []
+  );
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const data = {
     navMain: [
@@ -39,6 +44,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: Frame,
       },
       {
+        title: "Notifications",
+        icon: Bell,
+        badge: unreadCount > 0 ? unreadCount : undefined, // Add badge for unread notifications
+      },
+      {
         title: "Feedback",
         icon: BookOpen,
       },
@@ -51,7 +61,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: Settings2,
       },
     ],
-  }
+  };
 
   return (
     <Sidebar
@@ -82,5 +92,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           )}
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
