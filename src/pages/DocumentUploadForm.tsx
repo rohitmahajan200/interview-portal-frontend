@@ -42,6 +42,7 @@ interface UploadedDocument {
   document_url: string;
   public_id: string;
   file_name: string;
+  isVerified: boolean; // Added to match backend schema
 }
 
 interface CompanyReference {
@@ -52,8 +53,8 @@ interface CompanyReference {
 
 interface Organization {
   name: string;
-  appointment_letter?: string; // Store document URL
-  relieving_letter?: string;   // Store document URL
+  appointment_letter?: string;
+  relieving_letter?: string;
 }
 
 // Educational Documents Section
@@ -330,6 +331,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
         document_url: result.url,
         public_id: result.publicId,
         file_name: file.name,
+        isVerified: false, // **Added to match backend schema**
       };
 
       // Handle organization documents differently
@@ -450,53 +452,44 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   const validateFiles = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Validate educational documents
-    EDUCATIONAL_DOCUMENTS.forEach((doc) => {
-      if (doc.required && !uploadedDocuments[doc.key]) {
-        newErrors[doc.key] = `${doc.label} is required`;
-      }
-    });
-
-    // Validate organization documents
-    ORGANIZATION_DOCUMENTS.forEach((doc) => {
-      if (doc.required && !uploadedDocuments[doc.key]) {
-        newErrors[doc.key] = `${doc.label} is required`;
-      }
-    });
-
-    // Validate salary documents (at least salary slips or form 16)
-    const hasSalarySlips = SALARY_DOCUMENTS.slice(0, 3).every(doc => uploadedDocuments[doc.key]);
-    const hasForm16 = uploadedDocuments['form_16'];
-    
-    if (!hasSalarySlips && !hasForm16) {
-      newErrors['salary_documents'] = 'Either upload all 3 salary slips or Form 16';
+    // **Updated validation - only validate if documents are provided**
+    // Educational documents validation (only if any are uploaded)
+    const hasEducationalDocs = EDUCATIONAL_DOCUMENTS.some(doc => uploadedDocuments[doc.key]);
+    if (hasEducationalDocs) {
+      EDUCATIONAL_DOCUMENTS.forEach((doc) => {
+        if (doc.required && !uploadedDocuments[doc.key]) {
+          newErrors[doc.key] = `${doc.label} is required`;
+        }
+      });
     }
 
-    // Validate identity documents
-    IDENTITY_DOCUMENTS.forEach((doc) => {
-      if (doc.required && !uploadedDocuments[doc.key]) {
-        newErrors[doc.key] = `${doc.label} is required`;
-      }
-    });
+    // Identity documents validation (only if any are uploaded)
+    const hasIdentityDocs = IDENTITY_DOCUMENTS.some(doc => uploadedDocuments[doc.key]);
+    if (hasIdentityDocs) {
+      IDENTITY_DOCUMENTS.forEach((doc) => {
+        if (doc.required && !uploadedDocuments[doc.key]) {
+          newErrors[doc.key] = `${doc.label} is required`;
+        }
+      });
+    }
 
-    // Validate photo
-    PHOTO_DOCUMENTS.forEach((doc) => {
-      if (doc.required && !uploadedDocuments[doc.key]) {
-        newErrors[doc.key] = `${doc.label} is required`;
-      }
-    });
+    // Photo validation (only if any are uploaded)
+    const hasPhotoDocs = PHOTO_DOCUMENTS.some(doc => uploadedDocuments[doc.key]);
+    if (hasPhotoDocs) {
+      PHOTO_DOCUMENTS.forEach((doc) => {
+        if (doc.required && !uploadedDocuments[doc.key]) {
+          newErrors[doc.key] = `${doc.label} is required`;
+        }
+      });
+    }
 
-    // Validate organizations
+    // Validate organizations - only if organization name is provided
     organizations.forEach((org, index) => {
-      if (org.name.trim() && (!org.appointment_letter && !org.relieving_letter)) {
-        newErrors[`org_${index}`] = `Organization ${index + 1}: At least one document (appointment or relieving letter) is required`;
-      }
-    });
-
-    // Validate company references
-    companyReferences.forEach((ref, index) => {
-      if (!ref.company_name || !ref.email || !ref.phone) {
-        newErrors[`reference_${index}`] = `Company reference ${index + 1} is incomplete`;
+      if (org.name.trim()) {
+        // If organization name is provided, it must have at least one document
+        if (!org.appointment_letter && !org.relieving_letter) {
+          newErrors[`org_${index}`] = `Organization ${index + 1}: At least one document (appointment or relieving letter) is required when organization name is provided`;
+        }
       }
     });
 
@@ -520,33 +513,61 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Only send regular documents (not organization documents)
-      const documents = Object.values(uploadedDocuments).map(doc => ({
-        document_type: doc.document_type,
-        document_url: doc.document_url,
-        public_id: doc.public_id,
-        file_name: doc.file_name,
-      }));
+      // **Updated payload to match backend schema exactly**
+      
+      // Prepare documents array (only include if there are documents)
+      const documents = Object.values(uploadedDocuments).length > 0 
+        ? Object.values(uploadedDocuments).map(doc => ({
+            document_type: doc.document_type,
+            document_url: doc.document_url,
+            public_id: doc.public_id,
+            isVerified: doc.isVerified, // **Required by backend schema**
+            file_name: doc.file_name || undefined, // Optional field
+          }))
+        : undefined;
 
-      // Filter organizations with names and clean up the data
+      // Prepare organizations array (only include organizations with names)
       const validOrganizations = organizations
-        .filter(org => org.name.trim())
+        .filter(org => org.name.trim()) // Only include if name is provided
         .map(org => ({
           name: org.name.trim(),
-          appointment_letter: org.appointment_letter || null,
-          relieving_letter: org.relieving_letter || null
+          appointment_letter: org.appointment_letter || undefined,
+          relieving_letter: org.relieving_letter || undefined
         }));
 
-      const payload = {
-        documents, // Only regular documents
-        organizations: validOrganizations,
-        company_references: companyReferences.filter(ref => 
-          ref.company_name.trim() && ref.email.trim() && ref.phone.trim()
-        ),
-        social_media_handles: Object.fromEntries(
-          Object.entries(socialMediaHandles).filter(([key, value]) => value.trim())
-        )
+      // Prepare company references (only include if any field has content)
+      const validCompanyReferences = companyReferences
+        .filter(ref => ref.company_name.trim() || ref.email.trim() || ref.phone.trim())
+        .map(ref => ({
+          company_name: ref.company_name.trim() || undefined,
+          email: ref.email.trim() || undefined,
+          phone: ref.phone.trim() || undefined
+        }));
+
+      // Prepare social media handles (only include if any have content)
+      const validSocialMediaHandles = Object.fromEntries(
+        Object.entries(socialMediaHandles)
+          .filter(([key, value]) => value?.trim())
+          .map(([key, value]) => [key, value.trim()])
+      );
+
+      // **Final payload matching backend schema**
+      const payload: any = {
+        organizations: validOrganizations, // Always include (defaults to [] in schema)
       };
+
+      // Only include optional fields if they have content
+      if (documents && documents.length > 0) {
+        payload.documents = documents;
+      }
+
+      if (validCompanyReferences.length > 0) {
+        payload.company_references = validCompanyReferences;
+      }
+
+      if (Object.keys(validSocialMediaHandles).length > 0) {
+        payload.social_media_handles = validSocialMediaHandles;
+      }
 
       console.log("Submitting payload:", payload); // Debug log
 
@@ -563,16 +584,26 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       }
     } catch (error: any) {
       console.error("Error submitting documents:", error);
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to submit documents. Please try again."
-      );
+      
+      // **Enhanced error handling for validation errors**
+      if (error?.response?.status === 400 && error?.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorMessages = validationErrors.map((err: any) => err.message).join(", ");
+        toast.error(`Validation Error: ${errorMessages}`);
+      } else {
+        toast.error(
+          error?.response?.data?.message ||
+            "Failed to submit documents. Please try again."
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Rest of your existing render methods remain the same...
   const renderDocumentSection = (documents: DocumentType[], title: string, icon: React.ReactNode, bgColor: string) => (
+    // Your existing renderDocumentSection implementation
     <Card className={`${bgColor} border-2`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -730,7 +761,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
           </DialogTitle>
           <DialogDescription className="text-lg text-gray-700">
             You have been successfully hired! To complete your onboarding process, 
-            please upload the following documents organized by category.
+            please upload the following documents organized by category. 
           </DialogDescription>
         </DialogHeader>
 
@@ -738,7 +769,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
           {/* Educational Documents Section */}
           {renderDocumentSection(
             EDUCATIONAL_DOCUMENTS,
-            "Educational Documents",
+            "Educational Documents (Optional)",
             <GraduationCap className="w-5 h-5" />,
             "bg-blue-50 border-blue-200"
           )}
@@ -748,7 +779,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Building className="w-5 h-5" />
-                Organization Documents
+                Organization Documents (Optional)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -798,7 +829,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                     <CardContent className="space-y-3">
                       <div>
                         <Label htmlFor={`org-name-${index}`} className="text-sm">
-                          Organization Name *
+                          Organization Name
                         </Label>
                         <Input
                           id={`org-name-${index}`}
@@ -919,19 +950,15 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
           {/* Salary Documents Section */}
           {renderDocumentSection(
             SALARY_DOCUMENTS,
-            "Salary Documents",
+            "Salary Documents (Optional)",
             <IndianRupee className="w-5 h-5" />,
             "bg-purple-50 border-purple-200"
-          )}
-          
-          {errors['salary_documents'] && (
-            <p className="text-red-500 text-sm ml-4">{errors['salary_documents']}</p>
           )}
 
           {/* Identity Document Section */}
           {renderDocumentSection(
             IDENTITY_DOCUMENTS,
-            "Identity & Address Proof",
+            "Identity & Address Proof (Optional)",
             <CreditCard className="w-5 h-5" />,
             "bg-orange-50 border-orange-200"
           )}
@@ -941,10 +968,10 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Users className="w-5 h-5" />
-                Last 2 Companies References
+                Company References (Optional)
               </CardTitle>
               <CardDescription>
-                Provide contact details for verification from your last 2 companies
+                Provide contact details for verification from your previous companies
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -955,7 +982,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
-                      <Label className="text-sm">Company Name *</Label>
+                      <Label className="text-sm">Company Name</Label>
                       <Input
                         value={ref.company_name}
                         onChange={(e) => updateCompanyReference(index, 'company_name', e.target.value)}
@@ -965,7 +992,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-sm">Email ID *</Label>
+                        <Label className="text-sm">Email ID</Label>
                         <Input
                           type="email"
                           value={ref.email}
@@ -975,7 +1002,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                         />
                       </div>
                       <div>
-                        <Label className="text-sm">Phone/Landline *</Label>
+                        <Label className="text-sm">Phone/Landline</Label>
                         <Input
                           value={ref.phone}
                           onChange={(e) => updateCompanyReference(index, 'phone', e.target.value)}
@@ -998,11 +1025,10 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Share2 className="w-5 h-5" />
-                Social Media Handles - Background Verification
+                Social Media Handles (Optional)
               </CardTitle>
               <CardDescription className="text-indigo-700">
-                Please provide your social media handles. 
-              
+                Provide your social media handles for background verification if desired.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1030,7 +1056,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
           {/* Photo Section */}
           {renderDocumentSection(
             PHOTO_DOCUMENTS,
-            "Passport Size Photo",
+            "Passport Size Photo (Optional)",
             <Camera className="w-5 h-5" />,
             "bg-pink-50 border-pink-200"
           )}
@@ -1039,19 +1065,18 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
           <Card className="bg-gray-50 border-gray-200">
             <CardContent className="pt-6">
               <div className="flex gap-3">
-                <div className="text-2xl">⚠️</div>
+                <div className="text-2xl">ℹ️</div>
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-2">
-                    Important Instructions:
+                    Instructions:
                   </h3>
                   <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
                     <li>All files must be in PDF, JPG, PNG, DOC, or DOCX format</li>
                     <li>Maximum file size: 10MB per file</li>
-                    <li>Documents marked with * are mandatory</li>
-                    <li>For salary documents: Upload either all 3 salary slips OR Form 16</li>
-                    <li>Social media handles are required for background verification</li>
+                    <li>If you upload documents in a section, complete all required fields in that section</li>
                     <li>Ensure all documents are clear and readable</li>
                     <li>Use the "Sample" buttons to download template formats where available</li>
+                    <li>You can submit the form even without uploading any documents</li>
                   </ul>
                 </div>
               </div>
@@ -1075,7 +1100,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Submit All Documents & Complete Onboarding
+                  Submit Documents & Complete Onboarding
                 </>
               )}
             </Button>

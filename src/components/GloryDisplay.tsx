@@ -1,8 +1,7 @@
 /* ───────────────── GloryDisplay.tsx ───────────────── */
-import type { FC } from 'react';
+import { type FC } from 'react';
 import { format } from 'date-fns';
 import { Star } from 'lucide-react';
-
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -38,8 +37,8 @@ const gradeColor = (g: string) => ({
 
 /* ── component ─────────────────────────────────────── */
 const GloryDisplay: FC<GloryDisplayProps> = ({ glory }) => {
-  if (!glory || Object.keys(glory).length === 0) return null;
 
+  if (!glory || Object.keys(glory).length === 0) return null;
   return (
     <Card>
       <CardHeader>

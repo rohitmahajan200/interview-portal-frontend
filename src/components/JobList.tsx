@@ -1,7 +1,9 @@
 import { useAppSelector } from "@/hooks/useAuth"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 const JobList = () => {
-  const role = useAppSelector((state) => state.auth.user?.applied_job);
+  const role = useAppSelector((state) => state.auth.user?.applied_job)
 
   return (
     <div className="w-full bg-muted/50 rounded-xl px-4 py-6">
@@ -19,19 +21,16 @@ const JobList = () => {
             <h3 className="text-xl sm:text-2xl font-bold text-card-foreground text-center">
               {role.name}
             </h3>
-
-            <div className="space-y-2 text-muted-foreground text-sm sm:text-base">
-              <p><span className="font-semibold">Description:</span></p>
-              <p>Experience Required: <b>{role.description.expInYears}</b></p>
-              <p>Time: {role.description.time}</p>
-              <p>Location: {role.description.location}, {role.description.country}</p>
-              <p>Salary: {role.description.salary}</p>
+            <div className="prose prose-sm sm:prose-base text-muted-foreground max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {String(role.description ?? "")}
+              </ReactMarkdown>
             </div>
           </div>
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default JobList;
+export default JobList
