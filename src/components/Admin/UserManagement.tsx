@@ -302,7 +302,7 @@ const AdminHome = () => {
         toast.success("User deleted successfully");
         setDeleteDialogOpen(false);
         setSelectedUser(null);
-        fetchUsers(); // Refresh the list
+        fetchUsers(); // Refresh the list here
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to delete user");
