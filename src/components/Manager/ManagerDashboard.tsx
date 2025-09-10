@@ -74,6 +74,13 @@ interface ManagerCandidate {
   address: string;
   current_stage: string;
   status: string;
+  glory?: { [role: string]: {
+    graderId?: string;
+    graderName?: string;
+    graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+    grades: { [parameter: string]: string };
+    gradedAt: string;
+  }};
   applied_job?: {
     _id: string;
     name: string;
@@ -343,41 +350,50 @@ const ManagerDashboard: React.FC = () => {
   };
 
   // Data fetching - Updated to use common endpoint with client-side filtering
-  const fetchData = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const [candidatesRes, statsRes] = await Promise.all([
-        api.get<{ success: boolean; data: ManagerCandidate[] }>("/org/candidates"),
-        api.get<{ success: boolean; data: { statistics: ManagerStats } }>("/org/dashboard/stats"),
-      ]);
+const fetchData = useCallback(async (): Promise<void> => {
+  try {
+    setLoading(true);
+    const [candidatesRes, statsRes] = await Promise.all([
+      api.get<{ success: boolean; data: ManagerCandidate[] }>("/org/candidates"),
+      api.get<{ success: boolean; data: { statistics: ManagerStats } }>("/org/dashboard/stats"),
+    ]);
 
-      const allCandidatesData = candidatesRes.data.data || [];
-      
-const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
-  ...candidate,
-  documents: normalizeDocuments(candidate.documents),   // ✅ normalize
-  hired_docs: normalizeDocuments(candidate.hired_docs), // ✅ normalize
-  progress_metrics: calculateProgressMetrics(candidate),
-}));
+    const allCandidatesData = candidatesRes.data.data || [];
+    
+    // ✅ Force completely new object references with timestamp
+    const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
+      ...candidate,
+      documents: normalizeDocuments(candidate.documents),
+      hired_docs: normalizeDocuments(candidate.hired_docs),
+      progress_metrics: calculateProgressMetrics(candidate),
+      // ✅ Force new reference with timestamp
+      _renderKey: `${candidate._id}-${Date.now()}`,
+      // ✅ Deep clone glory to ensure new reference
+      glory: candidate.glory ? JSON.parse(JSON.stringify(candidate.glory)) : undefined
+    }));
 
-      
-      const managerStageCandidates = candidatesWithMetrics.filter(
-        candidate => candidate.current_stage === "manager"
-      );
-      
-      setCandidates(managerStageCandidates);
-      setAllCandidates(candidatesWithMetrics);
-      
-      if (statsRes.data.success) {
-        setStats(statsRes.data.data.statistics);
-      }
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast.error("Failed to load dashboard");
-    } finally {
-      setLoading(false);
+    const managerStageCandidates = candidatesWithMetrics.filter(
+      candidate => candidate.current_stage === "manager"
+    );
+    
+    // ✅ Force completely new array references
+    setCandidates([...managerStageCandidates]);
+    setAllCandidates([...candidatesWithMetrics]);
+    
+    // ✅ Clear detailed candidates to force fresh data
+    setDetailedCandidates({});
+    
+    if (statsRes.data.success) {
+      setStats(statsRes.data.data.statistics);
     }
-  }, []);
+  } catch (error) {
+    console.error("Failed to fetch data:", error);
+    toast.error("Failed to load dashboard");
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
 
   // Effects
   useEffect(() => {
@@ -692,6 +708,7 @@ const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
 
         <TabsContent value="manager-stage" className="space-y-4">
           <ManagerStage
+            key={`manager-${candidates.length}-${Date.now()}`}
             candidates={candidates}
             detailedCandidates={detailedCandidates}
             loadingDetails={loadingDetails}
@@ -712,6 +729,7 @@ const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
 
         <TabsContent value="tracking" className="space-y-4">
           <ManagerAllCandidates
+            key={`all-${allCandidates.length}-${Date.now()}`}
             allCandidates={allCandidates}
             detailedCandidates={detailedCandidates}
             loadingDetails={loadingDetails}
@@ -796,7 +814,6 @@ const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
                     <SelectValue placeholder="Select stage" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="registered">Registered</SelectItem>
                     <SelectItem value="hr">HR Review</SelectItem>
                     <SelectItem value="assessment">Assessment</SelectItem>
                     <SelectItem value="feedback">Final Feedback</SelectItem>

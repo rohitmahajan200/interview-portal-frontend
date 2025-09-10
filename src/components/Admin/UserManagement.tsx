@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,25 +7,45 @@ import { Input } from "@/components/ui/input";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import {  
-  Search, 
-  Users, 
-  UserPlus, 
-  UserCheck, 
-  UserX, 
-  Edit3, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Search,
+  Users,
+  UserPlus,
+  UserCheck,
+  UserX,
+  Edit3,
   Trash2,
   Mail,
   Shield,
-  MoreHorizontal
+  MoreHorizontal,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -51,20 +71,46 @@ interface User {
 const inviteSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email format"),
-  role: z.enum(["ADMIN","HR", "INVIGILATOR", "MANAGER"], {
+  role: z.enum(["ADMIN", "HR", "INVIGILATOR", "MANAGER"], {
     error: "Please select a valid role",
-  })
+  }),
 });
 type InviteFormData = z.infer<typeof inviteSchema>;
 
 const updateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email format"),
-  role: z.enum(["ADMIN","HR", "INVIGILATOR", "MANAGER"], {
+  role: z.enum(["ADMIN", "HR", "INVIGILATOR", "MANAGER"], {
     error: "Please select a valid role",
-  })
+  }),
 });
 
+const passwordUpdateSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        /(?=.*[a-z])/,
+        "Password must contain at least one lowercase letter"
+      )
+      .regex(
+        /(?=.*[A-Z])/,
+        "Password must contain at least one uppercase letter"
+      )
+      .regex(/(?=.*\d)/, "Password must contain at least one number")
+      .regex(
+        /(?=.*[@$!%*?&])/,
+        "Password must contain at least one special character"
+      ),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+type PasswordUpdateFormData = z.infer<typeof passwordUpdateSchema>;
 
 interface UpdateFormData {
   name: string;
@@ -73,20 +119,27 @@ interface UpdateFormData {
 }
 
 const AdminHome = () => {
+  // Add to existing dialog states
+  const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] =
+    useState(false);
+
+  // Add to existing loading states
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  
+
   // Dialog states
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  
+
   // Selected user for operations
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  
+
   // Loading states
   const [isInviting, setIsInviting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -98,8 +151,8 @@ const AdminHome = () => {
     defaultValues: {
       name: "",
       email: "",
-      role: "HR"
-    }
+      role: "HR",
+    },
   });
 
   const updateForm = useForm<UpdateFormData>({
@@ -107,8 +160,17 @@ const AdminHome = () => {
     defaultValues: {
       name: "",
       email: "",
-      role: "HR"
-    }
+      role: "HR",
+    },
+  });
+
+  // Add to existing forms
+  const passwordUpdateForm = useForm<PasswordUpdateFormData>({
+    resolver: zodResolver(passwordUpdateSchema),
+    defaultValues: {
+      newPassword: "",
+      confirmPassword: "",
+    },
   });
 
   // Fetch users
@@ -135,14 +197,16 @@ const AdminHome = () => {
     let filtered = users;
 
     if (searchTerm) {
-      filtered = filtered.filter(user => 
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      filtered = filtered.filter(
+        (user) =>
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.name &&
+            user.name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === roleFilter);
+    if (roleFilter !== "all") {
+      filtered = filtered.filter((user) => user.role === roleFilter);
     }
 
     setFilteredUsers(filtered);
@@ -152,8 +216,8 @@ const AdminHome = () => {
   const onInviteSubmit = async (data: InviteFormData) => {
     try {
       setIsInviting(true);
-      const response = await api.post('/org/invite', data);
-      
+      const response = await api.post("/org/invite", data);
+
       if (response.data.success) {
         toast.success(`Invitation sent to ${data.email}`);
         setInviteDialogOpen(false);
@@ -161,10 +225,47 @@ const AdminHome = () => {
         fetchUsers(); // Refresh the list
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to send invitation");
+      toast.error(
+        error?.response?.data?.message || "Failed to send invitation"
+      );
     } finally {
       setIsInviting(false);
     }
+  };
+
+  // Update user password
+  const onPasswordUpdateSubmit = async (data: PasswordUpdateFormData) => {
+    if (!selectedUser) return;
+
+    try {
+      setIsUpdatingPassword(true);
+      const response = await api.patch(
+        `/org/update-password/${selectedUser._id}`,
+        {
+          newPassword: data.newPassword,
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Password updated successfully");
+        setPasswordUpdateDialogOpen(false);
+        setSelectedUser(null);
+        passwordUpdateForm.reset();
+      }
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || "Failed to update password"
+      );
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  // Open password update dialog
+  const openPasswordUpdateDialog = (user: User) => {
+    setSelectedUser(user);
+    passwordUpdateForm.reset();
+    setPasswordUpdateDialogOpen(true);
   };
 
   // Update user
@@ -174,7 +275,7 @@ const AdminHome = () => {
     try {
       setIsUpdating(true);
       const response = await api.patch(`/org/update/${selectedUser._id}`, data);
-      
+
       if (response.data.success) {
         toast.success("User updated successfully");
         setUpdateDialogOpen(false);
@@ -196,7 +297,7 @@ const AdminHome = () => {
     try {
       setIsDeleting(true);
       const response = await api.delete(`/org/delete/${selectedUser._id}`);
-      
+
       if (response.data.success) {
         toast.success("User deleted successfully");
         setDeleteDialogOpen(false);
@@ -228,31 +329,36 @@ const AdminHome = () => {
   // Utility functions
   const getRoleColor = (role: Role) => {
     switch (role) {
-      case "ADMIN": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "HR": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "INVIGILATOR": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "MANAGER": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      case "ADMIN":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "HR":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "INVIGILATOR":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "MANAGER":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   // Statistics
   const stats = {
     total: users.length,
-    hr: users.filter(u => u.role === 'HR').length,
-    invigilator: users.filter(u => u.role === 'INVIGILATOR').length,
-    manager: users.filter(u => u.role === 'MANAGER').length,
-    verified: users.filter(u => u.email_verified).length,
+    hr: users.filter((u) => u.role === "HR").length,
+    invigilator: users.filter((u) => u.role === "INVIGILATOR").length,
+    manager: users.filter((u) => u.role === "MANAGER").length,
+    verified: users.filter((u) => u.email_verified).length,
   };
 
   if (loading) {
@@ -275,7 +381,7 @@ const AdminHome = () => {
             Manage organization users, roles, and permissions
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => setInviteDialogOpen(true)}
           className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
         >
@@ -312,7 +418,9 @@ const AdminHome = () => {
             <Shield className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.invigilator}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.invigilator}
+            </div>
           </CardContent>
         </Card>
 
@@ -322,7 +430,9 @@ const AdminHome = () => {
             <UserX className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.manager}</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {stats.manager}
+            </div>
           </CardContent>
         </Card>
 
@@ -332,7 +442,9 @@ const AdminHome = () => {
             <Mail className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{stats.verified}</div>
+            <div className="text-2xl font-bold text-emerald-600">
+              {stats.verified}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -384,19 +496,21 @@ const AdminHome = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (                  
+                {filteredUsers.map((user) => (
                   <TableRow key={user._id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar>
                           <AvatarImage src="" />
                           <AvatarFallback>
-                            {user.name ? user.name[0] : user.email[0].toUpperCase()}
+                            {user.name
+                              ? user.name[0]
+                              : user.email[0].toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="font-medium">
-                            {user.name || 'No name set'}
+                            {user.name || "No name set"}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             ID: {user._id.slice(-8)}
@@ -411,7 +525,9 @@ const AdminHome = () => {
                           {user.email_verified ? (
                             <span className="text-green-600">✓ Verified</span>
                           ) : (
-                            <span className="text-orange-600">⚠ Unverified</span>
+                            <span className="text-orange-600">
+                              ⚠ Unverified
+                            </span>
                           )}
                         </div>
                       </div>
@@ -423,15 +539,19 @@ const AdminHome = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${user.email_verified ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            user.email_verified
+                              ? "bg-green-500"
+                              : "bg-orange-500"
+                          }`}
+                        ></div>
                         <span className="text-sm">
-                          {user.email_verified ? 'Active' : 'Pending'}
+                          {user.email_verified ? "Active" : "Pending"}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {formatDate(user.createdAt)}
-                    </TableCell>
+                    <TableCell>{formatDate(user.createdAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -442,11 +562,19 @@ const AdminHome = () => {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => openUpdateDialog(user)}>
+                          <DropdownMenuItem
+                            onClick={() => openUpdateDialog(user)}
+                          >
                             <Edit3 className="mr-2 h-4 w-4" />
                             Edit User
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
+                            onClick={() => openPasswordUpdateDialog(user)}
+                          >
+                            <Shield className="mr-2 h-4 w-4" />
+                            Update Password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => openDeleteDialog(user)}
                             className="text-red-600"
                           >
@@ -464,13 +592,146 @@ const AdminHome = () => {
 
           {filteredUsers.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No users found matching your criteria.</p>
+              <p className="text-muted-foreground">
+                No users found matching your criteria.
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Invite User Dialog */}
+      {/* Update Password Dialog */}
+      <Dialog
+        open={passwordUpdateDialogOpen}
+        onOpenChange={setPasswordUpdateDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Update Password
+            </DialogTitle>
+            <DialogDescription>
+              Set a new password for this user. They will need to use this
+              password to log in.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="space-y-4">
+              {/* User Info */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback>
+                      {selectedUser.name
+                        ? selectedUser.name[0]
+                        : selectedUser.email[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {selectedUser.name || "No name set"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedUser.email}
+                    </p>
+                    <Badge
+                      className={getRoleColor(selectedUser.role)}
+                      variant="outline"
+                    >
+                      {selectedUser.role}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <form
+                onSubmit={passwordUpdateForm.handleSubmit(
+                  onPasswordUpdateSubmit
+                )}
+                className="space-y-4"
+              >
+                {/* New Password Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Enter new password"
+                    {...passwordUpdateForm.register("newPassword")}
+                    disabled={isUpdatingPassword}
+                  />
+                  {passwordUpdateForm.formState.errors.newPassword && (
+                    <p className="text-red-600 text-sm">
+                      {passwordUpdateForm.formState.errors.newPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Confirm Password Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirm new password"
+                    {...passwordUpdateForm.register("confirmPassword")}
+                    disabled={isUpdatingPassword}
+                  />
+                  {passwordUpdateForm.formState.errors.confirmPassword && (
+                    <p className="text-red-600 text-sm">
+                      {
+                        passwordUpdateForm.formState.errors.confirmPassword
+                          .message
+                      }
+                    </p>
+                  )}
+                </div>
+
+                {/* Password Requirements */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                    Password Requirements:
+                  </h4>
+                  <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <li>• At least 8 characters long</li>
+                    <li>• Contains uppercase and lowercase letters</li>
+                    <li>• Contains at least one number</li>
+                    <li>• Contains at least one special character (@$!%*?&)</li>
+                  </ul>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPasswordUpdateDialogOpen(false)}
+                    disabled={isUpdatingPassword}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isUpdatingPassword}>
+                    {isUpdatingPassword ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Update Password
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -483,7 +744,10 @@ const AdminHome = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={inviteForm.handleSubmit(onInviteSubmit)} className="space-y-4">
+          <form
+            onSubmit={inviteForm.handleSubmit(onInviteSubmit)}
+            className="space-y-4"
+          >
             <div className="space-y-4">
               {/* Name Field */}
               <div className="space-y-2">
@@ -492,11 +756,13 @@ const AdminHome = () => {
                   id="invite-name"
                   type="text"
                   placeholder="e.g., John Doe"
-                  {...inviteForm.register('name')}
+                  {...inviteForm.register("name")}
                   disabled={isInviting}
                 />
                 {inviteForm.formState.errors.name && (
-                  <p className="text-red-600 text-sm">{inviteForm.formState.errors.name.message}</p>
+                  <p className="text-red-600 text-sm">
+                    {inviteForm.formState.errors.name.message}
+                  </p>
                 )}
               </div>
 
@@ -507,11 +773,13 @@ const AdminHome = () => {
                   id="invite-email"
                   type="email"
                   placeholder="user@example.com"
-                  {...inviteForm.register('email')}
+                  {...inviteForm.register("email")}
                   disabled={isInviting}
                 />
                 {inviteForm.formState.errors.email && (
-                  <p className="text-red-600 text-sm">{inviteForm.formState.errors.email.message}</p>
+                  <p className="text-red-600 text-sm">
+                    {inviteForm.formState.errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -522,7 +790,11 @@ const AdminHome = () => {
                   name="role"
                   control={inviteForm.control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isInviting}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={isInviting}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
@@ -535,15 +807,17 @@ const AdminHome = () => {
                   )}
                 />
                 {inviteForm.formState.errors.role && (
-                  <p className="text-red-600 text-sm">{inviteForm.formState.errors.role.message}</p>
+                  <p className="text-red-600 text-sm">
+                    {inviteForm.formState.errors.role.message}
+                  </p>
                 )}
               </div>
             </div>
 
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setInviteDialogOpen(false)}
                 disabled={isInviting}
               >
@@ -587,17 +861,26 @@ const AdminHome = () => {
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback>
-                      {selectedUser.name ? selectedUser.name[0] : selectedUser.email[0].toUpperCase()}
+                      {selectedUser.name
+                        ? selectedUser.name[0]
+                        : selectedUser.email[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{selectedUser.name || 'No name set'}</p>
-                    <p className="text-sm text-muted-foreground">ID: {selectedUser._id.slice(-8)}</p>
+                    <p className="font-medium">
+                      {selectedUser.name || "No name set"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      ID: {selectedUser._id.slice(-8)}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <form onSubmit={updateForm.handleSubmit(onUpdateSubmit)} className="space-y-4">
+              <form
+                onSubmit={updateForm.handleSubmit(onUpdateSubmit)}
+                className="space-y-4"
+              >
                 {/* Name Field */}
                 <div className="space-y-2">
                   <Label htmlFor="update-name">Name</Label>
@@ -605,11 +888,13 @@ const AdminHome = () => {
                     id="update-name"
                     type="text"
                     placeholder="e.g., John Doe"
-                    {...updateForm.register('name')}
+                    {...updateForm.register("name")}
                     disabled={isUpdating}
                   />
                   {updateForm.formState.errors.name && (
-                    <p className="text-red-600 text-sm">{updateForm.formState.errors.name.message}</p>
+                    <p className="text-red-600 text-sm">
+                      {updateForm.formState.errors.name.message}
+                    </p>
                   )}
                 </div>
 
@@ -620,11 +905,13 @@ const AdminHome = () => {
                     id="update-email"
                     type="email"
                     placeholder="user@example.com"
-                    {...updateForm.register('email')}
+                    {...updateForm.register("email")}
                     disabled={isUpdating}
                   />
                   {updateForm.formState.errors.email && (
-                    <p className="text-red-600 text-sm">{updateForm.formState.errors.email.message}</p>
+                    <p className="text-red-600 text-sm">
+                      {updateForm.formState.errors.email.message}
+                    </p>
                   )}
                 </div>
 
@@ -635,27 +922,35 @@ const AdminHome = () => {
                     name="role"
                     control={updateForm.control}
                     render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value} disabled={isUpdating}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isUpdating}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="HR">HR</SelectItem>
-                          <SelectItem value="INVIGILATOR">Invigilator</SelectItem>
+                          <SelectItem value="INVIGILATOR">
+                            Invigilator
+                          </SelectItem>
                           <SelectItem value="MANAGER">Manager</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
                   />
                   {updateForm.formState.errors.role && (
-                    <p className="text-red-600 text-sm">{updateForm.formState.errors.role.message}</p>
+                    <p className="text-red-600 text-sm">
+                      {updateForm.formState.errors.role.message}
+                    </p>
                   )}
                 </div>
 
                 <DialogFooter>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setUpdateDialogOpen(false)}
                     disabled={isUpdating}
                   >
@@ -690,7 +985,8 @@ const AdminHome = () => {
               Delete User
             </DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The user will be permanently removed from your organization.
+              This action cannot be undone. The user will be permanently removed
+              from your organization.
             </DialogDescription>
           </DialogHeader>
 
@@ -701,13 +997,22 @@ const AdminHome = () => {
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback>
-                      {selectedUser.name ? selectedUser.name[0] : selectedUser.email[0].toUpperCase()}
+                      {selectedUser.name
+                        ? selectedUser.name[0]
+                        : selectedUser.email[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{selectedUser.name || 'No name set'}</p>
-                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                    <Badge className={getRoleColor(selectedUser.role)} variant="outline">
+                    <p className="font-medium">
+                      {selectedUser.name || "No name set"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedUser.email}
+                    </p>
+                    <Badge
+                      className={getRoleColor(selectedUser.role)}
+                      variant="outline"
+                    >
                       {selectedUser.role}
                     </Badge>
                   </div>
@@ -718,26 +1023,28 @@ const AdminHome = () => {
                 <div className="flex items-start gap-3">
                   <div className="w-5 h-5 text-yellow-600 mt-0.5">⚠️</div>
                   <div>
-                    <p className="font-medium text-yellow-800 dark:text-yellow-200">Warning</p>
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                      Warning
+                    </p>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      Deleting this user will remove all their data and access to the system. 
-                      This action cannot be undone.
+                      Deleting this user will remove all their data and access
+                      to the system. This action cannot be undone.
                     </p>
                   </div>
                 </div>
               </div>
 
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setDeleteDialogOpen(false)}
                   disabled={isDeleting}
                 >
                   Cancel
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={deleteUser}
                   disabled={isDeleting}
                 >

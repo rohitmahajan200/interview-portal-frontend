@@ -992,25 +992,6 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                                       </div>
                                     </div>
                                   )}
-
-                                  {response.question.tags.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-muted-foreground">
-                                        Tags:
-                                      </span>
-                                      {response.question.tags.map(
-                                        (tag, idx) => (
-                                          <Badge
-                                            key={idx}
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
-                                            {tag}
-                                          </Badge>
-                                        )
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             )
@@ -1120,7 +1101,13 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
         onClose={closeGloryDialog}
         role="hr" // Hardcoded role
         onGradeChange={handleGloryGradeChange}
-        onSubmit={() => submitGloryGrades(fetchResponsesList)}
+        onSubmit={() => submitGloryGrades(()=>{
+          fetchResponsesList();
+          if (selectedCandidate) {
+          fetchCandidateDetail(selectedCandidate._id);
+    }
+        }
+        )}
         getGradingParameters={getGradingParameters}
       />
 

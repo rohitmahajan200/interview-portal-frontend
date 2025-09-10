@@ -1,4 +1,4 @@
-import React, {useState } from "react";
+import React, {useEffect, useState } from "react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader } from "../ui/card";
@@ -385,6 +385,14 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   const [stageUpdateReason, setStageUpdateReason] = useState("");
   const [stageFeedback, setStageFeedback] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
+  useEffect(() => {
+    if (!submittingGlory) {
+      console.log('Glory submission completed, data should be updated');
+      
+    }
+  }, [submittingGlory]);
+
 
   // Action handlers
   const updateCandidateStage = async (
@@ -930,7 +938,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       </div>
 
                       {/* Glory */}
-                                            <GloryDisplay glory={candidateData.glory}/>
+                      <GloryDisplay glory={candidateData.glory}/>
 
                       {/* HR Responses Section */}
                       {candidateData.default_hr_responses &&
@@ -1619,7 +1627,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               getGradingParameters={getGradingParameters}
             />
       
-
       {/* Stage Update Dialog - Fixed */}
       <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
         <DialogContent className="sm:max-w-lg">
@@ -1685,14 +1692,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                 >
                   <option value="">Select new stage</option>
                   <option
-                    value="registered"
-                    disabled={
-                      candidateToUpdateStage.current_stage === "registered"
-                    }
-                  >
-                    📝 Registered
-                  </option>
-                  <option
                     value="hr"
                     disabled={candidateToUpdateStage.current_stage === "hr"}
                   >
@@ -1705,14 +1704,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                     }
                   >
                     📊 Assessment
-                  </option>
-                  <option
-                    value="manager"
-                    disabled={
-                      candidateToUpdateStage.current_stage === "manager"
-                    }
-                  >
-                    👔 Manager Review
                   </option>
                   <option
                     value="feedback"

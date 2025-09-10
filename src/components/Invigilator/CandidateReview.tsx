@@ -1043,7 +1043,13 @@ const fetchAssessmentDetail = async (id: string) => {
         onClose={closeGloryDialog}
         role="hr" // Hardcoded role
         onGradeChange={handleGloryGradeChange}
-        onSubmit={() => submitGloryGrades(fetchAssessmentsList)}
+        onSubmit={() => submitGloryGrades(()=>{
+          fetchAssessmentsList();
+          if(selectedAssessment){
+            fetchAssessmentDetail(selectedAssessment._id);
+          }
+        }
+          )}
         getGradingParameters={getGradingParameters}
 />
 
@@ -1098,14 +1104,8 @@ const fetchAssessmentDetail = async (id: string) => {
                   disabled={isUpdatingStage}
                 >
                   <option value="">Select new stage</option>
-                  <option value="registered" disabled={selectedAssessment.candidate.current_stage === 'registered'}>
-                    📝 Registered
-                  </option>
                   <option value="hr" disabled={selectedAssessment.candidate.current_stage === 'hr'}>
                     👥 HR Review
-                  </option>
-                  <option value="assessment" disabled={selectedAssessment.candidate.current_stage === 'assessment'}>
-                    📊 Assessment
                   </option>
                   <option value="manager" disabled={selectedAssessment.candidate.current_stage === 'manager'}>
                     👔 Manager Review

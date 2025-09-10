@@ -1551,7 +1551,7 @@ const {
                     {/* Action Buttons */}
                     {
                       <div className="flex flex-wrap items-center gap-2">
-                        {selectedCandidate.current_stage === "registered" && (
+                        {(selectedCandidate.current_stage === "registered"|| selectedCandidate.current_stage ==="hr") && (
                           <Button
                             onClick={() =>
                               openHRQuestionnaireDialog(selectedCandidate)
@@ -1568,7 +1568,7 @@ const {
                           </Button>
                         )}
 
-                        {selectedCandidate.current_stage === "hr" && (
+                        {selectedCandidate.current_stage === "assessment" && (
                           <Button
                             onClick={() =>
                               openAssessmentDialog(selectedCandidate)
@@ -2982,7 +2982,12 @@ const {
         onClose={closeGloryDialog}
         role="hr" // Pass hardcoded role instead of onRoleChange
         onGradeChange={handleGloryGradeChange}
-        onSubmit={() => submitGloryGrades(fetchAllData)}
+        onSubmit={() => submitGloryGrades(()=>{
+          fetchAllData();
+          if(selectedCandidate){
+            fetchCandidateDetails(selectedCandidate._id);
+          }
+        })}
         getGradingParameters={getGradingParameters}
       />
 
@@ -3804,18 +3809,6 @@ const {
                   disabled={isUpdatingStage}
                 >
                   <option value="">Select new stage</option>
-                  <option
-                    value="registered"
-                    disabled={selectedCandidate.current_stage === "registered"}
-                  >
-                    📝 Registered
-                  </option>
-                  <option
-                    value="hr"
-                    disabled={selectedCandidate.current_stage === "hr"}
-                  >
-                    👥 HR Review
-                  </option>
                   <option
                     value="assessment"
                     disabled={selectedCandidate.current_stage === "assessment"}

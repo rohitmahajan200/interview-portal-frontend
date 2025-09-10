@@ -127,6 +127,7 @@ const submitGloryGrades = async (onSuccess?: () => void) => {
     } else {
       toast.error(res.data.message || 'Failed to assign glory grades');
     }
+    
   } catch (err: any) {
     toast.error(err?.response?.data?.message || 'API error assigning grades');
   } finally {

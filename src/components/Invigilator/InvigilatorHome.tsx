@@ -2277,7 +2277,12 @@ const InvigilatorHome = () => {
         onClose={closeGloryDialog}
         role="invigilator" // Pass hardcoded role instead of onRoleChange
         onGradeChange={handleGloryGradeChange}
-        onSubmit={() => submitGloryGrades(fetchCandidates)}
+        onSubmit={() => submitGloryGrades(()=>{
+          fetchCandidates();
+          if(selectedCandidate){
+            fetchCandidateDetails(selectedCandidate._id);
+          }
+        })}
         getGradingParameters={getGradingParameters}
       />
 
@@ -2453,22 +2458,10 @@ const InvigilatorHome = () => {
                 >
                   <option value="">Select new stage</option>
                   <option
-                    value="registered"
-                    disabled={selectedCandidate.current_stage === "registered"}
-                  >
-                    📝 Registered
-                  </option>
-                  <option
                     value="hr"
                     disabled={selectedCandidate.current_stage === "hr"}
                   >
                     👥 HR Review
-                  </option>
-                  <option
-                    value="assessment"
-                    disabled={selectedCandidate.current_stage === "assessment"}
-                  >
-                    📊 Assessment
                   </option>
                   <option
                     value="manager"
