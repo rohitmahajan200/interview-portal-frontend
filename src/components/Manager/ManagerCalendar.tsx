@@ -75,7 +75,7 @@ const InterviewScheduling = () => {
   const [loading, setLoading] = useState(true);
 
   const orgUser = useAppSelector((s) => s.orgAuth?.user); // expects { id, _id?, name, role }
-  const userId = orgUser?.id || orgUser?._id; // be tolerant
+  const userId = orgUser?.id;// be tolerant
   const isAdmin = orgUser?.role === "ADMIN";
 
   // remark form state
