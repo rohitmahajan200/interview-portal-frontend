@@ -33,6 +33,8 @@ const SecureAssessmentLanding = () => {
   const [started, setStarted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isSeb, setIsSeb] = useState(false);
+
 
   // Step 1 → Entry
  // Step 1 → Entry
@@ -86,6 +88,7 @@ const handleEntry = async () => {
       const { data } = await api.get(getUrl, { headers: await sebHeaders(getUrl) });
 
       setAssessment(data.data.assessment);
+      setIsSeb(data.data.assessment.is_seb); 
       setStarted(true);
       setMessage("");
       toast.success("Assessment started successfully!");
@@ -310,7 +313,7 @@ const handleEntry = async () => {
                 </p>
               </div>
               <Button 
-                onClick={() => (window.location.href = "/quit")} 
+                onClick={() => (window.location.href = isSeb ? "/quit" : "/")} 
                 className="w-full"
               >
                 Close Window

@@ -55,7 +55,7 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
   // Manager navigation items with notifications
   const managerNav = [
     navItem("dashboard", Home, "manager-home"),
-    navItem("calendar", Calendar, "manager-calendar"),
+    navItem("interviews", Calendar, "manager-calendar"),
     // Only add notifications and config for non-admin users
     ...(!isAdmin
       ? [
