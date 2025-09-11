@@ -297,7 +297,6 @@ const AdminHome = () => {
     try {
       setIsDeleting(true);
       const response = await api.delete(`/org/delete/${selectedUser._id}`);
-
       if (response.data.success) {
         toast.success("User deleted successfully");
         setDeleteDialogOpen(false);

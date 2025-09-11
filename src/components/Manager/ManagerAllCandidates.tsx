@@ -750,80 +750,9 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                         </div>
                       </div>
 
-                      {/* Glory */}
-                      <GloryDisplay glory={candidate.glory}/>
+                      
 
-                      {/* HR Responses - Compact */}
-                      {candidateData.default_hr_responses &&
-                        candidateData.default_hr_responses.length > 0 && (
-                          <div>
-                            <h4 className="font-semibold mb-3 flex items-center gap-2">
-                              <MessageSquare className="h-4 w-4 text-purple-600" />
-                              HR Responses
-                            </h4>
-                            <div className="space-y-2">
-                              {candidateData.default_hr_responses
-                                .slice(0, 2)
-                                .map((response) => (
-                                  <div
-                                    key={response._id}
-                                    className="p-2 bg-purple-50 rounded border border-purple-100"
-                                  >
-                                    <div className="text-xs font-medium text-purple-800 mb-1">
-                                      {response.question_text?.substring(0, 40)}
-                                      ...
-                                    </div>
-                                    <div className="text-xs text-gray-700">
-                                      {response.response?.substring(0, 60)}...
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Documents Section - Enhanced with detailed data */}
-                      {detailedCandidate?.documents &&
-                        detailedCandidate.documents.length > 0 && (
-                          <div>
-                            <h4 className="font-semibold mb-3 flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-emerald-600" />
-                              Documents
-                            </h4>
-                            <div className="space-y-2">
-                              {detailedCandidate.documents
-                                .slice(0, 3)
-                                .map((document) => (
-                                  <div
-                                    key={document._id}
-                                    className="p-2 bg-emerald-50 rounded border border-emerald-100"
-                                  >
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm font-medium text-emerald-800 truncate">
-                                        {document.document_type}
-                                      </span>
-                                      {document.document_url && (
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() =>
-                                            window.open(
-                                              document.document_url,
-                                              "_blank"
-                                            )
-                                          }
-                                          className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700"
-                                        >
-                                          <ExternalLink className="h-3 w-3" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-
+                     
                       {/* Assessments - Compact */}
                       {candidateData.assessments &&
                         candidateData.assessments.length > 0 && (
@@ -858,46 +787,49 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                           </div>
                         )}
 
-                      {/* Stage History - Enhanced with detailed data */}
-                      {detailedCandidate?.stage_history &&
-                        detailedCandidate.stage_history.length > 0 && (
-                          <div className="lg:col-span-2">
+                      {/* HR Responses - Compact */}
+                      {candidateData.default_hr_responses &&
+                        candidateData.default_hr_responses.length > 0 && (
+                          <div>
                             <h4 className="font-semibold mb-3 flex items-center gap-2">
-                              <ArrowRight className="h-4 w-4 text-gray-600" />
-                              Stage History
+                              <MessageSquare className="h-4 w-4 text-purple-600" />
+                              HR Responses
                             </h4>
                             <div className="space-y-2">
-                              {detailedCandidate.stage_history
-                                .slice(-4)
-                                .map((stage) => (
+                              {candidateData.default_hr_responses
+                                .slice(0, 2)
+                                .map((response) => (
                                   <div
-                                    key={stage._id}
-                                    className="p-2 bg-gray-50 rounded border border-gray-200"
+                                    key={response._id}
+                                    className="p-2 bg-purple-50 rounded border border-purple-100"
                                   >
-                                    <div className="flex items-center justify-between mb-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                          {stage.from_stage || "Start"}
-                                        </span>
-                                        <ArrowRight className="h-3 w-3 text-gray-400" />
-                                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                                          {stage.to_stage}
-                                        </span>
-                                      </div>
-                                      <span className="text-xs text-muted-foreground">
-                                        {formatDate(stage.changed_at)}
-                                      </span>
+                                    <div className="text-xs font-medium text-purple-800 mb-1">
+                                      {response.question_text?.substring(0, 40)}
+                                      ...
                                     </div>
-                                    {stage.remarks && (
-                                      <div className="text-xs text-gray-600 italic">
-                                        "{stage.remarks}"
-                                      </div>
-                                    )}
+                                    <div className="text-xs text-gray-700">
+                                      {response.response?.substring(0, 60)}...
+                                    </div>
                                   </div>
                                 ))}
                             </div>
                           </div>
                         )}
+
+                      {/* HR Calling Details */}
+                      <div className="lg:col-span-2">
+                      <HRCallingDetailsDisplay
+                        candidateId={candidate._id}
+                        candidateName={`${candidate.first_name} ${candidate.last_name}`}
+                        userRole="manager" // Manager gets read-only access
+                      />
+                      </div>
+
+                      {/* Glory */}
+                      <div className="lg:col-span-2">
+                      <GloryDisplay glory={candidate.glory}/>
+                      </div>
+                        
 
                       {/* Internal Feedback - Compact */}
                       {candidateData.internal_feedback &&
@@ -937,20 +869,10 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                           </div>
                         )}
 
-                      {/* HR Calling Details */}
-                      {/* <div className="lg:col-span-2">
-                        <HRCallingDetailsDisplay
-                          candidateId={candidateData._id}
-                          candidateName={`${candidateData.first_name} ${candidateData.last_name}`}
-                        />
-                      </div> */}
-                      <HRCallingDetailsDisplay
-                        candidateId={candidate._id}
-                        candidateName={`${candidate.first_name} ${candidate.last_name}`}
-                        userRole="manager" // Manager gets read-only access
-                      />
+                      
 
                       {/* Documents */}
+                      
                       {candidateData.documents &&
                         candidateData.documents?.length > 0 && (
                           <div className="lg:col-span-2">
@@ -1488,6 +1410,48 @@ const ManagerAllCandidates: React.FC<ManagerAllCandidatesProps> = ({
                             </div>
                           </div>
                         )}
+
+                       {/* Stage History - Enhanced with detailed data */}
+                      {detailedCandidate?.stage_history &&
+                        detailedCandidate.stage_history.length > 0 && (
+                          <div className="lg:col-span-2">
+                            <h4 className="font-semibold mb-3 flex items-center gap-2">
+                              <ArrowRight className="h-4 w-4 text-gray-600" />
+                              Stage History
+                            </h4>
+                            <div className="space-y-2">
+                              {detailedCandidate.stage_history
+                                .slice(-4)
+                                .map((stage) => (
+                                  <div
+                                    key={stage._id}
+                                    className="p-2 bg-gray-50 rounded border border-gray-200"
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                          {stage.from_stage || "Start"}
+                                        </span>
+                                        <ArrowRight className="h-3 w-3 text-gray-400" />
+                                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                                          {stage.to_stage}
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDate(stage.changed_at)}
+                                      </span>
+                                    </div>
+                                    {stage.remarks && (
+                                      <div className="text-xs text-gray-600 italic">
+                                        "{stage.remarks}"
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
                     </div>
                   )}
                 </CardContent>

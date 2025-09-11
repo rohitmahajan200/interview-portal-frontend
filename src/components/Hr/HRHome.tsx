@@ -434,7 +434,68 @@ const {
     }
   };
 
-  // Add this function inside your HRHome component
+  // NEW: Individual document verification function
+  const handleIndividualDocVerification = async (doc: any) => {
+    if (!selectedCandidate) return;
+
+    try {
+      setSavingChecklist(true);
+
+      // Prepare update for single document
+      const updates = [{
+        id: doc._id,
+        isVerified: doc.isVerified // Send current status so backend can toggle
+      }];
+
+      const response = await api.patch("/org/update-doc-status", {
+        updates,
+      });
+
+      if (response.data.success) {
+        const action = doc.isVerified ? "unverified" : "verified";
+        toast.success(`Document ${action} successfully!`);
+
+        // Update local state
+        setSelectedCandidate((prev) => {
+          if (!prev) return prev;
+
+          const updatedDocuments = prev.documents?.map((document) =>
+            document._id === doc._id
+              ? { ...document, isVerified: !document.isVerified }
+              : document
+          );
+
+          const updatedHiredDocs = prev.hired_docs?.map((document) =>
+            document._id === doc._id
+              ? { ...document, isVerified: !document.isVerified }
+              : document
+          );
+
+          return {
+            ...prev,
+            documents: updatedDocuments,
+            hired_docs: updatedHiredDocs,
+          };
+        });
+
+        // Refresh candidates list
+        await fetchAllData();
+      } else {
+        throw new Error(response.data.message || "Failed to update document");
+      }
+    } catch (error: any) {
+      console.error("Error updating document verification:", error);
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update document verification";
+      toast.error(errorMessage);
+    } finally {
+      setSavingChecklist(false);
+    }
+  };
+
+  // UPDATED: Bulk verification function with toggle functionality
   const handleMarkVerified = async () => {
     if (!selectedCandidate) return;
 
@@ -444,18 +505,25 @@ const {
     );
 
     if (selectedDocIds.length === 0) {
-      toast.error("Please select at least one document to verify");
+      toast.error("Please select at least one document to update");
       return;
     }
 
     try {
       setSavingChecklist(true);
 
-      // Prepare updates array for backend
-      const updates = selectedDocIds.map((docId) => ({
-        id: docId,
-        isVerified: true,
-      }));
+      // Prepare updates array for backend with current status for toggling
+      const updates = selectedDocIds.map((docId) => {
+        const document = [
+          ...(selectedCandidate.documents || []),
+          ...(selectedCandidate.hired_docs || [])
+        ].find(doc => doc._id === docId);
+        
+        return {
+          id: docId,
+          isVerified: document?.isVerified || false // Current status for toggle
+        };
+      });
 
       const response = await api.patch("/org/update-doc-status", {
         updates,
@@ -463,22 +531,22 @@ const {
 
       if (response.data.success) {
         toast.success(
-          `${selectedDocIds.length} document(s) marked as verified successfully!`
+          `${selectedDocIds.length} document(s) verification status updated successfully!`
         );
 
-        // Update local state
+        // Update local state - toggle the verification status
         setSelectedCandidate((prev) => {
           if (!prev) return prev;
 
           const updatedDocuments = prev.documents?.map((doc) =>
             selectedDocIds.includes(doc._id)
-              ? { ...doc, isVerified: true }
+              ? { ...doc, isVerified: !doc.isVerified }
               : doc
           );
 
           const updatedHiredDocs = prev.hired_docs?.map((doc) =>
             selectedDocIds.includes(doc._id)
-              ? { ...doc, isVerified: true }
+              ? { ...doc, isVerified: !doc.isVerified }
               : doc
           );
 
@@ -498,11 +566,11 @@ const {
         throw new Error(response.data.message || "Failed to update documents");
       }
     } catch (error: any) {
-      console.error("Error marking documents as verified:", error);
+      console.error("Error updating document verification:", error);
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
-        "Failed to mark documents as verified";
+        "Failed to update document verification";
       toast.error(errorMessage);
     } finally {
       setSavingChecklist(false);
@@ -743,73 +811,6 @@ const {
       <GloryDisplay glory={gloryObj} />
       </>
     )
-    
-    // return (
-    //   <Card>
-    //     <CardHeader>
-    //       <CardTitle className="flex items-center gap-2">
-    //         <Star className="h-4 w-4 text-purple-600" />
-    //         Glory Grades
-    //       </CardTitle>
-    //     </CardHeader>
-    //     <CardContent>
-    //       <div className="space-y-4">
-    //         {Object.entries(gloryObj).map(([role, roleData]: [string, any]) => {
-    //           if (!roleData || !roleData.grades) return null;
-              
-    //           const grades = roleData.grades instanceof Map ? 
-    //             Object.fromEntries(roleData.grades) : 
-    //             roleData.grades || {};
-              
-    //           if (Object.keys(grades).length === 0) return null;
-
-    //           return (
-    //             <div
-    //               key={role}
-    //               className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg border border-purple-200 dark:border-purple-800"
-    //             >
-    //               <div className="flex items-center justify-between mb-3">
-    //                 <div className="flex items-center gap-2">
-    //                   <Badge className={getRoleColor(role)} variant="outline">
-    //                     {role.toUpperCase()}
-    //                   </Badge>
-    //                   {roleData.graderName && (
-    //                     <span className="text-sm text-muted-foreground">
-    //                       by {roleData.graderName}
-    //                     </span>
-    //                   )}
-    //                 </div>
-    //                 {roleData.gradedAt && (
-    //                   <span className="text-xs text-muted-foreground">
-    //                     {formatDate(roleData.gradedAt)}
-    //                   </span>
-    //                 )}
-    //               </div>
-                  
-    //               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-    //                 {Object.entries(grades).map(([parameter, grade]) => (
-    //                   <div
-    //                     key={parameter}
-    //                     className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
-    //                   >
-    //                     <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-    //                       {parameter}
-    //                     </span>
-    //                     <Badge
-    //                       className={`text-xs font-bold ${getGradeColor(grade as string)}`}
-    //                     >
-    //                       {grade}
-    //                     </Badge>
-    //                   </div>
-    //                 ))}
-    //               </div>
-    //             </div>
-    //           );
-    //         })}
-    //       </div>
-    //     </CardContent>
-    //   </Card>
-    // );
   };
 
   // Helper function to get role color
@@ -822,7 +823,6 @@ const {
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
-
 
   // Dialog Handlers
   const openHRQuestionnaireDialog = (candidate: Candidate) => {
@@ -1149,7 +1149,6 @@ const {
       day: "numeric",
     });
   };
-
 
   // Function to load existing calling details
   const loadCallingDetails = async (candidateId: string) => {
@@ -2000,15 +1999,17 @@ const {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {/* Mark Verified Button */}
+                      {/* UPDATED: Mark Verified Button */}
                       <div className="mb-4 flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <Checkbox
                             checked={documentChecklist.selectAll}
                             onCheckedChange={(checked) => {
-                              const allDocIds = selectedCandidate.documents.map(
-                                (doc) => doc._id
-                              );
+                              const allDocIds = [
+                                ...selectedCandidate.documents,
+                                ...(selectedCandidate.hired_docs || [])
+                              ].map((doc) => doc._id);
+                              
                               if (checked) {
                                 const newChecklist = { selectAll: true };
                                 allDocIds.forEach(
@@ -2034,15 +2035,15 @@ const {
                                 key !== "selectAll" && documentChecklist[key]
                             ).length === 0
                           }
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-blue-600 hover:bg-blue-700"
                         >
                           {savingChecklist ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Marking Verified...
+                              Updating Status...
                             </>
                           ) : (
-                            <>✓ Mark Selected as Verified</>
+                            <>🔄 Toggle Selected Status</>
                           )}
                         </Button>
                       </div>
@@ -2113,7 +2114,27 @@ const {
                                   </div>
                                 </div>
 
+                                {/* UPDATED: Individual verification button with proper functionality */}
                                 <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant={doc.isVerified ? "destructive" : "default"}
+                                    onClick={() => handleIndividualDocVerification(doc)}
+                                    disabled={savingChecklist}
+                                    className={doc.isVerified ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
+                                  >
+                                    {savingChecklist ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                                        Updating...
+                                      </>
+                                    ) : (
+                                      <>
+                                        {doc.isVerified ? "❌ Unverify" : "✅ Verify"}
+                                      </>
+                                    )}
+                                  </Button>
+                                  
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -2529,7 +2550,7 @@ const {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                                  <span className="text-white text-sm font-bold">
+                                                                    <span className="text-white text-sm font-bold">
                                     ▶
                                   </span>
                                 </div>
@@ -2723,7 +2744,7 @@ const {
                   <CardTitle>Scheduled Interviews</CardTitle>
                 </CardHeader>
                 <CardContent>
-                                    {selectedCandidate.interviews &&
+                  {selectedCandidate.interviews &&
                   selectedCandidate.interviews.length > 0 ? (
                     <div className="space-y-4">
                       {selectedCandidate.interviews.map((interview) => (
@@ -2970,7 +2991,7 @@ const {
         </DialogContent>
       </Dialog>
 
-<GloryDialog
+      <GloryDialog
         isOpen={gloryDialogOpen}
         candidate={candidateForGlory}
         gloryGrades={gloryGrades}
