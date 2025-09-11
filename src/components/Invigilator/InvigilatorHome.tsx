@@ -1072,8 +1072,8 @@ const InvigilatorHome = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Current Stage</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
                   <TableHead>Glory</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1136,6 +1136,11 @@ const InvigilatorHome = () => {
                         </Badge>
                       </TableCell>
 
+                                            {/* Glory */}
+                      <TableCell>
+                          {renderGloryGrades(candidate.glory)}
+                      </TableCell>
+
                       {/* Action Buttons */}
                       <TableCell>
                         <div className="flex space-x-2">
@@ -1180,11 +1185,6 @@ const InvigilatorHome = () => {
                           </Button> */}
                         </div>
                       </TableCell>
-
-                      {/* Glory */}
-                      <TableCell>
-                                            {renderGloryGrades(candidate.glory)}
-                                          </TableCell>
                     </TableRow>
                   );
                 })}

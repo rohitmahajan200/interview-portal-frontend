@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -10,6 +10,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Users, MapPin, Video, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { useAppSelector } from "@/hooks/useAuth";
+import { Button } from '../ui/button';
+
+type Grade = "A+" | "A" | "B" | "C" | "D" | "E";
+
+interface InterviewRemark {
+  _id?: string;
+  // provider may come as raw id string OR populated user
+  provider: string | { _id: string; name?: string; role?: string };
+  remark: string;
+  grade: Grade;
+  created_at: string;
+}
 
 interface Interview {
   _id: string;
@@ -20,16 +35,10 @@ interface Interview {
     last_name: string;
     email: string;
     current_stage: string;
-    applied_job?: {
-      name: string;
-    };
+    applied_job?: { name: string };
   };
   interview_type: string;
-  interviewers: Array<{
-    _id: string;
-    name: string;
-    role: string;
-  }>;
+  interviewers: Array<{ _id: string; name: string; role: string }>;
   scheduled_at: string;
   end_time: string;
   type: 'online' | 'offline';
@@ -38,6 +47,7 @@ interface Interview {
   platform?: string;
   description?: string;
   status: string;
+  remarks: InterviewRemark[];
 }
 
 interface CalendarEvent {
@@ -56,18 +66,131 @@ interface CalendarEvent {
   };
 }
 
+const gradeOptions: Grade[] = ["A+", "A", "B", "C", "D", "E"];
+
 const InterviewScheduling = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch interviews on component mount
+  const orgUser = useAppSelector((s) => s.orgAuth?.user); // expects { id, _id?, name, role }
+  const userId = orgUser?.id || orgUser?._id; // be tolerant
+  const isAdmin = orgUser?.role === "ADMIN";
+
+  // remark form state
+  const [remarkText, setRemarkText] = useState("");
+  const [remarkGrade, setRemarkGrade] = useState<Grade | "">("");
+
+  // run auto-open just once
+  const didAutoOpenRef = useRef(false);
+
+  const getProviderId = (r: InterviewRemark) =>
+    typeof r.provider === "string" ? r.provider : r.provider?._id;
+
+  const hasMyRemark = (iv: Interview) =>
+    Boolean(userId) && (iv.remarks || []).some(r => getProviderId(r) === userId);
+
+  const interviewStarted = (iv: Interview) =>
+    new Date(iv.scheduled_at).getTime() <= Date.now();
+
+  // “Needs my remark” = started AND I haven't remarked yet (admins never need)
+  const needsRemarkForUser = (iv: Interview) => {
+    if (isAdmin) return false;
+    return interviewStarted(iv) && !hasMyRemark(iv);
+  };
+
+  // On first usable render, auto-open the first interview that needs my remark
+  useEffect(() => {
+    if (didAutoOpenRef.current) return;
+    if (isAdmin) { didAutoOpenRef.current = true; return; }
+    if (!userId) return;           // need user
+    if (!interviews.length) return; // need data
+    if (selectedInterview) return; // don’t override manual open
+
+    const firstNeeding = interviews.find(needsRemarkForUser);
+    if (firstNeeding) {
+      setSelectedInterview(firstNeeding);
+    }
+    // Mark as done so it won't reopen again
+    didAutoOpenRef.current = true;
+  }, [interviews, userId, isAdmin, selectedInterview]);
+
+  // Keep dialog model in sync: if interview has my remark, show it; otherwise reset form
+  const myRemark = useMemo(() => {
+    if (!selectedInterview || !userId) return null;
+    return selectedInterview.remarks.find(r => getProviderId(r) === userId) || null;
+  }, [selectedInterview, userId]);
+
+  useEffect(() => {
+    // reset form every time dialog opens to a new interview *only if* no remark from me exists
+    if (!selectedInterview) return;
+    if (myRemark) {
+      setRemarkText("");
+      setRemarkGrade("");
+    } else {
+      setRemarkText("");
+      setRemarkGrade("");
+    }
+  }, [selectedInterview, myRemark]);
+
+  // Fetch interviews
   useEffect(() => {
     fetchInterviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Convert interviews to calendar events
+  const fetchInterviews = async () => {
+    try {
+      const response = await api.get("/org/interviews");
+      if (response.data.success) {
+        setInterviews(response.data.data as Interview[]);
+      }
+    } catch (error) {
+      console.error('Error fetching interviews:', error);
+      toast.error('Failed to load interviews');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Submit remark
+  const handleSubmitRemark = async () => {
+    if (isAdmin || !selectedInterview) return;
+    if (!remarkText.trim()) return toast.error("Remark is required");
+    if (!remarkGrade) return toast.error("Please select a grade");
+
+    try {
+      const url = `/org/interviews/${selectedInterview._id}/remarks`;
+      const payload = { remark: remarkText.trim(), grade: remarkGrade };
+      await api.post(url, payload);
+
+      // Update local cache for both list & selected
+      const newRemark: InterviewRemark = {
+        provider: userId!,
+        remark: payload.remark,
+        grade: payload.grade,
+        created_at: new Date().toISOString(),
+      };
+
+      setInterviews(prev => prev.map(iv =>
+        iv._id === selectedInterview._id
+          ? { ...iv, remarks: [...(iv.remarks || []), newRemark] }
+          : iv
+      ));
+      setSelectedInterview(prev =>
+        prev ? { ...prev, remarks: [...(prev.remarks || []), newRemark] } : prev
+      );
+
+      toast.success("Remark added");
+      // Optionally close dialog after submit; or keep open to show read-only view
+      // setSelectedInterview(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to add remark");
+    }
+  };
+
+  // Calendar events
   useEffect(() => {
     const calendarEvents: CalendarEvent[] = interviews.map(interview => ({
       id: interview._id,
@@ -87,28 +210,13 @@ const InterviewScheduling = () => {
     setEvents(calendarEvents);
   }, [interviews]);
 
-  const fetchInterviews = async () => {
-    try {
-      // The backend already filters interviews for invigilators - only returns interviews where they are assigned
-      const response = await api.get("/org/interviews");
-      if (response.data.success) {
-        setInterviews(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching interviews:', error);
-      toast.error('Failed to load interviews');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEventClick = (clickInfo: EventClickArg) => {
     const interview = clickInfo.event.extendedProps.interview as Interview;
     setSelectedInterview(interview);
   };
 
   const getStageColor = (stage: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'registered': 'bg-gray-100 text-gray-800',
       'hr': 'bg-blue-100 text-blue-800',
       'assessment': 'bg-yellow-100 text-yellow-800',
@@ -116,16 +224,16 @@ const InterviewScheduling = () => {
       'manager': 'bg-orange-100 text-orange-800',
       'feedback': 'bg-green-100 text-green-800'
     };
-    return colors[stage as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[stage] || 'bg-gray-100 text-gray-800';
   };
 
   const getInterviewTypeColor = (type: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       'hr_questionnaire': '#3b82f6',
       'technical_interview': '#8b5cf6',
       'managerial_round': '#f59e0b'
     };
-    return colors[type as keyof typeof colors] || '#6b7280';
+    return colors[type] || '#6b7280';
   };
 
   if (loading) {
@@ -163,79 +271,84 @@ const InterviewScheduling = () => {
         </CardContent>
       </Card>
 
-      {/* Interview Details Dialog - Read Only */}
+      {/* Interview Details Dialog */}
       <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
-        <DialogContent className="max-w-4xl md:max-w-[70vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="mt-4">
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-3xl md:max-w-[80vw] w-full h-auto max-h-[85vh] flex flex-col overflow-y-auto">
+          <DialogHeader className="sticky top-0 bg-white dark:bg-neutral-900 z-10 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
               <Calendar className="h-5 w-5" />
               Interview Details
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedInterview && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div>
-                <h4 className="font-semibold mb-3 flex items-center gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-sm md:text-base">
+              {/* Instruction banner only if remark required */}
+              {!isAdmin && needsRemarkForUser(selectedInterview) && (
+                <div className="md:col-span-2 mb-2 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-xs md:text-sm font-medium">
+                  ⚠️ Please provide your remark and grade for this interview. This is required because the interview has already been conducted and your input is pending.
+                </div>
+              )}
+
+              {/* Interview Information */}
+              <div className="space-y-2">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
                   <Calendar className="h-4 w-4" />
                   Interview Information
                 </h4>
-                <div className="space-y-2">
-                  <p><strong>Title:</strong> {selectedInterview.title}</p>
-                  <p><strong>Type:</strong> 
-                    <span className="ml-2 px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
-                      {selectedInterview.interview_type.replace('_', ' ').toUpperCase()}
-                    </span>
-                  </p>
-                  <p><strong>Status:</strong> 
-                    <span className="ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                      {selectedInterview.status}
-                    </span>
-                  </p>
-                  <p><strong>Date:</strong> {new Date(selectedInterview.scheduled_at).toLocaleDateString()}</p>
-                  <p><strong>Time:</strong> {new Date(selectedInterview.scheduled_at).toLocaleTimeString()} - {new Date(selectedInterview.end_time).toLocaleTimeString()}</p>
-                </div>
+                <p><strong>Title:</strong> {selectedInterview.title}</p>
+                <p><strong>Type:</strong>
+                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">
+                    {selectedInterview.interview_type.replace('_', ' ').toUpperCase()}
+                  </span>
+                </p>
+                <p><strong>Status:</strong>
+                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">
+                    {selectedInterview.status}
+                  </span>
+                </p>
+                <p><strong>Date:</strong> {new Date(selectedInterview.scheduled_at).toLocaleDateString()}</p>
+                <p><strong>Time:</strong> {new Date(selectedInterview.scheduled_at).toLocaleTimeString()} - {new Date(selectedInterview.end_time).toLocaleTimeString()}</p>
               </div>
-              
-              <div>
-                <h4 className="font-semibold mb-3 flex items-center gap-2">
+
+              {/* Candidate Information */}
+              <div className="space-y-2">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
                   <Users className="h-4 w-4" />
                   Candidate Information
                 </h4>
-                <div className="space-y-2">
-                  <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
-                  <p><strong>Email:</strong> 
-                    <a href={`mailto:${selectedInterview.candidate.email}`} className="ml-2 text-blue-600 hover:underline">
-                      {selectedInterview.candidate.email}
-                    </a>
-                  </p>
-                  <p><strong>Current Stage:</strong> 
-                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${getStageColor(selectedInterview.candidate.current_stage)}`}>
-                      {selectedInterview.candidate.current_stage}
-                    </span>
-                  </p>
-                  <p><strong>Applied Job:</strong> {selectedInterview.candidate.applied_job?.name || 'N/A'}</p>
-                </div>
+                <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
+                <p><strong>Email:</strong>
+                  <a href={`mailto:${selectedInterview.candidate.email}`} className="ml-1 text-blue-600 hover:underline break-all">
+                    {selectedInterview.candidate.email}
+                  </a>
+                </p>
+                <p><strong>Stage:</strong>
+                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${getStageColor(selectedInterview.candidate.current_stage)}`}>
+                    {selectedInterview.candidate.current_stage}
+                  </span>
+                </p>
+                <p><strong>Applied Job:</strong> {selectedInterview.candidate.applied_job?.name || 'N/A'}</p>
               </div>
-              
-              <div>
-                <h4 className="font-semibold mb-3 flex items-center gap-2">
+
+              {/* Panel */}
+              <div className="space-y-2">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
                   <Users className="h-4 w-4" />
                   Interview Panel
                 </h4>
-                <div className="space-y-2">
-                  {selectedInterview.interviewers.map(interviewer => (
-                    <div key={interviewer._id} className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span>{interviewer.name}</span>
-                      <span className="text-sm text-gray-500">({interviewer.role})</span>
-                    </div>
-                  ))}
-                </div>
+                {selectedInterview.interviewers.map(interviewer => (
+                  <div key={interviewer._id} className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>{interviewer.name}</span>
+                    <span className="text-xs text-gray-500">({interviewer.role})</span>
+                  </div>
+                ))}
               </div>
-              
-              <div>
-                <h4 className="font-semibold mb-3 flex items-center gap-2">
+
+              {/* Meeting Details */}
+              <div className="space-y-2">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
                   {selectedInterview.type === 'online' ? (
                     <Video className="h-4 w-4" />
                   ) : (
@@ -243,65 +356,90 @@ const InterviewScheduling = () => {
                   )}
                   Meeting Details
                 </h4>
-                <div className="space-y-3">
-                  <p><strong>Format:</strong> 
-                    <span className="ml-2 capitalize flex items-center gap-1">
-                      {selectedInterview.type === 'online' ? (
-                        <>
-                          <Video className="h-4 w-4 text-green-600" />
-                          <span className="text-green-600">Online</span>
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="h-4 w-4 text-blue-600" />
-                          <span className="text-blue-600">In-Person</span>
-                        </>
-                      )}
-                    </span>
-                  </p>
-                  
-                  {selectedInterview.type === 'online' ? (
-                    <>
-                      <div>
-                        <p><strong>Platform:</strong> {selectedInterview.platform || 'Not specified'}</p>
-                      </div>
-                      <div>
-                        <p><strong>Meeting Link:</strong></p>
-                        <a 
-                          href={selectedInterview.meeting_link} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="block mt-1 p-3 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200 break-all text-sm font-medium"
-                        >
-                          🔗 {selectedInterview.meeting_link}
-                        </a>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <p><strong>Address:</strong></p>
-                      <div className="mt-1 p-3 bg-gray-50 rounded-lg text-sm">
-                        📍 {selectedInterview.address}
-                      </div>
+
+                <p><strong>Format:</strong> {selectedInterview.type === 'online' ? "Online" : "In-Person"}</p>
+
+                {selectedInterview.type === 'online' ? (
+                  <>
+                    <p><strong>Platform:</strong> {selectedInterview.platform || 'Not specified'}</p>
+                    {selectedInterview.meeting_link && (
+                      <a
+                        href={selectedInterview.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block p-2 bg-blue-50 text-blue-700 rounded border text-xs break-all"
+                      >
+                        🔗 {selectedInterview.meeting_link}
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <p><strong>Address:</strong> {selectedInterview.address}</p>
+                )}
+
+                {selectedInterview.description && (
+                  <div>
+                    <p><strong>Notes:</strong></p>
+                    <div className="mt-1 p-2 bg-gray-50 rounded text-xs">
+                      {selectedInterview.description}
                     </div>
-                  )}
-                  
-                  {selectedInterview.description && (
-                    <div>
-                      <p><strong>Additional Notes:</strong></p>
-                      <div className="mt-1 p-3 bg-gray-50 rounded-lg text-sm">
-                        {selectedInterview.description}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
+
+              {/* My remark (read-only) OR form */}
+              {selectedInterview && !isAdmin && (
+                <div className="md:col-span-2 space-y-3">
+                  {myRemark ? (
+                    <div className="p-3 border rounded-lg bg-muted/30">
+                      <h4 className="font-semibold mb-1">📝 Your Submitted Remark</h4>
+                      <div className="text-sm">
+                        <p className="mb-2"><strong>Grade:</strong> {myRemark.grade}</p>
+                        <p className="whitespace-pre-wrap">{myRemark.remark}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Submitted at {new Date(myRemark.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ) : needsRemarkForUser(selectedInterview) ? (
+                    <div className="p-3 border rounded-lg bg-muted/30">
+                      <h4 className="font-semibold mb-2">📝 Your Remark (required)</h4>
+                      <Textarea
+                        value={remarkText}
+                        onChange={(e) => setRemarkText(e.target.value)}
+                        placeholder="Share your observations…"
+                        rows={3}
+                        className="text-sm"
+                      />
+                      <div className="mt-3">
+                        <Select value={remarkGrade} onValueChange={(v) => setRemarkGrade(v as Grade)}>
+                          <SelectTrigger className="w-full text-sm">
+                            <SelectValue placeholder="Select grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gradeOptions.map((g) => (
+                              <SelectItem key={g} value={g}>{g}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex justify-end mt-3">
+                        <Button size="sm" onClick={handleSubmitRemark}>Submit</Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        You’re seeing this because the interview has already started and you haven’t added your remark yet.
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* FullCalendar Component - Read Only */}
+      {/* Calendar */}
       <Card>
         <CardContent className="p-0">
           <FullCalendar
@@ -317,18 +455,11 @@ const InterviewScheduling = () => {
             weekends={true}
             eventClick={handleEventClick}
             height="auto"
-            businessHours={{
-              daysOfWeek: [1, 2, 3, 4, 5],
-              startTime: '09:00',
-              endTime: '18:00'
-            }}
+            businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '18:00' }}
             eventDidMount={(info) => {
               const candidateName = info.event.extendedProps?.candidateName || 'Unknown Candidate';
               const interviewerNames = info.event.extendedProps?.interviewerNames || [];
-              
               info.el.title = `${info.event.title}\nCandidate: ${candidateName}\nInterviewers: ${interviewerNames.join(', ') || 'No interviewers assigned'}`;
-              
-              // Add cursor pointer for better UX
               info.el.style.cursor = 'pointer';
             }}
           />

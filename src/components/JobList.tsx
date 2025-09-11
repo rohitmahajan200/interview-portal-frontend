@@ -21,7 +21,9 @@ const JobList = () => {
             <h3 className="text-xl sm:text-2xl font-bold text-card-foreground text-center">
               {role.name}
             </h3>
-            <div className="prose prose-sm sm:prose-base text-muted-foreground max-w-none">
+
+            {/* Scrollable section */}
+            <div className="prose prose-sm sm:prose-base text-muted-foreground max-w-none max-h-64 overflow-y-auto pr-2">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {String(role.description ?? "")}
               </ReactMarkdown>

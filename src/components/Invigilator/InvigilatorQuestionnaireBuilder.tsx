@@ -385,8 +385,8 @@ const AssessmentManagement = () => {
         exam_duration: data.exam_duration
       }));
 
-      // const response = await api.post('/org/assessment', { assessments });
-      
+      const response = await api.post('/org/assessment', { assessments });
+      console.log(response)
       toast.success(`${assessments.length} assessment(s) created successfully`);
       closeDialog();
       fetchAllData();
