@@ -1096,8 +1096,8 @@ const InvigilatorHome = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Current Stage</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
                   <TableHead>Glory</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1158,6 +1158,11 @@ const InvigilatorHome = () => {
                         >
                           {assessmentStatus.replace("-", " ").toUpperCase()}
                         </Badge>
+                      </TableCell>
+
+                                            {/* Glory */}
+                      <TableCell>
+                          {renderGloryGrades(candidate.glory)}
                       </TableCell>
 
                       {/* Action Buttons */}

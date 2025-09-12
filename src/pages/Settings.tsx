@@ -1,147 +1,82 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "@/hooks/useAuth";
 import { setCurrentView } from "@/features/Candidate/view/viewSlice";
 import api from "@/lib/api";
+import { useState } from "react";
 
 const Settings = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+
+  const handleDeleteRequest = async () => {
+    try {
+      setLoadingDelete(true);
+      await api.post("/candidates/request-delete"); // ✅ your backend route
+      setOpenDeleteDialog(false);
+      alert("✅ Your data deletion request has been submitted.");
+       navigate("/");
+    } catch (error) {
+      console.error("Failed to request data deletion", error);
+      alert("❌ Failed to request data deletion. Please try again.");
+    } finally {
+      setLoadingDelete(false);
+    }
+  };
+
   const settingsOptions = [
     {
       title: "Change Password",
       description: "Update your account password regularly to keep it secure.",
       actionLabel: "Change",
-      svg: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          className="lucide lucide-external-link-icon lucide-external-link"
-        >
-          <path d="M15 3h6v6" />
-          <path d="M10 14 21 3" />
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        </svg>
-      ),
-      onClick: () => {
-        navigate("/forget-password");
-      },
+      onClick: () => navigate("/forget-password"),
     },
     {
       title: "Edit Profile",
       description: "Modify your name, email, and profile photo.",
       actionLabel: "Edit",
-      svg: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          className="lucide lucide-external-link-icon lucide-external-link"
-        >
-          <path d="M15 3h6v6" />
-          <path d="M10 14 21 3" />
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        </svg>
-      ),
-
-      onClick: () => {
-        dispatch(setCurrentView("profile"));
-      },
+      onClick: () => dispatch(setCurrentView("profile")),
     },
     {
       title: "Download Personal Information",
       description: "Get a copy of your personal data stored on this platform.",
       actionLabel: "Download",
-      svg: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          className="lucide lucide-cloud-download-icon lucide-cloud-download"
-        >
-          <path d="M12 13v8l-4-4" />
-          <path d="m12 21 4-4" />
-          <path d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284" />
-        </svg>
-      ),
-      onClick: () => {
-        const getdata = async () => {
-          try {
-            const response = await api.get("/candidates/myinfo", {
-              responseType: "blob", // Important: treat it as binary data
-            });
-
-            // Create a blob from the response data
-            const blob = new Blob([response.data], {
-              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            });
-
-            // Create a temporary URL
-            const url = window.URL.createObjectURL(blob);
-
-            // Create a download link
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "candidate-info.docx";
-            document.body.appendChild(link);
-            link.click();
-
-            // Cleanup
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(link);
-          } catch (error) {
-            console.error("Failed to download DOCX file", error);
-          }
-        };
-
-        getdata();
+      onClick: async () => {
+        try {
+          const response = await api.get("/candidates/myinfo", {
+            responseType: "blob",
+          });
+          const blob = new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "candidate-info.docx";
+          document.body.appendChild(link);
+          link.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+        } catch (error) {
+          console.error("Failed to download DOCX file", error);
+        }
       },
     },
     {
       title: "Request Data Deletion",
       description: "Request permanent deletion of your personal data.",
       actionLabel: "Request",
-      svg: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          className="lucide lucide-external-link-icon lucide-external-link"
-        >
-          <path d="M15 3h6v6" />
-          <path d="M10 14 21 3" />
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        </svg>
-      ),
-
-      onClick: () => {
-        console.log("Request deletion clicked");
-      },
+      onClick: () => setOpenDeleteDialog(true), // ✅ open dialog
     },
   ];
 
@@ -166,11 +101,37 @@ const Settings = () => {
               onClick={option.onClick}
             >
               {option.actionLabel}
-              {option?.svg}
             </Button>
           </div>
         ))}
       </div>
+
+      {/* ✅ Confirmation Dialog */}
+      <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">
+              ⚠️ Confirm Data Deletion
+            </DialogTitle>
+            <DialogDescription>
+              This action is <b>permanent</b> and will delete all your personal
+              data from the platform. Are you sure you want to continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteRequest}
+              disabled={loadingDelete}
+            >
+              {loadingDelete ? "Deleting..." : "Confirm Deletion"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
