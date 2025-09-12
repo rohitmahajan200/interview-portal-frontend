@@ -1,4 +1,3 @@
-// src/types/manager.types.ts
 type document ={
 document_type:string
 document_url:string

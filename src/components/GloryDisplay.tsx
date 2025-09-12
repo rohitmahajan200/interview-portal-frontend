@@ -1,9 +1,10 @@
 /* ───────────────── GloryDisplay.tsx ───────────────── */
-import { type FC } from 'react';
+import { useState, type FC } from 'react';
 import { format } from 'date-fns';
-import { Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from './ui/button';
 
 type GradesObject = Record<string, string> | Map<string, string>;
 
@@ -35,17 +36,42 @@ const gradeColor = (g: string) => ({
   E:   'bg-red-100    text-red-700',
 }[g] ?? 'bg-gray-100 text-gray-700');
 
+
+
+
+
 /* ── component ─────────────────────────────────────── */
 const GloryDisplay: FC<GloryDisplayProps> = ({ glory }) => {
+const [hrResponsesCollapsed,setHrResponsesCollapsed]=useState(false);
 
-  if (!glory || Object.keys(glory).length === 0) return null;
+
+  if ( !glory || Object.keys(glory).length === 0) return null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
           <Star className="h-5 w-5 text-purple-600" />
           Glory Grades
+          </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setHrResponsesCollapsed(!hrResponsesCollapsed)}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <span className="text-sm font-medium">
+                  {hrResponsesCollapsed ? 'Show' : 'Hide'}
+                </span>
+                {hrResponsesCollapsed ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronUp className="h-4 w-4" />
+                )}
+              </Button>
+          
         </CardTitle>
+        
       </CardHeader>
 
       <CardContent>
@@ -61,6 +87,7 @@ const GloryDisplay: FC<GloryDisplayProps> = ({ glory }) => {
             if (Object.keys(gradesObj).length === 0) return null;
 
             return (
+              !hrResponsesCollapsed && 
               <div
                 key={role}
                 className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20

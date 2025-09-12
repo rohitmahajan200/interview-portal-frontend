@@ -29,6 +29,8 @@ import {
   User,
   Mail,
   Briefcase,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import { format } from "date-fns";
@@ -203,6 +205,7 @@ const CandidateReview = () => {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [candidateToReject, setCandidateToReject] = useState<CandidateToReject | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [responsesCollapsed,setResponsesCollapsed] = useState(false)
 
  // ✅ FIXED: Helper function to safely render Glory grades
 const renderFullGloryDisplay = (glory: CandidateGlory | undefined) => {
@@ -849,11 +852,30 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                     {/* Responses - Keep all existing response rendering logic */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Questionnaire Responses</CardTitle>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <CardTitle>📝 HR Questionnaire Responses</CardTitle>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setResponsesCollapsed(!responsesCollapsed)
+                                  }
+                                  className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                  <span className="text-sm font-medium">
+                                    {responsesCollapsed ? "Show" : "Hide"}
+                                  </span>
+                                  {responsesCollapsed ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronUp className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-6">
-                          {selectedCandidate.responses.map(
+                          {!responsesCollapsed && selectedCandidate.responses.map(
                             (response, index) => (
                               <div
                                 key={response._id}

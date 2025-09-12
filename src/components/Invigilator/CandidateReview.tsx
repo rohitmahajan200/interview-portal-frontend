@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, Clock, Eye, FileText, User, Mail, Code, PenTool, CheckCircle, Brain, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, Eye, FileText, User, Mail, Code, PenTool, CheckCircle, Brain, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -187,6 +187,9 @@ const AssessmentReview = () => {
   const [stageFeedback, setStageFeedback] = useState("");
   const [selectedNewStage, setSelectedNewStage] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
+  const [assessmentCollapsed,setAssessmentCollapsed] = useState(false);
+  const [proctorCollapsed,setProctorCollapsed] = useState(false);
 
    // ✅ FIXED: Helper function to safely render Glory grades
   const renderFullGloryDisplay = (glory: CandidateGlory | undefined) => {
@@ -764,13 +767,13 @@ const fetchAssessmentDetail = async (id: string) => {
                               </div>
                               {selectedAssessment.ai_score !== undefined && (
                                 <div>
-                                  <span className="font-medium">Score: </span>
+                                  <span className="font-medium">Score Obtain: </span>
                                   <span className="text-lg font-bold">{selectedAssessment.ai_score}</span>
                                 </div>
                               )}
                               {selectedAssessment.total_score !== undefined && (
                                 <div>
-                                  <span className="font-medium">Total Score: </span>
+                                  <span className="font-medium">Out Of: </span>
                                   <span className="text-lg font-bold">{selectedAssessment.total_score}</span>
                                 </div>
                               )}
@@ -821,11 +824,30 @@ const fetchAssessmentDetail = async (id: string) => {
                     {/* Responses */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Assessment Questions</CardTitle>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>Assessment Questions</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setAssessmentCollapsed(!assessmentCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {assessmentCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {assessmentCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-6">
-                          {selectedAssessment.responses.map((response, index) => (
+                          {!assessmentCollapsed && selectedAssessment.responses.map((response, index) => (
                             <div key={response.question_id} className="border rounded-lg p-4">
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
@@ -931,19 +953,36 @@ const fetchAssessmentDetail = async (id: string) => {
                     {/* Proctoring logs & snapshots */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          Proctoring Review
-                        </CardTitle>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>Proctoring Review</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setProctorCollapsed(!proctorCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {proctorCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {proctorCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                      
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div>
                           <h4 className="text-sm font-medium mb-2">Snapshots</h4>
-                          {renderSnapshots()}
+                          {!proctorCollapsed && renderSnapshots()}
                         </div>
                         <div>
                           <h4 className="text-sm font-medium mb-2">Event Logs</h4>
-                          {renderProctoringLogs()}
+                          { !proctorCollapsed && renderProctoringLogs()}
                         </div>
                       </CardContent>
                     </Card>

@@ -18,7 +18,10 @@ import {
   Check,
   MessageSquare,
   Phone,
-  Mail
+  Mail,
+  ChevronDown,
+  ChevronUp,
+  
 } from "lucide-react";
 import {
   Table,
@@ -60,6 +63,8 @@ import GloryDialog from "../GloryDialog";
 import GloryButton from "../GloryButton";
 import { useGlory } from "@/hooks/useGlory";
 import GloryDisplay from "../GloryDisplay";
+import { differenceInYears } from "date-fns";
+import CandidateDocumentsCard from "../ui/CandidateDocumentsCard";
 
 type StageHistory = {
   _id: string;
@@ -140,7 +145,7 @@ interface HRQuestionnaireFormData {
 interface GloryRoleData {
   graderId?: string;
   graderName?: string;
-  graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+  graderRole: "hr" | "manager" | "invigilator" | "admin";
   grades: { [key: string]: string } | Map<string, string>;
   gradedAt: string;
 }
@@ -288,8 +293,7 @@ type Candidate = {
 };
 
 const HRHome = () => {
-  
-const {
+  const {
     gloryDialogOpen,
     candidateForGlory,
     gloryGrades,
@@ -303,7 +307,7 @@ const {
     handleGloryGradeChange,
     submitGloryGrades,
     getGradingParameters,
-  } = useGlory('hr');
+  } = useGlory("hr");
 
   // Basic state
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -316,6 +320,8 @@ const {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCandidate, setLoadingCandidate] = useState(false);
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [jobRole, setJobRole] = useState<string[]>([]);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [copiedDocId, setCopiedDocId] = useState<string | null>(null);
   const dispatch = useDispatch();
@@ -367,6 +373,12 @@ const {
   >({});
   const [savingChecklist, setSavingChecklist] = useState(false);
 
+  const [hrResponsesCollapsed, setHrResponsesCollapsed] = useState(false);
+  const [personalCollapsed, setPersonalInfoCollapsed] = useState(false);
+  const [interviewCollapsed, setInterViewCollapsed] = useState(false);
+  const [feedbackCollapsed, setFeedbackCollapsed] = useState(false);
+  const [historyCollapsed,setHistoryCollapsed] = useState(false);
+
   interface KeyValuePair {
     id: string;
     key: string;
@@ -386,53 +398,11 @@ const {
     { id: "10", key: "Availability for Interview", value: "" },
   ]);
 
-  const [newKey, setNewKey] = useState("");
-
   //hr Remarks
   const [hrRemark, setHrRemark] = useState("");
 
   // Add new key-value pair
-  const addNewPair = () => {
-    if (newKey.trim()) {
-      const newPair: KeyValuePair = {
-        id: Date.now().toString(),
-        key: newKey.trim(),
-        value: "",
-      };
-      setKeyValuePairs([...keyValuePairs, newPair]);
-      setNewKey("");
-    }
-  };
 
-  // Update key
-  const updateKey = (id: string, newKey: string) => {
-    setKeyValuePairs(
-      keyValuePairs.map((pair) =>
-        pair.id === id ? { ...pair, key: newKey } : pair
-      )
-    );
-  };
-
-  // Update value
-  const updateValue = (id: string, newValue: string) => {
-    setKeyValuePairs(
-      keyValuePairs.map((pair) =>
-        pair.id === id ? { ...pair, value: newValue } : pair
-      )
-    );
-  };
-
-  // Delete pair
-  const deletePair = (id: string) => {
-    setKeyValuePairs(keyValuePairs.filter((pair) => pair.id !== id));
-  };
-
-  // Handle Enter key press to add new pair
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      addNewPair();
-    }
-  };
 
   // NEW: Individual document verification function
   const handleIndividualDocVerification = async (doc: any) => {
@@ -442,10 +412,12 @@ const {
       setSavingChecklist(true);
 
       // Prepare update for single document
-      const updates = [{
-        id: doc._id,
-        isVerified: doc.isVerified // Send current status so backend can toggle
-      }];
+      const updates = [
+        {
+          id: doc._id,
+          isVerified: doc.isVerified, // Send current status so backend can toggle
+        },
+      ];
 
       const response = await api.patch("/org/update-doc-status", {
         updates,
@@ -516,12 +488,12 @@ const {
       const updates = selectedDocIds.map((docId) => {
         const document = [
           ...(selectedCandidate.documents || []),
-          ...(selectedCandidate.hired_docs || [])
-        ].find(doc => doc._id === docId);
-        
+          ...(selectedCandidate.hired_docs || []),
+        ].find((doc) => doc._id === docId);
+
         return {
           id: docId,
-          isVerified: document?.isVerified || false // Current status for toggle
+          isVerified: document?.isVerified || false, // Current status for toggle
         };
       });
 
@@ -755,7 +727,11 @@ const {
 
   // Updated Glory helper functions
   const renderGloryGrades = (glory: any) => {
-    if (!glory || (glory instanceof Map && glory.size === 0) || (typeof glory === 'object' && Object.keys(glory).length === 0)) {
+    if (
+      !glory ||
+      (glory instanceof Map && glory.size === 0) ||
+      (typeof glory === "object" && Object.keys(glory).length === 0)
+    ) {
       return <span className="text-xs text-muted-foreground">No grades</span>;
     }
 
@@ -766,22 +742,32 @@ const {
     }
 
     // Get the first role that has grades to display in table
-    const firstRoleWithGrades = Object.entries(gloryObj).find(([, data]: [string, any]) => {
-      const grades = data?.grades instanceof Map ? Object.fromEntries(data.grades) : data?.grades || {};
-      return Object.keys(grades).length > 0;
-    });
+    const firstRoleWithGrades = Object.entries(gloryObj).find(
+      ([, data]: [string, any]) => {
+        const grades =
+          data?.grades instanceof Map
+            ? Object.fromEntries(data.grades)
+            : data?.grades || {};
+        return Object.keys(grades).length > 0;
+      }
+    );
 
     if (!firstRoleWithGrades) {
       return <span className="text-xs text-muted-foreground">No grades</span>;
     }
 
     const [role, roleData] = firstRoleWithGrades;
-    const typedRoleData = roleData as { grades?: Record<string, string> | Map<string, string> };
-    const grades = typedRoleData?.grades instanceof Map ? Object.fromEntries(typedRoleData.grades) : typedRoleData?.grades || {};
-    
+    const typedRoleData = roleData as {
+      grades?: Record<string, string> | Map<string, string>;
+    };
+    const grades =
+      typedRoleData?.grades instanceof Map
+        ? Object.fromEntries(typedRoleData.grades)
+        : typedRoleData?.grades || {};
+
     // Show overall grade if available, otherwise show first grade
-    const displayGrade = grades.Overall || Object.values(grades)[0] || 'N/A';
-    
+    const displayGrade = grades.Overall || Object.values(grades)[0] || "N/A";
+
     return (
       <div className="flex items-center gap-1">
         <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
@@ -796,7 +782,11 @@ const {
 
   // Helper function to render full Glory display in details
   const renderFullGloryDisplay = (glory: any) => {
-    if (!glory || (glory instanceof Map && glory.size === 0) || (typeof glory === 'object' && Object.keys(glory).length === 0)) {
+    if (
+      !glory ||
+      (glory instanceof Map && glory.size === 0) ||
+      (typeof glory === "object" && Object.keys(glory).length === 0)
+    ) {
       return null;
     }
 
@@ -806,21 +796,22 @@ const {
       gloryObj = Object.fromEntries(glory);
     }
 
-    return(
-      <>
-      <GloryDisplay glory={gloryObj} />
-      </>
-    )
+    return <GloryDisplay glory={gloryObj} />;
   };
 
   // Helper function to get role color
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "hr": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      case "manager": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "invigilator": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "admin": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      case "hr":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "manager":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "invigilator":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "admin":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
 
@@ -1247,6 +1238,11 @@ const {
   // Effects
   useEffect(() => {
     fetchAllData();
+    async function getJobs() {
+      const alljobs = await api.get("/org/jobs");
+      setJobRole(alljobs.data.data.map((job: any) => job.name));
+    }
+    getJobs();
   }, []);
 
   useEffect(() => {
@@ -1269,6 +1265,22 @@ const {
 
   useEffect(() => {
     let filtered = candidates;
+
+    if (stageFilter !== "all") {
+      filtered = filtered.filter((candidate) =>
+        candidate.current_stage
+          .toLowerCase()
+          .includes(stageFilter.toLowerCase())
+      );
+    }
+
+    if (roleFilter !== "all") {
+      filtered = filtered.filter((candidate) =>
+        candidate.applied_job.name
+          .toLowerCase()
+          .includes(roleFilter.toLowerCase())
+      );
+    }
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -1300,7 +1312,7 @@ const {
     }
 
     setFilteredCandidates(filtered);
-  }, [candidates, searchTerm, statusFilter]);
+  }, [candidates, searchTerm, statusFilter, roleFilter, stageFilter]);
 
   // Statistics
   const stats = {
@@ -1404,6 +1416,21 @@ const {
               />
             </div>
 
+            {/* Role Filter */}
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {jobRole.map((item, idx) => (
+                  <SelectItem key={idx} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {/* Stage Filter */}
             <Select value={stageFilter} onValueChange={setStageFilter}>
               <SelectTrigger className="w-full md:w-48">
@@ -1499,9 +1526,7 @@ const {
                     <TableCell>
                       {formatDate(candidate.registration_date)}
                     </TableCell>
-                    <TableCell>
-                      {renderGloryGrades(candidate.glory)}
-                    </TableCell>
+                    <TableCell>{renderGloryGrades(candidate.glory)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
@@ -1537,234 +1562,345 @@ const {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>Candidate Details</DialogTitle>
+              {selectedCandidate && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {(selectedCandidate.current_stage === "registered" ||
+                    selectedCandidate.current_stage === "hr") && (
+                    <Button
+                      onClick={() =>
+                        openHRQuestionnaireDialog(selectedCandidate)
+                      }
+                      variant="default"
+                      size="sm"
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
+                    >
+                      📋{" "}
+                      <span className="hidden md:inline">
+                        Assign HR Questionnaire
+                      </span>
+                      <span className="md:hidden">HR</span>
+                    </Button>
+                  )}
+
+                  {selectedCandidate.current_stage === "assessment" && (
+                    <Button
+                      onClick={() => openAssessmentDialog(selectedCandidate)}
+                      variant="default"
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
+                    >
+                      🔬{" "}
+                      <span className="hidden md:inline">
+                        Assign Assessment
+                      </span>
+                      <span className="md:hidden">Tech</span>
+                    </Button>
+                  )}
+
+                  {!selectedCandidate.shortlisted &&
+                    selectedCandidate.status !== "rejected" &&
+                    selectedCandidate.current_stage === "registered" && (
+                      <Button
+                        onClick={() =>
+                          shortlistCandidate(
+                            selectedCandidate._id,
+                            "Shortlisted from candidate review"
+                          )
+                        }
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
+                      >
+                        ⭐ <span className="hidden md:inline">Shortlist</span>
+                      </Button>
+                    )}
+
+                  {selectedCandidate.status !== "rejected" && (
+                    <Button
+                      onClick={() => {
+                        setCandidateToReject(selectedCandidate);
+                        setRejectionReason("");
+                        setRejectDialogOpen(true);
+                      }}
+                      variant="default"
+                      size="sm"
+                      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
+                    >
+                      ❌ <span className="hidden md:inline">Reject</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    onClick={() => {
+                      setSelectedNewStage("");
+                      setStageUpdateReason("");
+                      setStageUpdateModal(true);
+                    }}
+                    variant="default"
+                    size="sm"
+                    className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
+                  >
+                    🔄 <span className="hidden md:inline">Update Stage</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => handleAssignInterview(selectedCandidate)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Schedule Interview
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setCandidateForFeedback(selectedCandidate);
+                      setFeedbackContent("");
+                      setFeedbackType("general");
+                      setFeedbackDialogOpen(true);
+                    }}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1" />
+                    Feedback
+                  </Button>
+
+                  <GloryButton
+                    candidate={selectedCandidate}
+                    onOpenGlory={openGloryDialog} // Pass the function as prop
+                    variant="outline"
+                    size="sm"
+                    className="text-purple-600 hover:text-purple-700"
+                  />
+                </div>
+              )}
             </div>
           </DialogHeader>
           {selectedCandidate && (
             <div className="space-y-6">
               {/* Personal Information Card */}
+
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <CardTitle>Personal Information</CardTitle>
-
-                    {/* Action Buttons */}
-                    {
-                      <div className="flex flex-wrap items-center gap-2">
-                        {(selectedCandidate.current_stage === "registered"|| selectedCandidate.current_stage ==="hr") && (
-                          <Button
-                            onClick={() =>
-                              openHRQuestionnaireDialog(selectedCandidate)
-                            }
-                            variant="default"
-                            size="sm"
-                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
-                          >
-                            📋{" "}
-                            <span className="hidden md:inline">
-                              Assign HR Questionnaire
-                            </span>
-                            <span className="md:hidden">HR</span>
-                          </Button>
-                        )}
-
-                        {selectedCandidate.current_stage === "assessment" && (
-                          <Button
-                            onClick={() =>
-                              openAssessmentDialog(selectedCandidate)
-                            }
-                            variant="default"
-                            size="sm"
-                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
-                          >
-                            🔬{" "}
-                            <span className="hidden md:inline">
-                              Assign Assessment
-                            </span>
-                            <span className="md:hidden">Tech</span>
-                          </Button>
-                        )}
-
-                        {!selectedCandidate.shortlisted &&
-                          selectedCandidate.status !== "rejected" &&
-                          selectedCandidate.current_stage === "registered" && (
-                            <Button
-                              onClick={() =>
-                                shortlistCandidate(
-                                  selectedCandidate._id,
-                                  "Shortlisted from candidate review"
-                                )
-                              }
-                              variant="default"
-                              size="sm"
-                              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
-                            >
-                              ⭐{" "}
-                              <span className="hidden md:inline">
-                                Shortlist
-                              </span>
-                            </Button>
-                          )}
-
-                        {selectedCandidate.status !== "rejected" && (
-                          <Button
-                            onClick={() => {
-                              setCandidateToReject(selectedCandidate);
-                              setRejectionReason("");
-                              setRejectDialogOpen(true);
-                            }}
-                            variant="default"
-                            size="sm"
-                            className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
-                          >
-                            ❌ <span className="hidden md:inline">Reject</span>
-                          </Button>
-                        )}
-
-                        <Button
-                          onClick={() => {
-                            setSelectedNewStage("");
-                            setStageUpdateReason("");
-                            setStageUpdateModal(true);
-                          }}
-                          variant="default"
-                          size="sm"
-                          className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
-                        >
-                          🔄{" "}
-                          <span className="hidden md:inline">Update Stage</span>
-                        </Button>
-
-                        <Button
-                          onClick={() =>
-                            handleAssignInterview(selectedCandidate)
-                          }
-                          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                        >
-                          <Calendar className="h-4 w-4" />
-                          Schedule Interview
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setCandidateForFeedback(selectedCandidate);
-                            setFeedbackContent("");
-                            setFeedbackType("general");
-                            setFeedbackDialogOpen(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Feedback
-                        </Button>
-
-                        <GloryButton
-                          candidate={selectedCandidate}
-                          onOpenGlory={openGloryDialog} // Pass the function as prop
-                          variant="outline"
-                          size="sm"
-                          className="text-purple-600 hover:text-purple-700"
-                        />
-                      </div>
-                    }
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setPersonalInfoCollapsed(!personalCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {personalCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {personalCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
                   {/* Profile Info */}
-                  <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 border-2 p-4 sm:p-6 rounded-xl w-full lg:w-auto">
-                      <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-gray-200 dark:ring-gray-700 flex-shrink-0">
-                        <AvatarImage
-                          src={selectedCandidate.profile_photo_url?.url}
-                        />
-                        <AvatarFallback className="text-lg font-semibold">
-                          {selectedCandidate.first_name?.[0]}
-                          {selectedCandidate.last_name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
+                  {!personalCollapsed && (
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
+                        <Avatar className="w-40 h-33 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                          <AvatarImage
+                            src={selectedCandidate.profile_photo_url?.url}
+                            className="object-cover w-full h-full"
+                          />
+                          <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
+                            {selectedCandidate.first_name?.[0]}
+                            {selectedCandidate.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
 
-                      <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {selectedCandidate.first_name}{" "}
-                          {selectedCandidate.last_name}
-                        </h3>
-                        <div className="flex justify-center sm:justify-start">
-                          <Badge
-                            className={getStageColor(
-                              selectedCandidate.current_stage
-                            )}
-                            variant="outline"
-                          >
-                            {selectedCandidate.current_stage?.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="break-all">
-                            📧 {selectedCandidate.email}
+                        <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+                          <p className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
+                            <strong>Applied For - {selectedCandidate.applied_job?.name}</strong>
+                          </p>
+                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            {selectedCandidate.first_name}{" "}
+                            {selectedCandidate.last_name}
+                          </h3>
+                          <div className="flex justify-center sm:justify-start">
+                            <span className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
+                            <strong>Current Stage -</strong>
                           </span>
-                          <span>📱 {selectedCandidate.phone}</span>
+                            <Badge
+                              className={getStageColor(
+                                selectedCandidate.current_stage
+                              )}
+                              variant="secondary"
+                            >
+                              {selectedCandidate.current_stage?.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+
+  <div className="text-xs text-gray-600">
+  <strong className="text-purple-600">Status:</strong>{" "}
+  <span className={`inline-flex items-center gap-1 px-1 ${
+    selectedCandidate.status.toLowerCase() === 'hired' 
+      ? 'text-green-700' 
+      : 'text-gray-700'
+  }`}>
+    {selectedCandidate.status}
+    {selectedCandidate.status.toLowerCase() === 'hired' && (
+      <Check className="w-3 h-3" />
+    )}
+  </span>
+</div>
+</div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="break-all">
+                              📧 {selectedCandidate.email}
+                            </span>
+                            <span>📱 {selectedCandidate.phone}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Applied Position */}
+                      <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                        {/* Personal Details Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              DATE OF BIRTH
+                              <sup>
+                                <i className="text-blue-400">
+                                  {differenceInYears(
+                                    new Date(),
+                                    new Date(selectedCandidate.date_of_birth)
+                                  ) + " year"}
+                                </i>
+                              </sup>
+                            </p>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                              {formatDate(selectedCandidate.date_of_birth)}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              REGISTRATION
+                            </p>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                              {formatDate(selectedCandidate.registration_date)}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              SHORTLISTED
+                            </p>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                              {selectedCandidate.shortlisted
+                                ? "✅ Yes"
+                                : "❌ No"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Address */}
+                        {selectedCandidate.address && (
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
+                              Address
+                            </p>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
+                              {selectedCandidate.address}
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          {selectedCandidate.applied_job?.description
+                            ?.location && (
+                            <div>
+                              📍{" "}
+                              {
+                                selectedCandidate.applied_job.description
+                                  .location
+                              }
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description
+                            ?.country && (
+                            <div>
+                              🌍{" "}
+                              {
+                                selectedCandidate.applied_job.description
+                                  .country
+                              }
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description?.time && (
+                            <div>
+                              ⏰{" "}
+                              {selectedCandidate.applied_job.description.time}
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description
+                            ?.expInYears && (
+                            <div>
+                              💼{" "}
+                              {
+                                selectedCandidate.applied_job.description
+                                  .expInYears
+                              }
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description
+                            ?.salary && (
+                            <div className="sm:col-span-2">
+                              💰{" "}
+                              {selectedCandidate.applied_job.description.salary}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+                  )}
+                </CardContent>
+              </Card>
 
-                    {/* Applied Position */}
-                    <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">
-                        Applied Position
-                      </h4>
-                      <p className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                        {selectedCandidate.applied_job?.name}
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        {selectedCandidate.applied_job?.description
-                          ?.location && (
-                          <div>
-                            📍{" "}
-                            {selectedCandidate.applied_job.description.location}
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description
-                          ?.country && (
-                          <div>
-                            🌍{" "}
-                            {selectedCandidate.applied_job.description.country}
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description?.time && (
-                          <div>
-                            ⏰ {selectedCandidate.applied_job.description.time}
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description
-                          ?.expInYears && (
-                          <div>
-                            💼{" "}
-                            {
-                              selectedCandidate.applied_job.description
-                                .expInYears
-                            }
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description?.salary && (
-                          <div className="sm:col-span-2">
-                            💰{" "}
-                            {selectedCandidate.applied_job.description.salary}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>📝 Registration HR Responses</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setHrResponsesCollapsed(!hrResponsesCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {hrResponsesCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {hrResponsesCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
-
+                </CardHeader>
+                <CardContent className="space-y-4">
                   {/* HR Responses */}
-                  {selectedCandidate.default_hr_responses &&
+                  {!hrResponsesCollapsed &&
+                    selectedCandidate.default_hr_responses &&
                     selectedCandidate.default_hr_responses.length > 0 && (
                       <div className="border-l-4 border-l-green-500 bg-green-50/50 dark:bg-green-900/10 rounded-lg p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-                          <h4 className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">
-                            📝 Registration HR Responses
-                          </h4>
                           <Badge variant="secondary">
                             {selectedCandidate.default_hr_responses.length}{" "}
                             answered
@@ -1854,391 +1990,42 @@ const {
                         </div>
                       </div>
                     )}
-
-                  {/* Updated Glory Grades Display */}
-                  {selectedCandidate.glory && renderFullGloryDisplay(selectedCandidate.glory)}
-
-                  {/* Personal Details Grid */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                        GENDER
-                      </p>
-                      <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                        {selectedCandidate.gender || "Not specified"}
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                        DATE OF BIRTH
-                      </p>
-                      <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                        {formatDate(selectedCandidate.date_of_birth)}
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                        REGISTRATION
-                      </p>
-                      <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                        {formatDate(selectedCandidate.registration_date)}
-                      </p>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                        SHORTLISTED
-                      </p>
-                      <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                        {selectedCandidate.shortlisted ? "✅ Yes" : "❌ No"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  {selectedCandidate.address && (
-                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
-                        Address
-                      </p>
-                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
-                        {selectedCandidate.address}
-                      </p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 
-              {/* Calling details */}
-              <HRCallingDetailsDisplay
-                candidateId={selectedCandidate._id}
-                candidateName={`${selectedCandidate.first_name} ${selectedCandidate.last_name}`}
-                userRole="hr" // HR gets full CRUD access
-              />
-
-              {/* Status Information */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Application Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        Current Stage
-                      </div>
-                      <Badge
-                        className={getStageColor(
-                          selectedCandidate.current_stage
-                        )}
-                      >
-                        {selectedCandidate.current_stage?.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        Status
-                      </div>
-                      <Badge
-                        className={getStatusColor(selectedCandidate.status)}
-                      >
-                        {selectedCandidate.status?.toUpperCase()}
-                      </Badge>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        Email Verified
-                      </div>
-                      <Badge
-                        className={
-                          selectedCandidate.email_verified
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }
-                      >
-                        {selectedCandidate.email_verified
-                          ? "Verified"
-                          : "Not Verified"}
-                      </Badge>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">
-                        Registration Date
-                      </div>
-                      <div className="text-sm">
-                        {formatDate(selectedCandidate.registration_date)}
-                      </div>
-                    </div>
-                  </div>
+                <CardContent className="space-y-4">
+                  {/* Calling details */}
+                  <HRCallingDetailsDisplay
+                    candidateId={selectedCandidate._id}
+                    candidateName={`${selectedCandidate.first_name} ${selectedCandidate.last_name}`}
+                    userRole="hr" // HR gets full CRUD access
+                  />
                 </CardContent>
               </Card>
 
-              {/* Documents Section - Enhanced with Verification */}
+              {/* Updated Glory Grades Display */}
+              {selectedCandidate.glory &&
+                renderFullGloryDisplay(selectedCandidate.glory)}
+
+              {/* Documents Section */}
               {selectedCandidate.documents &&
-                selectedCandidate.documents?.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle>Documents</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {
-                              [
-                                ...selectedCandidate.documents,
-                                ...(selectedCandidate.hired_docs || []),
-                              ].filter((doc) => doc.isVerified).length
-                            }{" "}
-                            /{" "}
-                            {selectedCandidate.documents.length +
-                              (selectedCandidate.hired_docs?.length || 0)}{" "}
-                            Verified
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {/* UPDATED: Mark Verified Button */}
-                      <div className="mb-4 flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={documentChecklist.selectAll}
-                            onCheckedChange={(checked) => {
-                              const allDocIds = [
-                                ...selectedCandidate.documents,
-                                ...(selectedCandidate.hired_docs || [])
-                              ].map((doc) => doc._id);
-                              
-                              if (checked) {
-                                const newChecklist = { selectAll: true };
-                                allDocIds.forEach(
-                                  (id) => (newChecklist[id] = true)
-                                );
-                                setDocumentChecklist(newChecklist);
-                              } else {
-                                setDocumentChecklist({ selectAll: false });
-                              }
-                            }}
-                          />
-                          <Label className="text-sm font-medium">
-                            Select All
-                          </Label>
-                        </div>
-
-                        <Button
-                          onClick={handleMarkVerified}
-                          disabled={
-                            savingChecklist ||
-                            Object.keys(documentChecklist).filter(
-                              (key) =>
-                                key !== "selectAll" && documentChecklist[key]
-                            ).length === 0
-                          }
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          {savingChecklist ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Updating Status...
-                            </>
-                          ) : (
-                            <>🔄 Toggle Selected Status</>
-                          )}
-                        </Button>
-                      </div>
-
-                      {/* Documents List View */}
-                      <div className="space-y-4">
-                        {[
-                          ...(selectedCandidate.documents || []),
-                          ...(selectedCandidate.hired_docs || []),
-                        ].map((doc) => {
-                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(
-                            doc.document_url
-                          );
-                          const isPDF = /\.pdf$/i.test(doc.document_url);
-                          const pdfThumbUrl = isPDF
-                            ? doc.document_url
-                                .replace("/upload/", "/upload/pg_1/")
-                                .replace(/\.pdf$/i, ".jpg")
-                            : null;
-
-                          return (
-                            <div
-                              key={doc._id}
-                              className={`border rounded-lg p-4 ${
-                                doc.isVerified
-                                  ? "bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800"
-                                  : "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                  <Checkbox
-                                    checked={
-                                      documentChecklist[doc._id] || false
-                                    }
-                                    onCheckedChange={(checked) => {
-                                      setDocumentChecklist((prev) => {
-                                        const newState: Record<
-                                          string,
-                                          boolean
-                                        > = {
-                                          ...prev,
-                                          [doc._id]: checked as boolean, // Ensure it's boolean
-                                          selectAll: false,
-                                        };
-                                        return newState;
-                                      });
-                                    }}
-                                  />
-
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="text-base font-medium capitalize">
-                                      {doc.document_type}
-                                    </h3>
-
-                                    {/* Verification Status Badge */}
-                                    <Badge
-                                      className={
-                                        doc.isVerified
-                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                                      }
-                                    >
-                                      {doc.isVerified
-                                        ? "✓ Verified"
-                                        : "⏳ Pending"}
-                                    </Badge>
-                                  </div>
-                                </div>
-
-                                {/* UPDATED: Individual verification button with proper functionality */}
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant={doc.isVerified ? "destructive" : "default"}
-                                    onClick={() => handleIndividualDocVerification(doc)}
-                                    disabled={savingChecklist}
-                                    className={doc.isVerified ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
-                                  >
-                                    {savingChecklist ? (
-                                      <>
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                                        Updating...
-                                      </>
-                                    ) : (
-                                      <>
-                                        {doc.isVerified ? "❌ Unverify" : "✅ Verify"}
-                                      </>
-                                    )}
-                                  </Button>
-                                  
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) =>
-                                      copyToClipboard(
-                                        doc.document_url,
-                                        doc._id,
-                                        e
-                                      )
-                                    }
-                                    title="Copy document link"
-                                  >
-                                    {copiedDocId === doc._id ? (
-                                      <Check className="w-4 h-4 text-green-600" />
-                                    ) : (
-                                      <Copy className="w-4 h-4 text-gray-600" />
-                                    )}
-                                  </Button>
-
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      window.open(doc.document_url, "_blank")
-                                    }
-                                    title="View document"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Document Preview */}
-                              <div className="flex items-start gap-4">
-                                <div className="w-24 h-32 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0">
-                                  {isImage ? (
-                                    <img
-                                      src={doc.document_url}
-                                      alt={doc.document_type}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : isPDF ? (
-                                    <img
-                                      src={pdfThumbUrl!}
-                                      alt={`${doc.document_type} preview`}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.src =
-                                          "https://via.placeholder.com/96x128?text=PDF";
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
-                                      <FileText className="w-8 h-8 mb-1" />
-                                      <span className="text-xs">Doc</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                    <p>
-                                      <span className="font-medium">Type:</span>{" "}
-                                      {doc.document_type}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium">
-                                        Status:
-                                      </span>
-                                      <span
-                                        className={
-                                          doc.isVerified
-                                            ? "text-green-600"
-                                            : "text-yellow-600"
-                                        }
-                                      >
-                                        {doc.isVerified
-                                          ? " Verified"
-                                          : " Pending Verification"}
-                                      </span>
-                                    </p>
-                                    <p className="truncate">
-                                      <span className="font-medium">URL:</span>
-                                      <span className="text-xs ml-1">
-                                        {doc.document_url}
-                                      </span>
-                                    </p>
-                                    {doc.uploaded_at && (
-                                      <p>
-                                        <span className="font-medium">
-                                          Uploaded:
-                                        </span>{" "}
-                                        {formatDate(doc.uploaded_at)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
+                selectedCandidate.documents.length > 0 && (
+                  <CandidateDocumentsCard
+                    documents={selectedCandidate.documents}
+                    hired_docs={selectedCandidate.hired_docs}
+                    documentChecklist={documentChecklist}
+                    savingChecklist={savingChecklist}
+                    copiedDocId={copiedDocId}
+                    onDocumentChecklistChange={setDocumentChecklist}
+                    onMarkVerified={handleMarkVerified}
+                    onIndividualDocVerification={
+                      handleIndividualDocVerification
+                    }
+                    onCopyToClipboard={copyToClipboard}
+                    formatDate={formatDate}
+                    defaultCollapsed={false} // Set to true if you want it collapsed by default
+                  />
                 )}
 
               {/* Company References Section */}
@@ -2550,7 +2337,7 @@ const {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-                                                                    <span className="text-white text-sm font-bold">
+                                  <span className="text-white text-sm font-bold">
                                     ▶
                                   </span>
                                 </div>
@@ -2741,120 +2528,142 @@ const {
               {/* Interviews Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Scheduled Interviews</CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>Scheduled Interviews</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setInterViewCollapsed(!interviewCollapsed)}
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {interviewCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {interviewCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {selectedCandidate.interviews &&
-                  selectedCandidate.interviews.length > 0 ? (
-                    <div className="space-y-4">
-                      {selectedCandidate.interviews.map((interview) => (
-                        <div
-                          key={interview._id}
-                          className="border rounded-lg p-4 bg-gray-50"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h4 className="font-medium">{interview.title}</h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {interview.type.toUpperCase()}
-                                </Badge>
-                                {interview.platform && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {interview.platform}
+                  {!interviewCollapsed &&
+                    (selectedCandidate.interviews &&
+                    selectedCandidate.interviews.length > 0 ? (
+                      <div className="space-y-4">
+                        {selectedCandidate.interviews.map((interview) => (
+                          <div
+                            key={interview._id}
+                            className="border rounded-lg p-4 bg-gray-50"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h4 className="font-medium">
+                                  {interview.title}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {interview.type.toUpperCase()}
                                   </Badge>
-                                )}
+                                  {interview.platform && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {interview.platform}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge
+                                className={
+                                  interview.status === "scheduled"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-green-100 text-green-800"
+                                }
+                              >
+                                {interview.status.toUpperCase()}
+                              </Badge>
+                            </div>
+
+                            {interview.description && (
+                              <p className="text-sm text-gray-600 mb-3">
+                                {interview.description}
+                              </p>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-600">
+                                  Interviewers:
+                                </span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {interview.interviewers.map((interviewer) => (
+                                    <Badge
+                                      key={interviewer._id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {interviewer.name} ({interviewer.role})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">
+                                  Scheduled by:
+                                </span>
+                                <div className="font-medium">
+                                  {interview.scheduled_by.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {interview.scheduled_by.role}
+                                </div>
                               </div>
                             </div>
-                            <Badge
-                              className={
-                                interview.status === "scheduled"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-green-100 text-green-800"
-                              }
-                            >
-                              {interview.status.toUpperCase()}
-                            </Badge>
-                          </div>
 
-                          {interview.description && (
-                            <p className="text-sm text-gray-600 mb-3">
-                              {interview.description}
-                            </p>
-                          )}
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-600">
-                                Interviewers:
-                              </span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {interview.interviewers.map((interviewer) => (
-                                  <Badge
-                                    key={interviewer._id}
+                            {interview.meeting_link && (
+                              <div className="mt-3 pt-3 border-t">
+                                <span className="text-gray-600 text-sm">
+                                  Meeting Link:
+                                </span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Button
+                                    size="sm"
                                     variant="outline"
+                                    onClick={() =>
+                                      window.open(
+                                        interview.meeting_link,
+                                        "_blank"
+                                      )
+                                    }
                                     className="text-xs"
                                   >
-                                    {interviewer.name} ({interviewer.role})
-                                  </Badge>
-                                ))}
+                                    Join Meeting
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">
-                                Scheduled by:
-                              </span>
-                              <div className="font-medium">
-                                {interview.scheduled_by.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {interview.scheduled_by.role}
-                              </div>
-                            </div>
+                            )}
                           </div>
-
-                          {interview.meeting_link && (
-                            <div className="mt-3 pt-3 border-t">
-                              <span className="text-gray-600 text-sm">
-                                Meeting Link:
-                              </span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    window.open(
-                                      interview.meeting_link,
-                                      "_blank"
-                                    )
-                                  }
-                                  className="text-xs"
-                                >
-                                  Join Meeting
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">
-                        No interviews scheduled yet
-                      </p>
-                      <Button
-                        className="mt-4"
-                        variant="outline"
-                        onClick={() => handleAssignInterview(selectedCandidate)}
-                      >
-                        Schedule Interview
-                      </Button>
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">
+                          No interviews scheduled yet
+                        </p>
+                        <Button
+                          className="mt-4"
+                          variant="outline"
+                          onClick={() =>
+                            handleAssignInterview(selectedCandidate)
+                          }
+                        >
+                          Schedule Interview
+                        </Button>
+                      </div>
+                    ))}
                 </CardContent>
               </Card>
 
@@ -2863,76 +2672,96 @@ const {
                 selectedCandidate.internal_feedback.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        💬 Internal Feedback
-                        <Badge variant="secondary" className="text-xs">
-                          {selectedCandidate.internal_feedback.length}
-                        </Badge>
-                      </CardTitle>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <CardTitle>💬 Internal Feedback</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setFeedbackCollapsed(!feedbackCollapsed)
+                          }
+                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <span className="text-sm font-medium">
+                            {feedbackCollapsed ? "Show" : "Hide"}
+                          </span>
+                          {feedbackCollapsed ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedCandidate.internal_feedback.length}
+                      </Badge>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {selectedCandidate.internal_feedback.map((feedback) => (
-                          <div
-                            key={feedback._id}
-                            className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-10 h-10">
-                                  <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
-                                    {feedback.feedback_by.name
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .join("")}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                    {feedback.feedback_by.name}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs bg-blue-100 text-blue-700 border-blue-300"
-                                    >
-                                      {feedback.feedback_by.role}
-                                    </Badge>
+                        {!feedbackCollapsed &&
+                          selectedCandidate.internal_feedback.map(
+                            (feedback) => (
+                              <div
+                                key={feedback._id}
+                                className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
+                              >
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="w-10 h-10">
+                                      <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
+                                        {feedback.feedback_by.name
+                                          .split(" ")
+                                          .map((n) => n[0])
+                                          .join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                        {feedback.feedback_by.name}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs bg-blue-100 text-blue-700 border-blue-300"
+                                        >
+                                          {feedback.feedback_by.role}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
+                                      💬 Feedback
+                                    </div>
+                                    <div className="flex items-center justify-end gap-1">
+                                      <span className="text-xs text-gray-500">
+                                        At
+                                      </span>
+                                      <Badge
+                                        className={`text-xs ${getStageColor(
+                                          feedback.feedback_at
+                                        )}`}
+                                      >
+                                        {feedback.feedback_at &&
+                                          feedback.feedback_at
+                                            .replace("_", " ")
+                                            .toUpperCase()}
+                                      </Badge>
+                                      <span className="text-xs text-gray-500">
+                                        stage
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
-                                  💬 Feedback
-                                </div>
-                                <div className="flex items-center justify-end gap-1">
-                                  <span className="text-xs text-gray-500">
-                                    At
-                                  </span>
-                                  <Badge
-                                    className={`text-xs ${getStageColor(
-                                      feedback.feedback_at
-                                    )}`}
-                                  >
-                                    {feedback.feedback_at &&
-                                      feedback.feedback_at
-                                        .replace("_", " ")
-                                        .toUpperCase()}
-                                  </Badge>
-                                  <span className="text-xs text-gray-500">
-                                    stage
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
 
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                              <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-                                "{feedback.feedback}"
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                                <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                                    "{feedback.feedback}"
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          )}
                       </div>
                     </CardContent>
                   </Card>
@@ -2943,11 +2772,30 @@ const {
                 selectedCandidate.stage_history.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Stage History</CardTitle>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <CardTitle>Stage History</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setHistoryCollapsed(!historyCollapsed)
+                          }
+                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <span className="text-sm font-medium">
+                            {historyCollapsed ? "Show" : "Hide"}
+                          </span>
+                          {historyCollapsed ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {selectedCandidate.stage_history.map(
+                        {!historyCollapsed && (selectedCandidate.stage_history.map(
                           (stage: StageHistory) => (
                             <div
                               key={stage._id}
@@ -2981,7 +2829,7 @@ const {
                               )}
                             </div>
                           )
-                        )}
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
@@ -3003,12 +2851,14 @@ const {
         onClose={closeGloryDialog}
         role="hr" // Pass hardcoded role instead of onRoleChange
         onGradeChange={handleGloryGradeChange}
-        onSubmit={() => submitGloryGrades(()=>{
-          fetchAllData();
-          if(selectedCandidate){
-            fetchCandidateDetails(selectedCandidate._id);
-          }
-        })}
+        onSubmit={() =>
+          submitGloryGrades(() => {
+            fetchAllData();
+            if (selectedCandidate) {
+              fetchCandidateDetails(selectedCandidate._id);
+            }
+          })
+        }
         getGradingParameters={getGradingParameters}
       />
 
@@ -4053,4 +3903,3 @@ const {
 };
 
 export default HRHome;
-

@@ -39,9 +39,9 @@ import {
   Check,
   Filter,
   ClipboardCheck,
-  FileText,
-  Copy,
-  MessageSquare,
+  Copy, 
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -49,11 +49,9 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import GloryDialog from "../GloryDialog";
-import GloryButton from "../GloryButton";
+
 import { useGlory } from "@/hooks/useGlory";
 import GloryDisplay from "../GloryDisplay";
-
-
 
 // Assessment status type definition (matching your backend model)
 type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
@@ -101,7 +99,7 @@ interface GloryData {
 interface GloryRoleData {
   graderId?: string;
   graderName?: string;
-  graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
+  graderRole: "hr" | "manager" | "invigilator" | "admin";
   grades: GloryData; // ✅ Use plain object instead of Map
   gradedAt: string;
 }
@@ -155,7 +153,7 @@ type Candidate = {
     | "tech"
     | "manager"
     | "feedback";
-    glory?: { [role: string]: GloryRoleData };
+  glory?: { [role: string]: GloryRoleData };
   status:
     | "active"
     | "inactive"
@@ -244,12 +242,11 @@ const InvigilatorHome = () => {
     loadingGlory,
     gradeOptions,
     currentUser,
-    openGloryDialog,
     closeGloryDialog,
     handleGloryGradeChange,
     submitGloryGrades,
     getGradingParameters,
-  } = useGlory('invigilator');
+  } = useGlory("invigilator");
 
   // State management for candidates and filters
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -302,76 +299,104 @@ const InvigilatorHome = () => {
   const [feedbackType, setFeedbackType] = useState("general");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
-    // Updated Glory helper functions
-    const renderGloryGrades = (glory: any) => {
-      if (!glory || (glory instanceof Map && glory.size === 0) || (typeof glory === 'object' && Object.keys(glory).length === 0)) {
-        return <span className="text-xs text-muted-foreground">No grades</span>;
-      }
-      // Convert Map to Object if needed
-      let gloryObj = glory;
-      if (glory instanceof Map) {
-        gloryObj = Object.fromEntries(glory);
-      }
   
-   // Get the first role that has grades to display in table - FIXED TYPE ASSERTION
-  const firstRoleWithGrades = Object.entries(gloryObj).find(([, data]: [string, any]) => {
-    const roleData = data as { grades?: Record<string, string> | Map<string, string> };
-    const grades = roleData?.grades instanceof Map ? Object.fromEntries(roleData.grades) : roleData?.grades || {};
-    return Object.keys(grades).length > 0;
-  });
-      if (!firstRoleWithGrades) {
-        return <span className="text-xs text-muted-foreground">No grades</span>;
+  const [personalCollapsed, setPersonalInfoCollapsed] = useState(false);
+  const [interviewsCollapsed,setInterviewsCollapsed] = useState(false);
+  const [feedBackCollapsed,setFeedBackCollapsed] = useState(false);
+  const [timeLineCollapsed,setTimeLineCollapsed] = useState(false);
+  // Updated Glory helper functions
+  const renderGloryGrades = (glory: any) => {
+    if (
+      !glory ||
+      (glory instanceof Map && glory.size === 0) ||
+      (typeof glory === "object" && Object.keys(glory).length === 0)
+    ) {
+      return <span className="text-xs text-muted-foreground">No grades</span>;
+    }
+    // Convert Map to Object if needed
+    let gloryObj = glory;
+    if (glory instanceof Map) {
+      gloryObj = Object.fromEntries(glory);
+    }
+
+    // Get the first role that has grades to display in table - FIXED TYPE ASSERTION
+    const firstRoleWithGrades = Object.entries(gloryObj).find(
+      ([, data]: [string, any]) => {
+        const roleData = data as {
+          grades?: Record<string, string> | Map<string, string>;
+        };
+        const grades =
+          roleData?.grades instanceof Map
+            ? Object.fromEntries(roleData.grades)
+            : roleData?.grades || {};
+        return Object.keys(grades).length > 0;
       }
-  
-      const [role, roleData] = firstRoleWithGrades;
-      const typedRoleData = roleData as { grades?: Record<string, string> | Map<string, string> };
-      
-      const grades = typedRoleData?.grades instanceof Map ? Object.fromEntries(typedRoleData.grades) : typedRoleData?.grades || {};
-      
-      // Show overall grade if available, otherwise show first grade
-      const displayGrade = grades.Overall || Object.values(grades)[0] || 'N/A';
-      
-      return (
-        <div className="flex items-center gap-1">
-          <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
-            {displayGrade}
-          </Badge>
-          <span className="text-sm font-medium text-blue-600">
-            {}
-          </span>
-        </div>
-      );
+    );
+    if (!firstRoleWithGrades) {
+      return <span className="text-xs text-muted-foreground">No grades</span>;
+    }
+
+    const [role, roleData] = firstRoleWithGrades;
+    const typedRoleData = roleData as {
+      grades?: Record<string, string> | Map<string, string>;
     };
-  
-    // Helper function to render full Glory display in details
-    const renderFullGloryDisplay = (glory: any) => {
-      if (!glory || (glory instanceof Map && glory.size === 0) || (typeof glory === 'object' && Object.keys(glory).length === 0)) {
-        return null;
-      }
-  
-      // Convert Map to Object if needed
-      let gloryObj = glory;
-      if (glory instanceof Map) {
-        gloryObj = Object.fromEntries(glory);
-      }
-  
-      return(
-        <>
+
+    const grades =
+      typedRoleData?.grades instanceof Map
+        ? Object.fromEntries(typedRoleData.grades)
+        : typedRoleData?.grades || {};
+
+    // Show overall grade if available, otherwise show first grade
+    const displayGrade = grades.Overall || Object.values(grades)[0] || "N/A";
+
+    return (
+      <div className="flex items-center gap-1">
+        <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
+          {displayGrade}
+        </Badge>
+        <span className="text-sm font-medium text-blue-600">{}</span>
+      </div>
+    );
+  };
+
+  // Helper function to render full Glory display in details
+  const renderFullGloryDisplay = (glory: any) => {
+    if (
+      !glory ||
+      (glory instanceof Map && glory.size === 0) ||
+      (typeof glory === "object" && Object.keys(glory).length === 0)
+    ) {
+      return null;
+    }
+
+    // Convert Map to Object if needed
+    let gloryObj = glory;
+    if (glory instanceof Map) {
+      gloryObj = Object.fromEntries(glory);
+    }
+
+    return (
+      <>
         <GloryDisplay glory={gloryObj} />
-        </>
-      )
-    };
-  
-    // Helper function to get role color
-    const getRoleColor = (role: string) => {
-      switch (role) {
-        case "hr": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-        case "manager": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-        case "invigilator": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-        case "admin": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
-        default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
-      }
-    };
+      </>
+    );
+  };
+
+  // Helper function to get role color
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "hr":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "manager":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "invigilator":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "admin":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
+  };
 
   // FIXED: Submit feedback function without parameters
   const submitFeedback = async () => {
@@ -531,7 +556,6 @@ const InvigilatorHome = () => {
       setIsUpdatingStage(false);
     }
   };
-
 
   /**
    * Helper function to map backend status to frontend display status
@@ -1183,8 +1207,8 @@ const InvigilatorHome = () => {
 
                       {/* Glory */}
                       <TableCell>
-                                            {renderGloryGrades(candidate.glory)}
-                                          </TableCell>
+                        {renderGloryGrades(candidate.glory)}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -1611,262 +1635,242 @@ const InvigilatorHome = () => {
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <CardTitle>Personal Information</CardTitle>
-
-                    {/* Enhanced Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {selectedCandidate.assessments?.length === 0 && (
-                        <Button
-                          onClick={() => {
-                            closeViewDialog();
-                            handleAssignAssessment(selectedCandidate);
-                          }}
-                          variant="default"
-                          size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
-                        >
-                          🔬{" "}
-                          <span className="hidden md:inline">
-                            Assign Assessment
-                          </span>
-                          <span className="md:hidden">Assessment</span>
-                        </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setPersonalInfoCollapsed(!personalCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {personalCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {personalCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
                       )}
-
-                      {selectedCandidate.status !== "rejected" && (
-                        <Button
-                          onClick={() => {
-                            setCandidateToReject(selectedCandidate);
-                            setRejectionReason("");
-                            setRejectDialogOpen(true);
-                          }}
-                          variant="default"
-                          size="sm"
-                          className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
-                        >
-                          ❌ <span className="hidden md:inline">Reject</span>
-                        </Button>
-                      )}
-
-                      <GloryButton
-                        candidate={selectedCandidate} // Pass your candidate object
-                        onOpenGlory={openGloryDialog} // Pass the function from hook
-                        variant="outline"
-                        size="sm"
-                        className="text-purple-600 hover:text-purple-700"
-                      />
-
-                      {selectedCandidate.status !== "rejected" && (
-                        <Button
-                          onClick={() => {
-                            setSelectedNewStage("");
-                            setStageUpdateReason("");
-                            setStageFeedback("");
-                            setStageUpdateModal(true);
-                          }}
-                          variant="default"
-                          size="sm"
-                          className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
-                        >
-                          🔄{" "}
-                          <span className="hidden md:inline">Update Stage</span>
-                        </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setCandidateForFeedback(selectedCandidate);
-                          setFeedbackContent("");
-                          setFeedbackType("general");
-                          setFeedbackDialogOpen(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Feedback
-                      </Button>
-                    </div>
+                    </Button>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4">
                   {/* Profile Info */}
-                  <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 border-2 p-4 sm:p-6 rounded-xl w-full lg:w-auto">
-                      <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-gray-200 dark:ring-gray-700 flex-shrink-0">
-                        <AvatarImage
-                          src={selectedCandidate.profile_photo_url?.url}
-                        />
-                        <AvatarFallback className="text-lg font-semibold">
-                          {selectedCandidate.first_name?.[0]}
-                          {selectedCandidate.last_name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
+                  {!personalCollapsed && (
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
+                        <Avatar className="w-40 h-33 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                          <AvatarImage
+                            src={selectedCandidate.profile_photo_url?.url}
+                            className="object-cover w-full h-full"
+                          />
+                          <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
+                            {selectedCandidate.first_name?.[0]}
+                            {selectedCandidate.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
 
-                      <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {selectedCandidate.first_name}{" "}
-                          {selectedCandidate.last_name}
-                        </h3>
-                        <div className="flex justify-center sm:justify-start">
-                          <Badge
-                            className={getStageColor(
-                              selectedCandidate.current_stage
-                            )}
-                            variant="outline"
-                          >
-                            {selectedCandidate.current_stage?.toUpperCase()}
-                          </Badge>
+                        <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+                          <p className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
+                            <strong>
+                              Applied For -{" "}
+                              {selectedCandidate.applied_job?.name}
+                            </strong>
+                          </p>
+                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            {selectedCandidate.first_name}{" "}
+                            {selectedCandidate.last_name}
+                          </h3>
+                          <div className="flex justify-center sm:justify-start">
+                            <span className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
+                              <strong>Current Stage -</strong>
+                            </span>
+                            <Badge
+                              className={getStageColor(
+                                selectedCandidate.current_stage
+                              )}
+                              variant="secondary"
+                            >
+                              {selectedCandidate.current_stage?.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+                            <div className="text-xs text-gray-600">
+                              <strong className="text-purple-600">
+                                Status:
+                              </strong>{" "}
+                              <span
+                                className={`inline-flex items-center gap-1 px-1 ${
+                                  selectedCandidate.status.toLowerCase() ===
+                                  "hired"
+                                    ? "text-green-700"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {selectedCandidate.status}
+                                {selectedCandidate.status.toLowerCase() ===
+                                  "hired" && <Check className="w-3 h-3" />}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="break-all">
+                              📧 {selectedCandidate.email}
+                            </span>
+                            <span>📱 {selectedCandidate.phone}</span>
+                          </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="break-all">
-                            📧 {selectedCandidate.email}
-                          </span>
-                          <span>📱 {selectedCandidate.phone}</span>
+                      </div>
+
+                      {/* Applied Position */}
+                      <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                        {/* Personal Details Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              REGISTRATION
+                            </p>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                              {formatDate(selectedCandidate.registration_date)}
+                            </p>
+                          </div>
+
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              SHORTLISTED
+                            </p>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                              {selectedCandidate.shortlisted
+                                ? "✅ Yes"
+                                : "❌ No"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Address */}
+                        {selectedCandidate.address && (
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
+                              Address
+                            </p>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
+                              {selectedCandidate.address}
+                            </p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          {selectedCandidate.applied_job?.description
+                            ?.location && (
+                            <div>
+                              📍{" "}
+                              {
+                                selectedCandidate.applied_job.description
+                                  .location
+                              }
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description
+                            ?.country && (
+                            <div>
+                              🌍{" "}
+                              {
+                                selectedCandidate.applied_job.description
+                                  .country
+                              }
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description?.time && (
+                            <div>
+                              ⏰{" "}
+                              {selectedCandidate.applied_job.description.time}
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description
+                            ?.expInYears && (
+                            <div>
+                              💼{" "}
+                              {
+                                selectedCandidate.applied_job.description
+                                  .expInYears
+                              }
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.description
+                            ?.salary && (
+                            <div className="sm:col-span-2">
+                              💰{" "}
+                              {selectedCandidate.applied_job.description.salary}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
-
-                    {/* Applied Position */}
-                    <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">
-                        Applied Position
-                      </h4>
-                      <p className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                        {selectedCandidate.applied_job?.name}
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        {selectedCandidate.applied_job?.description
-                          ?.location && (
-                          <div>
-                            📍{" "}
-                            {selectedCandidate.applied_job.description.location}
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description
-                          ?.country && (
-                          <div>
-                            🌍{" "}
-                            {selectedCandidate.applied_job.description.country}
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description?.time && (
-                          <div>
-                            ⏰ {selectedCandidate.applied_job.description.time}
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description
-                          ?.expInYears && (
-                          <div>
-                            💼{" "}
-                            {
-                              selectedCandidate.applied_job.description
-                                .expInYears
-                            }
-                          </div>
-                        )}
-                        {selectedCandidate.applied_job?.description?.salary && (
-                          <div className="sm:col-span-2">
-                            💰{" "}
-                            {selectedCandidate.applied_job.description.salary}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Documents */}
-              {selectedCandidate.documents &&
-                selectedCandidate.documents.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Documents</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {selectedCandidate.documents.map((doc) => {
-                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(
-                            doc.document_url
-                          );
-                          const isPDF = /\.pdf$/i.test(doc.document_url);
+              {/* Documents - Compact One Line Version */}
+{selectedCandidate.documents &&
+  selectedCandidate.documents.length > 0 && (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Documents ({selectedCandidate.documents.length})</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2 overflow-x-auto">
+          {selectedCandidate.documents.map((doc) => (
+            <div
+              key={doc._id}
+              className="inline-flex items-center gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 whitespace-nowrap transition-colors"
+            >
+              {/* Document Name - Clickable */}
+              <span
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted hover:decoration-solid transition-all"
+                title={`View ${doc.document_type}`}
+                onClick={() => window.open(doc.document_url, "_blank")}
+              >
+                {doc.document_type}
+              </span>
 
-                          const pdfThumbUrl = isPDF
-                            ? doc.document_url
-                                .replace("/upload/", "/upload/pg_1/")
-                                .replace(/\.pdf$/i, ".jpg")
-                            : null;
-
-                          return (
-                            <div
-                              key={doc._id}
-                              className="group relative border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition cursor-pointer bg-white dark:bg-gray-800"
-                              onClick={() =>
-                                window.open(doc.document_url, "_blank")
-                              }
-                            >
-                              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-sm"
-                                  onClick={(e) =>
-                                    copyToClipboard(
-                                      doc.document_url,
-                                      doc._id,
-                                      e
-                                    )
-                                  }
-                                  title="Copy document link"
-                                >
-                                  {copiedDocId === doc._id ? (
-                                    <Check className="w-4 h-4 text-green-600" />
-                                  ) : (
-                                    <Copy className="w-4 h-4 text-gray-600" />
-                                  )}
-                                </Button>
-                              </div>
-                              <div className="h-52 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
-                                {isImage ? (
-                                  <img
-                                    src={doc.document_url}
-                                    alt={doc.document_type}
-                                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform"
-                                  />
-                                ) : isPDF ? (
-                                  <img
-                                    src={pdfThumbUrl!}
-                                    alt={`${doc.document_type} preview`}
-                                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform"
-                                    onError={(e) => {
-                                      e.currentTarget.src =
-                                        "https://via.placeholder.com/300x200?text=PDF+Preview+Not+Available";
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="flex flex-col items-center text-gray-500">
-                                    <FileText className="w-10 h-10 mb-2" />
-                                    <span className="text-xs">Document</span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="p-3">
-                                <p className="text-sm font-medium truncate capitalize">
-                                  {doc.document_type}
-                                </p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {doc.document_url}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* Copy Button */}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 hover:bg-blue-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(doc.document_url, doc._id, e);
+                }}
+                title="Copy document link"
+              >
+                {copiedDocId === doc._id ? (
+                  <Check className="w-3 h-3 text-green-600" />
+                ) : (
+                  <Copy className="w-3 h-3 text-gray-500 hover:text-blue-600" />
                 )}
+              </Button>
+
+              {/* View Button */}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 hover:bg-green-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(doc.document_url, "_blank");
+                }}
+                title="View document"
+              >
+                <Eye className="w-3 h-3 text-gray-500 hover:text-green-600" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )}
+
 
               {/* HR Questionnaire */}
               {selectedCandidate.hrQuestionnaire &&
@@ -2004,19 +2008,40 @@ const InvigilatorHome = () => {
                 </CardContent>
               </Card>
 
-                                {/* Glory Grades Display */}
-                                {selectedCandidate.glory &&renderFullGloryDisplay(selectedCandidate.glory)}
+              {/* Glory Grades Display */}
+              {selectedCandidate.glory &&
+                renderFullGloryDisplay(selectedCandidate.glory)}
 
               {/* Interviews Status */}
               {selectedCandidate.interviews &&
                 selectedCandidate.interviews.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Scheduled Interviews</CardTitle>
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>Scheduled Interviews</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setInterviewsCollapsed(!interviewsCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {interviewsCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {interviewsCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {selectedCandidate.interviews.map((interview) => (
+                        {!interviewsCollapsed && selectedCandidate.interviews.map((interview) => (
                           <div
                             key={interview._id}
                             className="border rounded-lg p-4 bg-gray-50"
@@ -2121,16 +2146,37 @@ const InvigilatorHome = () => {
                 selectedCandidate.internal_feedback.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        💬 Internal Feedback
-                        <Badge variant="secondary" className="text-xs">
+                     
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>💬 Internal Feedback
+                      <Badge variant="secondary" className="text-xs">
                           {selectedCandidate.internal_feedback.length}
-                        </Badge>
-                      </CardTitle>
+                        </Badge></CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setFeedBackCollapsed(!feedBackCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {feedBackCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {feedBackCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                        
+                      
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {selectedCandidate.internal_feedback.map((feedback) => (
+                        {!feedBackCollapsed && selectedCandidate.internal_feedback.map((feedback) => (
                           <div
                             key={feedback._id}
                             className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
@@ -2201,11 +2247,30 @@ const InvigilatorHome = () => {
                 selectedCandidate.stage_history.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Application Timeline</CardTitle>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle>Application Time-Line</CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setTimeLineCollapsed(!timeLineCollapsed)
+                      }
+                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <span className="text-sm font-medium">
+                        {timeLineCollapsed ? "Show" : "Hide"}
+                      </span>
+                      {timeLineCollapsed ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {selectedCandidate.stage_history.map((stage) => (
+                        {!timeLineCollapsed && selectedCandidate.stage_history.map((stage) => (
                           <div
                             key={stage._id}
                             className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
@@ -2265,11 +2330,11 @@ const InvigilatorHome = () => {
       </Dialog>
 
       {/* Glory Dialog */}
-<GloryDialog
+      <GloryDialog
         isOpen={gloryDialogOpen}
         candidate={candidateForGlory}
         gloryGrades={gloryGrades}
-        selectedRole={selectedRole} 
+        selectedRole={selectedRole}
         submittingGlory={submittingGlory}
         loadingGlory={loadingGlory}
         gradeOptions={gradeOptions}
@@ -2277,15 +2342,16 @@ const InvigilatorHome = () => {
         onClose={closeGloryDialog}
         role="invigilator" // Pass hardcoded role instead of onRoleChange
         onGradeChange={handleGloryGradeChange}
-        onSubmit={() => submitGloryGrades(()=>{
-          fetchCandidates();
-          if(selectedCandidate){
-            fetchCandidateDetails(selectedCandidate._id);
-          }
-        })}
+        onSubmit={() =>
+          submitGloryGrades(() => {
+            fetchCandidates();
+            if (selectedCandidate) {
+              fetchCandidateDetails(selectedCandidate._id);
+            }
+          })
+        }
         getGradingParameters={getGradingParameters}
       />
-
 
       {/* Rejection Confirmation Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>

@@ -741,10 +741,8 @@ const fetchData = useCallback(async (): Promise<void> => {
             stageFilter={stageFilter}
             setStageFilter={setStageFilter}
             toggleCardExpansion={toggleCardExpansion}
-            copyMeetingLink={copyMeetingLink}
             getStatusColor={getStatusColor}
             getStageColor={getStageColor}
-            formatDateTime={formatDateTime}
             formatDate={formatDate}
             formatAge={formatAge}
           />
