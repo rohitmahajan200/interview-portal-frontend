@@ -60,7 +60,7 @@ export function InvigilatorSidebar(
     navItem("home", Home, "invigilator-home"),
     navItem("questions", HelpCircle, "invigilator-questions"),
     navItem("assessment", FileText, "invigilator-questionnaire"),
-    navItem("candidates", Users, "candidate-review"),
+    navItem("assessment review", Users, "candidate-review"),
     navItem("interviews", Calendar, "interview-scheduling"),
     navItem("analytics", BarChart3, "invigilator-analytics"),
     // Only add notifications and config for non-admin users

@@ -53,6 +53,14 @@ import GloryDialog from "../GloryDialog";
 import { useGlory } from "@/hooks/useGlory";
 import GloryDisplay from "../GloryDisplay";
 
+interface InterviewRemark {
+  _id: string;
+  provider: string;
+  remark: string;
+  grade: string;
+  created_at: string;
+}
+
 // Assessment status type definition (matching your backend model)
 type BackendAssessmentStatus = "pending" | "started" | "completed" | "expired";
 type FrontendAssessmentStatus =
@@ -205,7 +213,8 @@ type Candidate = {
       name: string;
       email: string;
       role: string;
-    };
+    };    
+    remarks?: InterviewRemark[]; 
   }[];
   stage_history?: {
     _id: string;
@@ -556,6 +565,7 @@ const InvigilatorHome = () => {
       setIsUpdatingStage(false);
     }
   };
+
 
   /**
    * Helper function to map backend status to frontend display status
@@ -2017,134 +2027,179 @@ const InvigilatorHome = () => {
               {selectedCandidate.glory &&
                 renderFullGloryDisplay(selectedCandidate.glory)}
 
-              {/* Interviews Status */}
-              {selectedCandidate.interviews &&
-                selectedCandidate.interviews.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <CardTitle>Scheduled Interviews</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setInterviewsCollapsed(!interviewsCollapsed)
-                      }
-                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                      <span className="text-sm font-medium">
-                        {interviewsCollapsed ? "Show" : "Hide"}
-                      </span>
-                      {interviewsCollapsed ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4" />
+ {/* Interviews Status - MERGED VERSION */}
+{selectedCandidate.interviews &&
+  selectedCandidate.interviews.length > 0 && (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle className="flex items-center gap-2">
+            <span>Interviews Overview</span>
+            <Badge variant="secondary" className="text-xs">
+              {selectedCandidate.interviews?.length || 0} Scheduled
+            </Badge>
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              setInterviewsCollapsed(!interviewsCollapsed)
+            }
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <span className="text-sm font-medium">
+              {interviewsCollapsed ? "Show" : "Hide"}
+            </span>
+            {interviewsCollapsed ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {!interviewsCollapsed ? (
+          <div className="space-y-6">
+            {selectedCandidate.interviews.map((interview) => (
+              <div
+                key={interview._id}
+                className="border rounded-lg p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-sm"
+              >
+                {/* Top Header */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
+                  <div>
+                    <h4 className="font-semibold">{interview.title}</h4>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {interview.type.toUpperCase()}
+                      </Badge>
+                      {interview.platform && (
+                        <Badge variant="secondary" className="text-xs">
+                          {interview.platform}
+                        </Badge>
                       )}
+                      <Badge
+                        className={
+                          interview.status === "scheduled"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }
+                      >
+                        {interview.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Scheduled by <span className="font-medium">{interview.scheduled_by.name}</span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {interview.description && (
+                  <p className="text-sm text-gray-600 mb-3">
+                    {interview.description}
+                  </p>
+                )}
+
+                {/* Interviewers Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
+                  <div>
+                    <span className="text-gray-600">Interviewers:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {interview.interviewers.map((interviewer) => (
+                        <Badge
+                          key={interviewer._id}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {interviewer.name} ({interviewer.role})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Meeting link */}
+                {interview.meeting_link && (
+                  <div className="mb-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(interview.meeting_link, "_blank")}
+                      className="text-xs"
+                    >
+                      Join Meeting
                     </Button>
                   </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {!interviewsCollapsed && selectedCandidate.interviews.map((interview) => (
+                )}
+
+                {/* Remarks Section - FROM FIRST VERSION */}
+                {interview.remarks && interview.remarks.length > 0 && (
+                  <div className="mt-3 border-t pt-3">
+                    <h5 className="text-sm font-medium mb-2">Remarks & Grades</h5>
+                    <div className="space-y-3">
+                      {interview.remarks.map((remark) => {
+                        const interviewer =
+                          interview.interviewers.find((int) => int._id === remark.provider) ||
+                          interview.scheduled_by;
+
+                        const getGradeColor = (grade: string) => {
+                          switch (grade.toUpperCase()) {
+                            case "A+":
+                            case "A":
+                              return "bg-green-100 text-green-800";
+                            case "B":
+                              return "bg-blue-100 text-blue-800";
+                            case "C":
+                              return "bg-yellow-100 text-yellow-800";
+                            case "D":
+                              return "bg-orange-100 text-orange-800";
+                            case "E":
+                              return "bg-red-100 text-red-800";
+                            default:
+                              return "bg-gray-100 text-gray-800";
+                          }
+                        };
+
+                        return (
                           <div
-                            key={interview._id}
-                            className="border rounded-lg p-4 bg-gray-50"
+                            key={remark._id}
+                            className="p-3 rounded-lg bg-white dark:bg-gray-800 border shadow-sm"
                           >
-                            <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-start justify-between">
                               <div>
-                                <h4 className="font-medium">
-                                  {interview.title}
-                                </h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {interview.type.toUpperCase()}
-                                  </Badge>
-                                  {interview.platform && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      {interview.platform}
-                                    </Badge>
-                                  )}
-                                </div>
+                                <p className="text-sm font-medium">{interviewer?.name || "Unknown"}</p>
+                                <p className="text-xs text-gray-500">{interviewer?.role || "Interviewer"}</p>
+                                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                  "{remark.remark}"
+                                </p>
                               </div>
-                              <Badge
-                                className={
-                                  interview.status === "scheduled"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-green-100 text-green-800"
-                                }
-                              >
-                                {interview.status.toUpperCase()}
+                              <Badge className={`text-xs font-bold ${getGradeColor(remark.grade)}`}>
+                                {remark.grade}
                               </Badge>
                             </div>
-
-                            {interview.description && (
-                              <p className="text-sm text-gray-600 mb-3">
-                                {interview.description}
-                              </p>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-600">
-                                  Interviewers:
-                                </span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {interview.interviewers.map((interviewer) => (
-                                    <Badge
-                                      key={interviewer._id}
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {interviewer.name} ({interviewer.role})
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <span className="text-gray-600">
-                                  Scheduled by:
-                                </span>
-                                <div className="font-medium">
-                                  {interview.scheduled_by.name}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {interview.scheduled_by.role}
-                                </div>
-                              </div>
-                            </div>
-
-                            {interview.meeting_link && (
-                              <div className="mt-3 pt-3 border-t">
-                                <span className="text-gray-600 text-sm">
-                                  Meeting Link:
-                                </span>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      window.open(
-                                        interview.meeting_link,
-                                        "_blank"
-                                      )
-                                    }
-                                    className="text-xs"
-                                  >
-                                    Join Meeting
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground text-sm">
+              {selectedCandidate.interviews.length} interview{selectedCandidate.interviews.length !== 1 ? 's' : ''} scheduled
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+)}
+
 
               {/* Internal Feedback Section - Enhanced with Stage Information */}
               {selectedCandidate.internal_feedback &&

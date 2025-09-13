@@ -555,59 +555,82 @@ export default function Assessments() {
           </Table>
         </div>
       )}
-      <Dialog open={Boolean(showSebDialog)} onOpenChange={(open) => !open && setShowSebDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Safe Exam Browser Required</DialogTitle>
-            <DialogDescription>
-              To begin this assessment, Safe Exam Browser (SEB) will be launched.
-              <br />
-              <strong>Warning:</strong> SEB will close some apps automatically for security reasons, and your
-              computer may become locked down during the exam.
-            </DialogDescription>
-          </DialogHeader>
-          <p><input type="checkbox" onChange={()=>setIsDownloaded(prev=>!prev)} /> I have already downloaded Safe Exam Browser (SEB)</p>
-          <p className="mb-2 text-sm">
-            If you do not have SEB installed, download it from
-            <a
-              href="https://safeexambrowser.org/download_en.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-1 text-blue-600 underline"
-            >
-              the official SEB download page
-            </a>
-            .
-          </p>
+<Dialog
+  open={Boolean(showSebDialog)}
+  onOpenChange={(open) => {
+    if (!open) {
+      setShowSebDialog(null);
+      setIsDownloaded(false); // ✅ reset when closing
+    } else {
+      setIsDownloaded(false); // ✅ reset when opening fresh
+    }
+  }}
+>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Safe Exam Browser Required</DialogTitle>
+      <DialogDescription>
+        To begin this assessment, Safe Exam Browser (SEB) will be launched.
+        <br />
+        <strong>Warning:</strong> SEB will close some apps automatically for
+        security reasons, and your computer may become locked down during
+        the exam.
+      </DialogDescription>
+    </DialogHeader>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowSebDialog(null)}>
-              Cancel
-            </Button>
+    {/* ✅ controlled checkbox */}
+    <p>
+      <input
+        type="checkbox"
+        checked={isDownloaded}
+        onChange={(e) => setIsDownloaded(e.target.checked)}
+      />{" "}
+      I have already downloaded Safe Exam Browser (SEB)
+    </p>
 
-            <Button
-              disabled={!isDownloaded}
-              onClick={() => {
-                if (!showSebDialog) return;
-                const row = showSebDialog;
+    <p className="mb-2 text-sm">
+      If you do not have SEB installed, download it from
+      <a
+        href="https://safeexambrowser.org/download_en.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ml-1 text-blue-600 underline"
+      >
+        the official SEB download page
+      </a>
+      .
+    </p>
 
-                // Resolve API base and host safely
-                const apiBase = (import.meta as any).env?.VITE_API_URL || window.location.origin;
-                const host = new URL(apiBase, window.location.origin).host;
+    <div className="flex justify-end gap-2">
+      <Button variant="outline" onClick={() => setShowSebDialog(null)}>
+        Cancel
+      </Button>
 
-                // Include token in SEB link (URL-encoded)
-                const sebUrl = `seb://${host}/api/candidates/seb/config?token=${row.access_token}`;
-                console.log(sebUrl)
+      <Button
+        disabled={!isDownloaded}
+        onClick={() => {
+          if (!showSebDialog) return;
+          const row = showSebDialog;
 
-                window.location.href = sebUrl;
-                setShowSebDialog(null);
-              }}
-            >
-              Open Safe Exam Browser
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          // Resolve API base and host safely
+          const apiBase =
+            (import.meta as any).env?.VITE_API_URL || window.location.origin;
+          const host = new URL(apiBase, window.location.origin).host;
+
+          // Include token in SEB link (URL-encoded)
+          const sebUrl = `seb://${host}/api/candidates/seb/config?token=${row.access_token}`;
+          console.log(sebUrl);
+
+          window.location.href = sebUrl;
+          setShowSebDialog(null);
+        }}
+      >
+        Open Safe Exam Browser
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
+
 
     </div>
   );

@@ -1052,7 +1052,8 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
 
                   {/* Reject Button */}
                   {selectedCandidate &&
-                    selectedCandidate.candidate.status !== "rejected" && (
+                      selectedCandidate.candidate.current_stage === "hr" &&
+                      selectedCandidate.candidate.status !== "rejected" && (
                       <Button
                         variant="destructive"
                         onClick={() => {
@@ -1081,22 +1082,24 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                       </Button>
                     )}
                   
-                  {/* ✅ FIXED: Glory Button */}
-                  {selectedCandidate && (
-                    <GloryButton
-                      candidate={transformCandidateForGlory(selectedCandidate)}
-                      onOpenGlory={() => handleOpenGlory(selectedCandidate)}
-                      variant="outline"
-                      size="sm"
-                      className="text-purple-600 hover:text-purple-700"
-                    />
-                  )}
-                  
-                  {selectedCandidate && (
-                    <Button onClick={() => setStageUpdateModal(true)}>
-                      🔄 Update Stage
-                    </Button>
-                  )}
+                  {/* Glory Button (only visible if stage === "hr") */}
+                  {selectedCandidate &&
+                    selectedCandidate.candidate.current_stage === "hr" && selectedCandidate.candidate.status !== "rejected" && (
+                      <GloryButton
+                        candidate={transformCandidateForGlory(selectedCandidate)}
+                        onOpenGlory={() => handleOpenGlory(selectedCandidate)}
+                        variant="outline"
+                        size="sm"
+                        className="text-purple-600 hover:text-purple-700"
+                      />
+                    )}
+                  {selectedCandidate && selectedCandidate.candidate.status !== "rejected" &&
+                    selectedCandidate.candidate.current_stage === "hr" && (
+                      <Button onClick={() => setStageUpdateModal(true)}>
+                        🔄 Update Stage
+                      </Button>
+                    )}
+
                 </div>
               </div>
             </>

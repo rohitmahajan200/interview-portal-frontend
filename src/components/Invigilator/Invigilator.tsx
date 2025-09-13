@@ -23,6 +23,7 @@ import InvigilatorQuestionnaireBuilder from "./InvigilatorQuestionnaireBuilder";
 import InvigilatorAnalytics from "./InvigilatorAnalytics";
 import InvigilatorNotifications from "./InvigilatorNotifications"; // Added import
 import SystemConfiguration from "./SystemConfiguration";
+import { OrgPushNotificationToggle } from "../OrgPushNotificationToggle";
 
 export default function Invigilator() {
   const dispatch = useDispatch();
@@ -89,6 +90,7 @@ export default function Invigilator() {
 
   return (
     <div className="h-full flex overflow-hidden">
+      <OrgPushNotificationToggle showTestButton={true} />
       <SidebarProvider>
         {/* Sidebar */}
         <InvigilatorSidebar className="w-64 h-full flex-shrink-0" />
