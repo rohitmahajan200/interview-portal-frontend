@@ -1,7 +1,10 @@
 // src/App.tsx
+import { useEffect } from "react";
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
-import GlobalErrorPage from "./components/GlobalErrorPage";
+import pushNotificationService from "./services/pushNotificationService";
 
+// pages/components
+import GlobalErrorPage from "./components/GlobalErrorPage";
 import { LoginForm } from "@/pages/login-form";
 import { EmailVerification } from "./pages/emailVerification";
 import RegisterForm from "./pages/Register-form";
@@ -17,17 +20,41 @@ import OrgDashboard from "./pages/OrgDashboard";
 import SecureHRInterview from "./pages/SecureHrQn";
 import SebQuitPage from "./pages/SebQuitPage";
 
+// Optional: your toggle (comment out if you don't have it yet)
+// import PushNotificationToggle from "./components/PushNotificationToggle";
+
 function RootLayout() {
-  return <Outlet />; // optional shared layout/shell goes here
+  // Initialize push once, when the shell mounts
+  useEffect(() => {
+    const init = async () => {
+      try {
+        if (pushNotificationService.isSupported) {
+          await pushNotificationService.initializeServiceWorker();
+          // console.log("✅ Push notifications initialized");
+        }
+      } catch (err) {
+        console.error("❌ Failed to initialize push notifications:", err);
+      }
+    };
+    void init();
+  }, []);
+
+  return (
+    <>
+      {/* Put any shared UI (nav, footer, etc.) here */}
+      {/* <PushNotificationToggle /> */}
+      <Outlet />
+    </>
+  );
 }
 
 const router = createBrowserRouter([
   {
-    path: "/",                    // 🔑 single root
+    path: "/",
     element: <RootLayout />,
-    errorElement: <GlobalErrorPage />,   // 🔑 global route error UI
+    errorElement: <GlobalErrorPage />,
     children: [
-      { index: true, element: <Dashboard /> },         // "/" -> Dashboard
+      { index: true, element: <Dashboard /> },
       { path: "login", element: <LoginForm /> },
       { path: "register-candidate", element: <RegisterForm /> },
       { path: "login-otp", element: <OTPLoginForm /> },

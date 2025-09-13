@@ -23,6 +23,7 @@ import AuditLogs from "./AuditLogs";
 import AdminNotifications from "./AdminNotifications"; // Changed from OrgNotifications
 import ThemeToggle from "@/components/themeToggle";
 import JobManagement from "./JobManagement";
+import { OrgPushNotificationToggle } from "../OrgPushNotificationToggle";
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
@@ -100,6 +101,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="h-full flex overflow-hidden">
+      <OrgPushNotificationToggle showTestButton={true} />
       <SidebarProvider>
         <AdminSidebar className="w-64 h-full flex-shrink-0" />
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">

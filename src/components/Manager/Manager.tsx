@@ -19,6 +19,7 @@ import ManagerDashboard from "./ManagerDashboard";
 import ManagerCalendar from "./ManagerCalendar";
 import ManagerNotifications from "./ManagerNotifications"; // Added import
 import SystemConfiguration from "./SystemConfiguration";
+import { OrgPushNotificationToggle } from "../OrgPushNotificationToggle";
 
 const Manager: React.FC = () => {
   const dispatch = useDispatch();
@@ -78,6 +79,7 @@ const Manager: React.FC = () => {
 
   return (
     <div className="h-full flex overflow-hidden">
+      <OrgPushNotificationToggle showTestButton={true} />
       <SidebarProvider>
         <ManagerSidebar className="w-64 h-full flex-shrink-0" />
 

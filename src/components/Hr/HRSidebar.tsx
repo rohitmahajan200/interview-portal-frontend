@@ -46,7 +46,7 @@ export function HRSidebar(props: React.ComponentProps<typeof Sidebar>) {
     navItem("home", Home, "hr-home"),
     navItem("questions", HelpCircle, "hr-questions"),
     navItem("questionnaire", FileText, "hr-questionnaire"),
-    navItem("candidates", Users, "candidate-review"),
+    navItem("questionnaire review", Users, "candidate-review"),
     navItem("interviews", Calendar, "interview-scheduling"),
     navItem("analytics", BarChart3, "hr-analytics"),
     // Only add notifications and config for non-admin users

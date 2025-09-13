@@ -23,6 +23,7 @@ import HRAnalytics from "./HRAnalytics";
 import HRNotifications from "./HRNotifications";
 import { HRSidebar } from "./HRSidebar";
 import SystemConfiguration from "./SystemConfiguration";
+import { OrgPushNotificationToggle } from "../OrgPushNotificationToggle";
 
 export default function Hr() {
   const dispatch = useDispatch();
@@ -88,6 +89,7 @@ export default function Hr() {
 
   return (
     <div className="h-full flex overflow-hidden">
+      <OrgPushNotificationToggle showTestButton={true} />
       <SidebarProvider>
         <HRSidebar className="w-64 h-full flex-shrink-0" />
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
