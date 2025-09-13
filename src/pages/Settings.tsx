@@ -12,6 +12,7 @@ import { useAppDispatch } from "@/hooks/useAuth";
 import { setCurrentView } from "@/features/Candidate/view/viewSlice";
 import api from "@/lib/api";
 import { useState } from "react";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ const Settings = () => {
   return (
     <div className="relative min-h-screen p-6 bg-background text-foreground">
       <h1 className="text-2xl font-semibold text-center mb-8">User Settings</h1>
-
+      <PushNotificationToggle />
       <div className="space-y-6 max-w-2xl mx-auto">
         {settingsOptions.map((option, index) => (
           <div

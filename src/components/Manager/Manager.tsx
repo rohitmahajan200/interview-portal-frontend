@@ -1,35 +1,91 @@
 // src/components/Manager/Manager.tsx
-import React, { useCallback, useEffect } from "react"; // Added useCallback
+import { useEffect, useCallback, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import type { RootState } from "@/app/store";
+
 import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState } from "@/app/store";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { setUser } from "@/features/Org/Auth/orgAuthSlice";
-import { setNotifications } from "@/features/Org/Notifications/orgNotificationSlice"; // Added import
-import api from "@/lib/api";
-import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/themeToggle";
+
+import { setUser } from "@/features/Org/Auth/orgAuthSlice";
+import { setNotifications } from "@/features/Org/Notifications/orgNotificationSlice";
+import api from "@/lib/api";
+import pushNotificationService from "@/services/pushNotificationService";
+
 import { ManagerSidebar } from "./ManagerSidebar";
 import ManagerDashboard from "./ManagerDashboard";
 import ManagerCalendar from "./ManagerCalendar";
-import ManagerNotifications from "./ManagerNotifications"; // Added import
+import ManagerNotifications from "./ManagerNotifications";
 import SystemConfiguration from "./SystemConfiguration";
-import { OrgPushNotificationToggle } from "../OrgPushNotificationToggle";
 
-const Manager: React.FC = () => {
+// toasts
+import { Toaster, toast } from "react-hot-toast";
+
+export default function Manager() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
   const currentView = useSelector(
     (state: RootState) => state.managerView.currentManagerPage
   );
-  const orgUser = useSelector((state: RootState) => state.orgAuth.user);
-  const isAdmin = orgUser?.role === "ADMIN";
+  const user = useSelector((state: RootState) => state.orgAuth.user);
+
+  const supported = pushNotificationService.isSupported;
+  const [open, setOpen] = useState(Notification.permission === "default");
+
+  // 🔔 Notifications only if role = manager
+  useEffect(() => {
+    if (!user || user.role !== "MANAGER") return;
+
+    if (!supported) {
+      toast.error("This browser doesn’t support push notifications.");
+      return;
+    }
+
+    const perm = Notification.permission;
+    if (perm === "default") setOpen(true);
+    else if (perm === "denied") {
+      setOpen(false);
+      toast("Notifications are blocked. Enable them in browser settings.", {
+        icon: "⚠️",
+      });
+    }
+
+    pushNotificationService.initializeServiceWorker().catch((e) => {
+      console.error("SW init failed:", e);
+      toast.error("Failed to initialize notifications.");
+    });
+  }, [supported, user]);
+
+  const handleEnableNotifications = async () => {
+    try {
+      await pushNotificationService.subscribe();
+      if (Notification.permission === "granted") {
+        toast.success("Notifications enabled!");
+      } else if (Notification.permission === "denied") {
+        toast("Notifications blocked. Enable them in settings.", {
+          icon: "⚠️",
+        });
+      }
+      setOpen(false);
+    } catch (e) {
+      console.error("Subscribe failed:", e);
+      toast.error("Couldn’t enable notifications.");
+    }
+  };
 
   const fetchOrgNotifications = useCallback(async () => {
     try {
@@ -39,6 +95,7 @@ const Manager: React.FC = () => {
       }
     } catch (e) {
       console.error("Failed to fetch org notifications:", e);
+      toast.error("Failed to fetch notifications.");
     }
   }, [dispatch]);
 
@@ -46,24 +103,22 @@ const Manager: React.FC = () => {
     const fetchOrgUser = async () => {
       try {
         const res = await api.get("/org/me");
-        if (res.data.user) {
-          dispatch(setUser(res.data.user));
-        }
+        if (res.data.user) dispatch(setUser(res.data.user));
       } catch (error) {
         console.error("Failed to fetch org user profile:", error);
       }
     };
 
     fetchOrgUser();
-    fetchOrgNotifications(); // Load notifications so badge shows
+    fetchOrgNotifications();
   }, [dispatch, navigate, fetchOrgNotifications]);
 
   useEffect(() => {
     localStorage.setItem("managerCurrentView", currentView);
   }, [currentView]);
 
-  const renderManagerView = (currentView: string): React.ReactNode => {
-    switch (currentView) {
+  const renderManagerView = (view: string) => {
+    switch (view) {
       case "manager-home":
         return <ManagerDashboard />;
       case "manager-calendar":
@@ -79,34 +134,44 @@ const Manager: React.FC = () => {
 
   return (
     <div className="h-full flex overflow-hidden">
-      <OrgPushNotificationToggle showTestButton={true} />
+      <Toaster position="bottom-right" />
+
       <SidebarProvider>
         <ManagerSidebar className="w-64 h-full flex-shrink-0" />
 
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          {user?.role === "MANAGER" && (
+            <Dialog
+              open={open && Notification.permission === "default"}
+              onOpenChange={setOpen}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Enable notifications?</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-gray-600">
+                  Stay updated with calendar, team, and scheduling alerts.
+                </p>
+                <DialogFooter>
+                  <Button onClick={handleEnableNotifications}>
+                    Allow notifications
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white dark:bg-gray-900">
             <div className="flex items-center gap-2 px-4 justify-between w-full">
               <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
-                <Separator
-                  orientation="vertical"
-                  className="mr-2 data-[orientation=vertical]:h-4"
-                />
+                <Separator orientation="vertical" className="mr-2 h-4" />
                 <Breadcrumb>
                   <BreadcrumbList>
                     <header className="px-1 rounded-xl">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                          {isAdmin
-                            ? "Manager Portal - Admin View"
-                            : "Manager Portal"}
-                        </span>
-                        {isAdmin && (
-                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                            Admin Mode
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                        Manager Portal - Change Networks
+                      </span>
                     </header>
                   </BreadcrumbList>
                 </Breadcrumb>
@@ -115,13 +180,11 @@ const Manager: React.FC = () => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-950">
+          <main className="flex-1 overflow-y-auto p-4">
             {currentView ? renderManagerView(currentView) : null}
           </main>
         </SidebarInset>
       </SidebarProvider>
     </div>
   );
-};
-
-export default Manager;
+}
