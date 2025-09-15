@@ -984,8 +984,8 @@ const InvigilatorHome = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="flex flex-nowrap gap-3 w-full">
+        <Card className="flex-1 basis-0 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total in Assessment
@@ -1000,7 +1000,7 @@ const InvigilatorHome = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex-1 basis-0 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
             <ClipboardCheck className="h-4 w-4 text-green-600" />
@@ -1015,7 +1015,7 @@ const InvigilatorHome = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex-1 basis-0 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Assigned</CardTitle>
             <UserCheck className="h-4 w-4 text-blue-600" />
@@ -1030,7 +1030,7 @@ const InvigilatorHome = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex-1 basis-0 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Not Assigned</CardTitle>
             <UserX className="h-4 w-4 text-yellow-600" />
@@ -1042,7 +1042,7 @@ const InvigilatorHome = () => {
             <p className="text-xs text-muted-foreground">Pending assignment</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="flex-1 basis-0 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expired</CardTitle>
             <UserX className="h-4 w-4 text-red-600" />

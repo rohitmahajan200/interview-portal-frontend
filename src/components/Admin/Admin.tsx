@@ -37,7 +37,7 @@ import AdminNotifications from "./AdminNotifications";
 import JobManagement from "./JobManagement";
 
 // toasts
-import { Toaster, toast } from "react-hot-toast";
+import {  toast } from "react-hot-toast";
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
@@ -75,8 +75,9 @@ export default function AdminDashboard() {
   const handleEnableNotifications = async () => {
     try {
       await pushNotificationService.subscribe(); // triggers permission prompt + backend registration
+      console.log(Notification.permission)
       if (Notification.permission === "granted") {
-        toast.success("Notifications enabled!");
+        toast.success("Notifications enabled!", { duration: 2000});
       } else if (Notification.permission === "denied") {
         toast(
           "Notifications were blocked. Enable them in site settings to receive alerts.",
@@ -160,9 +161,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="h-full flex overflow-hidden">
-      {/* Toaster for react-hot-toast */}
-      <Toaster position="bottom-right" />
-
       <SidebarProvider>
         <AdminSidebar className="w-64 h-full flex-shrink-0" />
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">
@@ -202,7 +200,7 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 pb-24">
             {currentView ? renderAdminView(currentView) : null}
           </div>
         </SidebarInset>

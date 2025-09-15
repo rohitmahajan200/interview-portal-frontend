@@ -127,16 +127,6 @@ export const OrgPushNotificationToggle = ({
     }
   };
 
-  const sendTestNotification = async () => {
-    try {
-      const response = await api.post('/org/push/test');
-      if (response.data.success) {
-        toast.success('Test notification sent!');
-      }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to send test notification');
-    }
-  };
 
   const getPermissionBadge = () => {
     switch (permissionState) {
@@ -204,17 +194,6 @@ export const OrgPushNotificationToggle = ({
           />
         </div>
 
-        {showTestButton && isSubscribed && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={sendTestNotification}
-            className="w-full"
-          >
-            <TestTube className="h-4 w-4 mr-2" />
-            Send Test Notification
-          </Button>
-        )}
 
         {permissionState === 'denied' && (
           <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">

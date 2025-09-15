@@ -93,12 +93,12 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 shrink-0">
         {orgState.user && (
           <NavOrgUser
-            user={{
-              name: orgState.user.name,
-              email: orgState.user.email,
-              avatar: "/default-avatar.png",
-            }}
-          />
+                      user={{
+                        name: orgState.user.name,
+                        email: orgState.user.email,
+                        profile_photo_url: orgState.user.profile_photo_url
+                      }}
+                    />
         )}
         {isAdmin && (
           <div className="px-4 py-2 text-xs text-center bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
