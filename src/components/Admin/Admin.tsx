@@ -44,6 +44,7 @@ export default function AdminDashboard() {
   const currentView = useSelector(
     (state: RootState) => state.adminView.currentAdminPage
   );
+  const user = useSelector((state: RootState) => state.orgAuth.user);
 
   const supported = pushNotificationService.isSupported;
   const [open, setOpen] = useState(Notification.permission === "default");
@@ -92,6 +93,11 @@ export default function AdminDashboard() {
   };
 
   const fetchAdminNotifications = useCallback(async () => {
+    // ✅ Only fetch if user is admin
+    if (!user || user.role !== 'ADMIN') {
+      return;
+    }
+    
     try {
       const response = await api.get("/org/admin/notifications");
       if (response.data?.success) {
@@ -106,7 +112,7 @@ export default function AdminDashboard() {
       console.error("Failed to fetch admin notifications:", error);
       toast.error("Failed to fetch notifications.");
     }
-  }, [dispatch]);
+  }, [dispatch, user]); 
 
   useEffect(() => {
     const fetchOrgUser = async () => {
