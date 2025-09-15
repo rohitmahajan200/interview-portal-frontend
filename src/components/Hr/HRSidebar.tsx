@@ -82,12 +82,12 @@ export function HRSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
         {orgState.user && (
           <NavOrgUser
-            user={{
-              name: orgState.user.name,
-              email: orgState.user.email,
-              avatar: "/default-avatar.png",
-            }}
-          />
+                      user={{
+                        name: orgState.user.name,
+                        email: orgState.user.email,
+                        profile_photo_url: orgState.user.profile_photo_url
+                      }}
+                    />
         )}
       </SidebarFooter>
     </Sidebar>

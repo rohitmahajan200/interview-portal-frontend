@@ -65,7 +65,7 @@ const Home = () => {
     try {
       await pushNotificationService.subscribe();
       if (Notification.permission === "granted") {
-        toast.success("Notifications enabled!");
+        toast.success("Notifications enabled!", { duration: 2000});toast.success("Notifications enabled!", { duration: 2000});
       } else if (Notification.permission === "denied") {
         toast("Notifications blocked. Enable them in settings.", {
           icon: "⚠️",
