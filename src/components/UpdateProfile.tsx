@@ -26,7 +26,7 @@ export interface CandidateUpdateInput {
   last_name: string;
   phone?: string;
   date_of_birth?: string; // format: YYYY-MM-DD
-  gender?: "male" | "female" | "other";
+  gender?: "male" | "female" ;
   address?: string;
   profile_photo_url?: {
     url: string;
@@ -34,7 +34,7 @@ export interface CandidateUpdateInput {
   };
   portfolio_url?: string;
 }
-const genders = ["male", "female", "other"];
+const genders = ["male", "female"];
 
 const pickSchemaFields = (data: Partial<User>): CandidateUpdateInput => {
   const schemaFields = Object.keys(candidateUpdateSchema.shape) as (keyof CandidateUpdateInput)[];
@@ -107,6 +107,17 @@ export default function UpdateProfile({
     if (!file) return;
 
     setUploading(true);
+
+    
+  if (file.size > 2 * 1024 * 1024) { // 2 MB
+    toast.error("File size should not exceed 2 MB");
+    return;
+  }
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    toast.error("Only JPG, PNG or WEBP allowed");
+    return;
+    }
 
     const result = await uploadToCloudinary(file, "/profiles");
     if (result?.url && result?.publicId) {

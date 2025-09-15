@@ -405,6 +405,10 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   ) => {
     setIsUpdatingStage(true);
     try {
+      if (!gloryGrades.Overall) {
+      toast.error("Glory Required To Stage Update");
+      return; // ✅ Use return instead of throw
+    }
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
@@ -715,7 +719,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
               {/* Action Buttons Group - Horizontal on larger screens */}
               <div className="flex items-center gap-1">
-                {candidate.status !== "hired" && (
+                {candidate.status === "hold" || candidate.status !== "hired" && candidate.status !== "rejected" &&(
                   <Button
                     size="sm"
                     variant="outline"
@@ -731,7 +735,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   </Button>
                 )}
 
-                {candidate.status !== "rejected" && (
+                {candidate.status === "hold" || candidate.status !== "rejected" && candidate.status !== "hired" &&(
                   <Button
                     size="sm"
                     variant="outline"
@@ -747,7 +751,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   </Button>
                 )}
 
-                {candidate.status !== "hold" && (
+                {candidate.status!="hired" && candidate.status!="rejected" && candidate.status !== "hold" && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -778,6 +782,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   <span className="hidden lg:inline">Feedback</span>
                 </Button>
 
+{ candidate.status !== "rejected" && candidate.status !== "hired" &&
                 <Button
                   onClick={() => {
                     setCandidateToUpdateStage(candidate);
@@ -792,7 +797,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                 >
                   🔄 <span className="hidden lg:inline ml-1">Stage</span>
                 </Button>
-
+  }
                 <GloryButton
                   candidate={candidate}
                   onOpenGlory={openGloryDialog}
@@ -800,6 +805,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   size="sm"
                   className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8"
                 />
+  
 
                 <Button
                   size="sm"

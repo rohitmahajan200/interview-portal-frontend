@@ -369,6 +369,10 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
   ) => {
     setLoadingActions((prev) => ({ ...prev, [`stage_${responseId}`]: true }));
     try {
+      if (!gloryGrades.Overall) {
+      toast.error("Glory Required To Stage Update");
+      return; // ✅ Use return instead of throw
+    }
       await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,

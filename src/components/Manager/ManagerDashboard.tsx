@@ -303,6 +303,8 @@ const ManagerDashboard: React.FC = () => {
   // Filter states for tracking view
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [gloryFilter, setGloryFilter] = useState<string>("all");
   
   const [stats, setStats] = useState<ManagerStats>({
     total_candidates: 0,
@@ -740,6 +742,10 @@ const fetchData = useCallback(async (): Promise<void> => {
             setStatusFilter={setStatusFilter}
             stageFilter={stageFilter}
             setStageFilter={setStageFilter}
+            gloryFilter={gloryFilter}
+            setGloryFilter={setGloryFilter}
+            roleFilter={roleFilter}
+            setRoleFilter={setRoleFilter}
             toggleCardExpansion={toggleCardExpansion}
             getStatusColor={getStatusColor}
             getStageColor={getStageColor}

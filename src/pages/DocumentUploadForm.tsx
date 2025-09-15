@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, CheckCircle2, X, Loader2, FileText, Download, GraduationCap, Building, CreditCard, Users, Camera, IndianRupee, Share2 } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/clodinary";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import api from "@/lib/api";
 
 interface DocumentUploadFormProps {
@@ -361,7 +361,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       toast.success(`${file.name} uploaded successfully`);
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error(`Failed to upload ${file.name}`);
+      toast.error(error.message);
 
       setUploadedFiles((prev) => {
         const newFiles = { ...prev };
@@ -604,7 +604,12 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   // Rest of your existing render methods remain the same...
   const renderDocumentSection = (documents: DocumentType[], title: string, icon: React.ReactNode, bgColor: string) => (
     // Your existing renderDocumentSection implementation
+    
     <Card className={`${bgColor} border-2`}>
+      <Toaster
+  position="top-center"
+  reverseOrder={false}
+/>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           {icon}
@@ -1072,7 +1077,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                   </h3>
                   <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
                     <li>All files must be in PDF, JPG, PNG, DOC, or DOCX format</li>
-                    <li>Maximum file size: 10MB per file</li>
+                    <li>Maximum file size: 5MB per file</li>
                     <li>If you upload documents in a section, complete all required fields in that section</li>
                     <li>Ensure all documents are clear and readable</li>
                     <li>Use the "Sample" buttons to download template formats where available</li>

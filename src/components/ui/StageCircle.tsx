@@ -28,12 +28,6 @@ export const StageCircle: React.FC<{ currentStage: string }> = ({ currentStage }
           <span className="text-xs font-semibold text-blue-600">{percentage}%</span>
         </div>
       </div>
-      <div>
-        <div className="text-sm font-medium capitalize">{currentStage}</div>
-        <div className="text-xs text-muted-foreground">
-          Step {currentIndex + 1} of {stages.length}
-        </div>
-      </div>
     </div>
   );
 };

@@ -38,6 +38,8 @@ export default function DocumentCRUD() {
       setFileInputKey(prev => prev + 1);
       await refreshUser();
     } catch (err: any) {
+      console.log("Doc upload fail=>",err);
+      
       toast.error(err.response?.data?.message || 'Upload failed', {duration: 1000});
     }
   };

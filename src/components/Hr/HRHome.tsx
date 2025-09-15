@@ -1025,6 +1025,10 @@ const HRHome = () => {
   ) => {
     setIsUpdatingStage(true);
     try {
+      if (!gloryGrades.Overall) {
+            toast.error("Glory Required To Stage Update");
+            return; // ✅ Use return instead of throw
+          }
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
