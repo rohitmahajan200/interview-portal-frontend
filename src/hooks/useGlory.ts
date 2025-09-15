@@ -52,7 +52,7 @@ export const useGlory = (fixedRole: 'hr' | 'manager' | 'invigilator' | 'admin' =
     
     // Get current user info (you might need to adjust this based on your auth system)
     try {
-      const userResponse = await api.get('/auth/me');
+      const userResponse = await api.get('org/me');
       setCurrentUser(userResponse.data.user);
     } catch (error) {
       console.log("Could not fetch current user info");

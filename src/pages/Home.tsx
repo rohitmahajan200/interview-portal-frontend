@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Toaster, toast } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 type EventType = "Assessment" | "Interview";
 
@@ -175,7 +175,6 @@ const Home = () => {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-background text-foreground">
-      <Toaster position="bottom-right" />
 
       {/* 🔔 Notification dialog */}
       <Dialog

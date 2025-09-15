@@ -90,6 +90,18 @@ interface AssessmentListItem {
       url: string;
       publicId: string;
     };
+    applied_job: {
+      _id: string;
+      name: string;
+      description: {
+        time: string;
+        country: string;
+        location: string;
+        expInYears: string;
+        salary: string;
+      };
+      gradingParameters?: string[];
+    };
     glory?: { [role: string]: GloryRoleData };
     name: string;
     status: string;
@@ -141,6 +153,12 @@ interface AssessmentDetail {
     current_stage?: string;
     status?: string;
     glory?: CandidateGlory;
+    applied_job?: {
+      _id: string;
+      name: string;
+      description?: any;
+      gradingParameters?: string[];
+    };
   };
   assessment: {
     _id: string;
@@ -239,6 +257,38 @@ const AssessmentReview = () => {
     );
   };
 
+  // ✅ ADD: Transform candidate for Glory system
+  const transformCandidateForGlory = (
+    assessmentDetail: AssessmentDetail
+  ): any => {
+    if (!assessmentDetail?.candidate) {
+      console.warn("Invalid candidate structure for Glory:", assessmentDetail);
+      return null;
+    }
+
+    const candidate = assessmentDetail.candidate;
+    const nameParts = candidate.name?.split(" ") || [];
+
+    return {
+      _id: candidate._id,
+      first_name: nameParts[0] || "",
+      last_name: nameParts.slice(1).join(" ") || "",
+      email: candidate.email,
+      profile_photo_url: candidate.profile_photo_url,
+      // ✅ FIXED: Now includes proper job data from backend
+      applied_job: candidate.applied_job
+        ? {
+            _id: candidate.applied_job._id,
+            name: candidate.applied_job.name,
+            description: candidate.applied_job.description,
+            gradingParameters: candidate.applied_job.gradingParameters || [],
+          }
+        : null,
+      current_stage: candidate.current_stage,
+      glory: candidate.glory,
+    };
+  };
+
   // ✅ FIXED: Transform CandidateDetail to match Glory's expected candidate structure
 
   const fetchStatistics = async () => {
@@ -283,10 +333,16 @@ const AssessmentReview = () => {
   ) => {
     setIsUpdatingStage(true);
     try {
-      if (!gloryGrades.Overall) {
-      toast.error("Glory Required To Stage Update");
-      return; // ✅ Use return instead of throw
-    }
+      const invigilatorGlory =
+        selectedAssessment?.candidate?.glory?.invigilator;
+      if (
+        !invigilatorGlory ||
+        !invigilatorGlory.grades ||
+        Object.keys(invigilatorGlory.grades).length === 0
+      ) {
+        toast.error("Glory Required To Stage Update");
+        return;
+      }
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
@@ -358,6 +414,17 @@ const AssessmentReview = () => {
     setLoadingDetail(true);
     try {
       const response = await api.get(`/org/assessment-responses/${id}`); // ✅ Correct endpoint
+     ////////////////////////////////////// 
+      const assessmentData = response.data.data;
+    
+    // ✅ ADD: Debug the backend response
+    console.log("=== BACKEND RESPONSE DEBUG ===");
+    console.log("Full response:", assessmentData);
+    console.log("Candidate applied_job:", assessmentData.candidate?.applied_job);
+    console.log("Grading parameters:", assessmentData.candidate?.applied_job?.gradingParameters);
+    console.log("===============================");
+      ////////////////////////////////////////////
+      
       setSelectedAssessment(response.data.data);
     } catch (error) {
       console.error("Failed to fetch assessment details:", error);
@@ -761,7 +828,8 @@ const AssessmentReview = () => {
                         Object.keys(item.candidate.glory).length > 0 ? (
                           <div className="flex items-center gap-1">
                             <span className="text-xl text-blue-600">
-                              {JSON.stringify(item.candidate.glory.Overall)}
+                              {item.candidate.glory?.invigilator?.grades
+                                ?.Overall || "No Grades"}
                             </span>
                           </div>
                         ) : (
@@ -1293,9 +1361,18 @@ const AssessmentReview = () => {
                       </Button>
                     )}
 
+                  {/* ✅ FIXED: Use transformed candidate data */}
                   <GloryButton
-                    candidate={selectedAssessment.candidate} // Pass your candidate object
-                    onOpenGlory={openGloryDialog} // Pass the function from hook
+                    candidate={transformCandidateForGlory(selectedAssessment)}
+                    onOpenGlory={(transformedCandidate) => {
+                      if (transformedCandidate) {
+                        openGloryDialog(transformedCandidate);
+                      } else {
+                        toast.error(
+                          "Failed to prepare candidate data for Glory"
+                        );
+                      }
+                    }}
                     variant="outline"
                     size="sm"
                     className="text-purple-600 hover:text-purple-700"
@@ -1336,7 +1413,7 @@ const AssessmentReview = () => {
         gradeOptions={gradeOptions}
         currentUser={currentUser}
         onClose={closeGloryDialog}
-        role="hr" // Hardcoded role
+        role="invigilator" // Hardcoded role
         onGradeChange={handleGloryGradeChange}
         onSubmit={() =>
           submitGloryGrades(() => {

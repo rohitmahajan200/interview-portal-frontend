@@ -388,13 +388,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   const [stageFeedback, setStageFeedback] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
 
-  useEffect(() => {
-    if (!submittingGlory) {
-      console.log('Glory submission completed, data should be updated');
-      
-    }
-  }, [submittingGlory]);
-
 
   // Action handlers
   const updateCandidateStage = async (
@@ -405,10 +398,12 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   ) => {
     setIsUpdatingStage(true);
     try {
-      if (!gloryGrades.Overall) {
+      const managerGlory = candidateToUpdateStage?.glory?.manager;
+    if (!managerGlory || !managerGlory.grades || Object.keys(managerGlory.grades).length === 0) {
       toast.error("Glory Required To Stage Update");
-      return; // ✅ Use return instead of throw
+      return;
     }
+    
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,

@@ -541,11 +541,11 @@ const InvigilatorHome = () => {
   ) => {
     setIsUpdatingStage(true);
     try {
-      if (!gloryGrades.Overall) {
-      toast.error("Glory Required To Stage Update");
-      return; // ✅ Use return instead of throw
-    }
-                  
+          const invigilatorGlory = selectedCandidate?.glory?.invigilator;
+          if (!invigilatorGlory || !invigilatorGlory.grades || Object.keys(invigilatorGlory.grades).length === 0) {
+            toast.error("Glory Required To Stage Update");
+            return;
+          }             
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
@@ -1192,42 +1192,7 @@ const InvigilatorHome = () => {
                             <Eye className="h-4 w-4 mr-1" />
                             View
                           </Button>
-                          {/*                           
-                          <Button 
-                            variant={
-                              assessmentStatus === "not-assigned" ? "default" : 
-                              assessmentStatus === "expired" ? "destructive" : 
-                              "secondary"
-                            }
-                            size="sm"
-                            disabled={assessmentStatus === "assigned" || assessmentStatus === "completed"}
-                            onClick={() => {
-                              if (assessmentStatus === "not-assigned" || assessmentStatus === "expired") {
-                                handleAssignAssessment(candidate);
-                              }
-                            }}
-                            className="ml-2"
-                          >
-                            {
-                            assessmentStatus === "not-assigned" && 
-                              <>
-                                <Plus className="h-4 w-4 mr-1" />
-                                Assign
-                              </>
-                              }
-                             { assessmentStatus === "expired" && 
-                              <>
-                                <Plus className="h-4 w-4 mr-1" />
-                                Reassign
-                              </>
-                            }
-                          </Button> */}
                         </div>
-                      </TableCell>
-
-                      {/* Glory */}
-                      <TableCell>
-                        {renderGloryGrades(candidate.glory)}
                       </TableCell>
                     </TableRow>
                   );

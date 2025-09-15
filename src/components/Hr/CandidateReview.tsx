@@ -369,10 +369,12 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
   ) => {
     setLoadingActions((prev) => ({ ...prev, [`stage_${responseId}`]: true }));
     try {
-      if (!gloryGrades.Overall) {
+      console.log("HR Glory Grades=>",gloryGrades);
+      const hrGlory = selectedCandidate?.candidate?.glory?.hr;
+      if (!hrGlory || !hrGlory.grades || Object.keys(hrGlory.grades).length === 0) {
       toast.error("Glory Required To Stage Update");
-      return; // ✅ Use return instead of throw
-    }
+      return;
+      }
       await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
@@ -526,7 +528,7 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
   useEffect(() => {
     fetchResponsesList();
     fetchStatistics();
-  }, []);
+  }, [submitGloryGrades]);
 
   const rejectCandidate = async (candidateId: string, reason: string) => {
     setIsRejecting(true);
@@ -1180,6 +1182,7 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                   required
                 >
                   <option value="">Select Stage</option>
+                  <option value="hr">HR</option>
                   <option value="assessment">Assessment</option>
                   <option value="manager">Manager Review</option>
                   <option value="feedback">Final Feedback</option>

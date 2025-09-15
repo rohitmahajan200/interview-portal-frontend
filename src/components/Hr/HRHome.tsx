@@ -1025,10 +1025,11 @@ const HRHome = () => {
   ) => {
     setIsUpdatingStage(true);
     try {
-      if (!gloryGrades.Overall) {
-            toast.error("Glory Required To Stage Update");
-            return; // ✅ Use return instead of throw
-          }
+      const hrGlory = selectedCandidate?.glory?.hr;
+      if (!hrGlory || !hrGlory.grades || Object.keys(hrGlory.grades).length === 0) {
+      toast.error("Glory Required To Stage Update");
+    return;
+    }
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
@@ -3778,6 +3779,12 @@ const HRHome = () => {
                   disabled={isUpdatingStage}
                 >
                   <option value="">Select new stage</option>
+                  <option
+                    value="hr"
+                    disabled={selectedCandidate.current_stage === "hr"}
+                  >
+                    📊 HR
+                  </option>
                   <option
                     value="assessment"
                     disabled={selectedCandidate.current_stage === "assessment"}
