@@ -80,7 +80,7 @@ export function AdminSidebar(props: React.ComponentProps<typeof Sidebar>) {
             user={{
               name: orgState.user.name,
               email: orgState.user.email,
-              avatar: "/default-avatar.png",
+              profile_photo_url: orgState.user.profile_photo_url
             }}
           />
         )}

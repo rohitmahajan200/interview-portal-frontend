@@ -1,11 +1,13 @@
+// src/features/Org/Auth/orgAuthSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-// Define OrgUser type
+// Define OrgUser type with profile_photo_url
 interface OrgUser {
   id: string;
   name: string;
   email: string;
   role: "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER";
+  profile_photo_url?: string; // Add this field
 }
 
 // Define the shape of the org auth slice state

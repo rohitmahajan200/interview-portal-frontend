@@ -65,7 +65,9 @@ interface User {
   last_login?: string;
   createdAt: string;
   updatedAt: string;
+  profilephotourl?: string; // ✅ new
 }
+
 
 // Zod schemas
 const inviteSchema = z.object({
@@ -500,12 +502,13 @@ const AdminHome = () => {
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar>
-                          <AvatarImage src="" />
-                          <AvatarFallback>
-                            {user.name
-                              ? user.name[0]
-                              : user.email[0].toUpperCase()}
-                          </AvatarFallback>
+                          <Avatar>
+                            <AvatarImage src={user.profilephotourl || ""} alt={user.name || user.email} />
+                            <AvatarFallback>
+                              {user.name ? user.name[0] : user.email[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+
                         </Avatar>
                         <div>
                           <div className="font-medium">

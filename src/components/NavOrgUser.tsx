@@ -1,5 +1,5 @@
+// src/components/NavOrgUser.tsx
 import { ChevronsUpDown, LogOut } from "lucide-react";
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -24,7 +24,8 @@ export function NavOrgUser({
   user: {
     name: string;
     email: string;
-    avatar: string;
+    avatar?: string; // Make avatar optional since we'll get it from profile_photo_url
+    profile_photo_url?: string; // Add this field
   };
 }) {
   const { isMobile } = useSidebar();
@@ -34,6 +35,17 @@ export function NavOrgUser({
     await api.post("/org/logout");
     navigate("/org/login");
   };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
+  };
+
+  // Use profile_photo_url if available, fallback to avatar
+  const profileImage = user.profile_photo_url || user.avatar;
 
   return (
     <SidebarMenu>
@@ -45,8 +57,10 @@ export function NavOrgUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarImage src={profileImage} alt={user.name} />
+                <AvatarFallback className="rounded-lg">
+                  {getInitials(user.name)}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -64,8 +78,10 @@ export function NavOrgUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarImage src={profileImage} alt={user.name} />
+                  <AvatarFallback className="rounded-lg">
+                    {getInitials(user.name)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
