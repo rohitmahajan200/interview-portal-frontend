@@ -16,7 +16,7 @@ import type { User } from "@/types/types";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import UpdateProfile from "@/components/UpdateProfile";
-import { Clipboard, ClipboardCheck } from "lucide-react";
+import { Clipboard, ClipboardCheck, Eye } from "lucide-react";
 
 const DocumentRow = ({ doc }: { doc: { document_type: string; document_url: string } }) => {
   const [copied, setCopied] = useState(false);
@@ -28,7 +28,7 @@ const DocumentRow = ({ doc }: { doc: { document_type: string; document_url: stri
   };
 
   return (
-    <div className="flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
+    <div className="w-sm flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
       <div className="flex items-center gap-3">
         <span className="font-medium text-foreground">{doc.document_type}</span>
       </div>
@@ -44,7 +44,7 @@ const DocumentRow = ({ doc }: { doc: { document_type: string; document_url: stri
             target="_blank"
             rel="noreferrer"
           >
-            View
+            <Eye />
           </a>
         </Button>
         <Button
@@ -145,24 +145,21 @@ const Profile = () => {
               ? format(new Date(user.registration_date), "dd MMM yyyy")
               : "N/A"}
           </p>
-        </CardContent>
-      </Card>
 
-      {/* Documents Card */}
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-foreground">Documents</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm text-foreground">
-          {user.documents?.length ? (
+          <p>
+            <strong>Documents:</strong>
+            {user.documents?.length ? (
             user.documents.map((doc, i) => (
               <DocumentRow key={i} doc={doc} />
             ))
           ) : (
             <p className="text-muted-foreground">No documents uploaded.</p>
           )}
+          </p>
         </CardContent>
       </Card>
+
+      
 
     </div>
   );

@@ -13,12 +13,21 @@ import { setCurrentView } from "@/features/Candidate/view/viewSlice";
 import api from "@/lib/api";
 import { useState } from "react";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
+import ResetOrgPasswordDialog from "@/components/ui/ResetOrgPasswordDialog";
 
 const Settings = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
+
+    const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] = useState(false);
+  
+    // Update the openPasswordUpdateDialog function
+    const openPasswordUpdateDialog = () => {
+      setPasswordUpdateDialogOpen(true);
+    };
+
 
   const handleDeleteRequest = async () => {
     try {
@@ -40,7 +49,7 @@ const Settings = () => {
       title: "Change Password",
       description: "Update your account password regularly to keep it secure.",
       actionLabel: "Change",
-      onClick: () => navigate("/forget-password"),
+      onClick: () => openPasswordUpdateDialog()
     },
     {
       title: "Edit Profile",
@@ -84,8 +93,8 @@ const Settings = () => {
   return (
     <div className="relative min-h-screen p-6 bg-background text-foreground">
       <h1 className="text-2xl font-semibold text-center mb-8">User Settings</h1>
-      <PushNotificationToggle />
       <div className="space-y-6 max-w-2xl mx-auto">
+        <PushNotificationToggle />
         {settingsOptions.map((option, index) => (
           <div
             key={index}
@@ -106,6 +115,12 @@ const Settings = () => {
           </div>
         ))}
       </div>
+
+      <ResetOrgPasswordDialog
+        isOpen={passwordUpdateDialogOpen}
+        onOpenChange={setPasswordUpdateDialogOpen}
+        apiEndpoint="/candidates/new-password"
+      />
 
       {/* ✅ Confirmation Dialog */}
       <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>

@@ -727,7 +727,7 @@ case "checkbox": {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* All your existing form fields remain the same */}
                   <div>
-                    <Label htmlFor="first_name">First Name</Label>
+                    <Label htmlFor="first_name">First Name<span className="text-red-500">*</span></Label>
                     <Input
                       {...register("first_name", { required: true })}
                       id="first_name"
@@ -753,7 +753,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email<span className="text-red-500">*</span></Label>
                     <Input
                       {...register("email", { required: true })}
                       id="email"
@@ -768,7 +768,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">Phone<span className="text-red-500">*</span></Label>
                     <Controller
                       name="phone"
                       control={control}
@@ -789,7 +789,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="date_of_birth">Date Of Birth</Label>
+                    <Label htmlFor="date_of_birth">Date Of Birth<span className="text-red-500">*</span></Label>
                     <Input
                       {...register("date_of_birth")}
                       id="date_of_birth"
@@ -803,7 +803,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="gender">Gender</Label>
+                    <Label htmlFor="gender">Gender<span className="text-red-500">*</span></Label>
                     <select
                       {...register("gender", { required: true })}
                       id="gender"
@@ -847,7 +847,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="profile_photo_url">Profile Photo</Label>
+                    <Label htmlFor="profile_photo_url">Profile Photo<span className="text-red-500">*</span></Label>
                     <Input
                       {...register("profile_photo_url", { required: true })}
                       id="profile_photo_url"
@@ -862,7 +862,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="resume">Resume (PDF)</Label>
+                    <Label htmlFor="resume">Resume (PDF)<span className="text-red-500">*</span></Label>
                     <Input
                       id="resume"
                       type="file"
@@ -878,7 +878,7 @@ case "checkbox": {
                   </div>
 
                   <div>
-                    <Label htmlFor="applied_job">Applied Job</Label>
+                    <Label htmlFor="applied_job">Applied Job<span className="text-red-500">*</span></Label>
                     <Popover open={open} onOpenChange={setOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -940,7 +940,7 @@ case "checkbox": {
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">Password<span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <Input
                         id="password"

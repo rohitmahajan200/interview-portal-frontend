@@ -45,19 +45,13 @@ const PushNotificationToggle = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="flex-shrink-0">
-            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-muted/50 border border-border rounded-xl p-4 shadow-sm transition">
+        <div className="flex items-center space-y-1">
           <div>
-            <h3 className="text-sm font-medium text-gray-900">
+            <h2 className="text-base font-medium">
               Push Notifications
-            </h3>
-            <p className="text-sm text-gray-500">
+            </h2>
+            <p className="text-sm text-muted-foreground">
               {isSubscribed 
                 ? 'You will receive notifications for important updates' 
                 : 'Enable notifications to stay updated'
@@ -67,15 +61,15 @@ const PushNotificationToggle = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          {isSubscribed && (
+          {/* {isSubscribed && (
             <button
               onClick={handleTest}
               disabled={isLoading}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 mt-4 sm:mt-0 hover:cursor-pointer"
             >
               {isLoading ? 'Sending...' : 'Test'}
             </button>
-          )}
+          )} */}
           
           <button
             onClick={handleToggle}
@@ -91,7 +85,7 @@ const PushNotificationToggle = () => {
             />
           </button>
         </div>
-      </div>
+  
 
       {error && (
         <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">

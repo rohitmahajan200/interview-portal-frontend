@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +53,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ResetOrgPasswordDialog from "../ui/ResetOrgPasswordDialog";
 
 type Role = "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER";
 
@@ -87,33 +88,6 @@ const updateSchema = z.object({
   }),
 });
 
-const passwordUpdateSchema = z
-  .object({
-    newPassword: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(
-        /(?=.*[a-z])/,
-        "Password must contain at least one lowercase letter"
-      )
-      .regex(
-        /(?=.*[A-Z])/,
-        "Password must contain at least one uppercase letter"
-      )
-      .regex(/(?=.*\d)/, "Password must contain at least one number")
-      .regex(
-        /(?=.*[@$!%*?&])/,
-        "Password must contain at least one special character"
-      ),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type PasswordUpdateFormData = z.infer<typeof passwordUpdateSchema>;
-
 interface UpdateFormData {
   name: string;
   email: string;
@@ -121,12 +95,6 @@ interface UpdateFormData {
 }
 
 const AdminHome = () => {
-  // Add to existing dialog states
-  const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] =
-    useState(false);
-
-  // Add to existing loading states
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -147,6 +115,16 @@ const AdminHome = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] = useState(false);
+
+  
+
+    // Update the openPasswordUpdateDialog function
+  const openPasswordUpdateDialog = (user: User) => {
+    setSelectedUser(user);
+    setPasswordUpdateDialogOpen(true);
+  };
+
   // Forms with Zod validation
   const inviteForm = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
@@ -166,29 +144,23 @@ const AdminHome = () => {
     },
   });
 
-  // Add to existing forms
-  const passwordUpdateForm = useForm<PasswordUpdateFormData>({
-    resolver: zodResolver(passwordUpdateSchema),
-    defaultValues: {
-      newPassword: "",
-      confirmPassword: "",
-    },
-  });
 
-  // Fetch users
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get("/org/orgUser");
+
+  const fetchUsers = useCallback(async () => {
+  try {
+    setLoading(true);
+    const response = await api.get("/org/orgUser");
+    if (response?.data?.data) {
       setUsers(response.data.data);
       setFilteredUsers(response.data.data);
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error: any) {
+    console.error('Fetch users error:', error);
+    toast.error("Failed to load users");
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchUsers();
@@ -235,40 +207,15 @@ const AdminHome = () => {
     }
   };
 
-  // Update user password
-  const onPasswordUpdateSubmit = async (data: PasswordUpdateFormData) => {
-    if (!selectedUser) return;
 
-    try {
-      setIsUpdatingPassword(true);
-      const response = await api.patch(
-        `/org/update-password/${selectedUser._id}`,
-        {
-          newPassword: data.newPassword,
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Password updated successfully");
-        setPasswordUpdateDialogOpen(false);
-        setSelectedUser(null);
-        passwordUpdateForm.reset();
-      }
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || "Failed to update password"
-      );
-    } finally {
-      setIsUpdatingPassword(false);
-    }
-  };
-
-  // Open password update dialog
-  const openPasswordUpdateDialog = (user: User) => {
-    setSelectedUser(user);
-    passwordUpdateForm.reset();
-    setPasswordUpdateDialogOpen(true);
-  };
+const handlePasswordUpdateSuccess = useCallback(() => {
+  setPasswordUpdateDialogOpen(false);
+  setSelectedUser(null);
+  // Use setTimeout to prevent immediate re-render conflicts
+  setTimeout(() => {
+    fetchUsers();
+  }, 100);
+}, [fetchUsers]);
 
   // Update user
   const onUpdateSubmit = async (data: UpdateFormData) => {
@@ -370,10 +317,10 @@ const AdminHome = () => {
     );
   }
 
+  
+
   return (
     <div className="p-6 space-y-6">
-      <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
-
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -501,15 +448,12 @@ const AdminHome = () => {
                   <TableRow key={user._id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                        <Avatar>
                           <Avatar>
                             <AvatarImage src={user.profilephotourl || ""} alt={user.name || user.email} />
                             <AvatarFallback>
                               {user.name ? user.name[0] : user.email[0].toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-
-                        </Avatar>
                         <div>
                           <div className="font-medium">
                             {user.name || "No name set"}
@@ -602,137 +546,13 @@ const AdminHome = () => {
         </CardContent>
       </Card>
 
-      {/* Invite User Dialog */}
-      {/* Update Password Dialog */}
-      <Dialog
-        open={passwordUpdateDialogOpen}
+      <ResetOrgPasswordDialog 
+        isOpen={passwordUpdateDialogOpen}
         onOpenChange={setPasswordUpdateDialogOpen}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Update Password
-            </DialogTitle>
-            <DialogDescription>
-              Set a new password for this user. They will need to use this
-              password to log in.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedUser && (
-            <div className="space-y-4">
-              {/* User Info */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback>
-                      {selectedUser.name
-                        ? selectedUser.name[0]
-                        : selectedUser.email[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      {selectedUser.name || "No name set"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedUser.email}
-                    </p>
-                    <Badge
-                      className={getRoleColor(selectedUser.role)}
-                      variant="outline"
-                    >
-                      {selectedUser.role}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <form
-                onSubmit={passwordUpdateForm.handleSubmit(
-                  onPasswordUpdateSubmit
-                )}
-                className="space-y-4"
-              >
-                {/* New Password Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    placeholder="Enter new password"
-                    {...passwordUpdateForm.register("newPassword")}
-                    disabled={isUpdatingPassword}
-                  />
-                  {passwordUpdateForm.formState.errors.newPassword && (
-                    <p className="text-red-600 text-sm">
-                      {passwordUpdateForm.formState.errors.newPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Confirm Password Field */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Confirm new password"
-                    {...passwordUpdateForm.register("confirmPassword")}
-                    disabled={isUpdatingPassword}
-                  />
-                  {passwordUpdateForm.formState.errors.confirmPassword && (
-                    <p className="text-red-600 text-sm">
-                      {
-                        passwordUpdateForm.formState.errors.confirmPassword
-                          .message
-                      }
-                    </p>
-                  )}
-                </div>
-
-                {/* Password Requirements */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                    Password Requirements:
-                  </h4>
-                  <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                    <li>• At least 8 characters long</li>
-                    <li>• Contains uppercase and lowercase letters</li>
-                    <li>• Contains at least one number</li>
-                    <li>• Contains at least one special character (@$!%*?&)</li>
-                  </ul>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setPasswordUpdateDialogOpen(false)}
-                    disabled={isUpdatingPassword}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isUpdatingPassword}>
-                    {isUpdatingPassword ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="h-4 w-4 mr-2" />
-                        Update Password
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        selectedUser={selectedUser}
+        onSuccess={handlePasswordUpdateSuccess}
+        apiEndpoint="/org/update-password" // Optional: customize endpoint
+      />
 
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent className="sm:max-w-md">

@@ -414,17 +414,6 @@ const AssessmentReview = () => {
     setLoadingDetail(true);
     try {
       const response = await api.get(`/org/assessment-responses/${id}`); // ✅ Correct endpoint
-     ////////////////////////////////////// 
-      const assessmentData = response.data.data;
-    
-    // ✅ ADD: Debug the backend response
-    console.log("=== BACKEND RESPONSE DEBUG ===");
-    console.log("Full response:", assessmentData);
-    console.log("Candidate applied_job:", assessmentData.candidate?.applied_job);
-    console.log("Grading parameters:", assessmentData.candidate?.applied_job?.gradingParameters);
-    console.log("===============================");
-      ////////////////////////////////////////////
-      
       setSelectedAssessment(response.data.data);
     } catch (error) {
       console.error("Failed to fetch assessment details:", error);

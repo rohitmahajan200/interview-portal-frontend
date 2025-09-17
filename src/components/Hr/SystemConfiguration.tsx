@@ -1,19 +1,27 @@
 // src/components/SystemConfiguration.tsx
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Settings, Shield, Key } from 'lucide-react';
-import OrgProfileUpdate from '../OrgProfileUpdate';
-import { OrgPushNotificationToggle } from '../OrgPushNotificationToggle';
-import { EmailPreferenceToggle } from '../EmailPreference';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Settings, Shield, Key } from "lucide-react";
+import OrgProfileUpdate from "../OrgProfileUpdate";
+import { OrgPushNotificationToggle } from "../OrgPushNotificationToggle";
+import { EmailPreferenceToggle } from "../EmailPreference";
+import ResetOrgPasswordDialog from "../ui/ResetOrgPasswordDialog";
 
 export const SystemConfiguration = () => {
-  const navigate = useNavigate();
+  const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] =
+    useState(false);
 
-  const handlePasswordSetup = () => {
-    navigate('/org/setup-password');
+  // Update the openPasswordUpdateDialog function
+  const openPasswordUpdateDialog = () => {
+    setPasswordUpdateDialogOpen(true);
   };
 
   return (
@@ -31,6 +39,13 @@ export const SystemConfiguration = () => {
 
       {/* Profile Settings */}
       <OrgProfileUpdate />
+
+      {/* Password Update Dialog */}
+      <ResetOrgPasswordDialog
+        isOpen={passwordUpdateDialogOpen}
+        onOpenChange={setPasswordUpdateDialogOpen}
+        apiEndpoint="/org/setup-password"
+      />
 
       <Separator />
 
@@ -54,7 +69,7 @@ export const SystemConfiguration = () => {
                   Change your account password for enhanced security
                 </p>
               </div>
-              <Button onClick={handlePasswordSetup} variant="outline">
+              <Button onClick={openPasswordUpdateDialog} variant="outline">
                 <Key className="h-4 w-4 mr-2" />
                 Setup Password
               </Button>
