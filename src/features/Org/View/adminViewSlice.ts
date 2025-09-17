@@ -11,7 +11,7 @@ export type AdminPage =
   | "audit"
   | "notifications" // Add this line
   | "integrations"
-  | "JobManagement";
+  | "jobs";
 
 interface AdminViewState {
   currentRole: AdminViewRole;

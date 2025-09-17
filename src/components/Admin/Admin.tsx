@@ -129,12 +129,12 @@ export default function AdminDashboard() {
 
     fetchOrgUser();
     fetchAdminNotifications();
-  }, [dispatch, fetchAdminNotifications]);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       fetchAdminNotifications();
-    }, 120000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [fetchAdminNotifications]);
 
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
         return <AuditLogs />;
       case "notifications":
         return <AdminNotifications />;
-      case "JobManagement":
+      case "jobs":
         return <JobManagement />;
       default:
         return <AdminHome />;

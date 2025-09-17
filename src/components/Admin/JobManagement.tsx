@@ -70,6 +70,16 @@ interface GradingParameter {
   name: string;
 }
 
+interface MissingJob {
+  _id: string;
+  title: string;
+  time: string;
+  country: string;
+  location: string;
+  expInYears: string;
+  salary: string;
+}
+
 const JobManagement = () => {
   // State Management
   const [loading, setLoading] = useState(false);
@@ -79,6 +89,12 @@ const JobManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [missingJobs, setMissingJobs] = useState<MissingJob[]>([]);
+  const [showMissingJobsSection, setShowMissingJobsSection] = useState(false);
+  const [loadingMissingJobs, setLoadingMissingJobs] = useState(false);
+  // Add this new state near the other state declarations
+  const [currentJobPortalId, setCurrentJobPortalId] = useState<string | null>(null);
+
 
   // Form states - Support BOTH key-value pairs AND bullet sections simultaneously
   const [formData, setFormData] = useState({
@@ -244,13 +260,13 @@ const JobManagement = () => {
     setGradingParameters((prev) => [...prev, { id: newId, name: "" }]);
   };
 
-const removeGradingParameter = (id: string) => {
-  // Prevent removing the default "Overall" parameter
-  if (id === "overall") {
-    return;
-  }
-  setGradingParameters((prev) => prev.filter((param) => param.id !== id));
-};
+  const removeGradingParameter = (id: string) => {
+    // Prevent removing the default "Overall" parameter
+    if (id === "overall") {
+      return;
+    }
+    setGradingParameters((prev) => prev.filter((param) => param.id !== id));
+  };
 
   const updateGradingParameter = (id: string, name: string) => {
     setGradingParameters((prev) =>
@@ -371,12 +387,23 @@ const removeGradingParameter = (id: string) => {
         jobData.gradingParameters = validGradingParams;
       }
 
+      // Add jobPortalId if available (from Change Networks import)
+      if (currentJobPortalId) {
+        jobData.jobPortalId = currentJobPortalId;
+      }
+
       const response = await api.post("/org/jobs", jobData);
 
       if (response.data.success) {
         toast.success(response.data.message || "Job created successfully");
         setShowCreateDialog(false);
         resetForm();
+        // Clear the jobPortalId after successful creation
+        setCurrentJobPortalId(null);
+        // Remove the job from missing jobs list if it was imported
+        if (currentJobPortalId) {
+          setMissingJobs(prev => prev.filter(job => job._id !== currentJobPortalId));
+        }
         await fetchJobs();
       } else {
         toast.error(response.data.message || "Failed to create job");
@@ -384,11 +411,22 @@ const removeGradingParameter = (id: string) => {
     } catch (error: any) {
       const errorMessage =
         error?.response?.data?.message || "Failed to create job";
-      toast.error(errorMessage);
+      
+      // Handle specific case where job already exists
+      if (error?.response?.status === 409) {
+        toast.error("This job has already been imported from Change Networks");
+        // Remove from missing jobs list since it already exists
+        if (currentJobPortalId) {
+          setMissingJobs(prev => prev.filter(job => job._id !== currentJobPortalId));
+        }
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsCreating(false);
     }
   };
+
 
   const handleEditJob = async () => {
     if (!editingJob || !formData.name.trim() || !formData.description.trim()) {
@@ -524,60 +562,59 @@ const removeGradingParameter = (id: string) => {
     }
   };
 
- // Update the openEditDialog function (around line 330)
-const openEditDialog = (job: IJob) => {
-  setEditingJob(job);
-  setFormData({
-    name: job.name,
-    description:
-      typeof job.description === "string"
-        ? job.description
-        : JSON.stringify(job.description),
-  });
+  // Update the openEditDialog function
+  const openEditDialog = (job: IJob) => {
+    setEditingJob(job);
+    setFormData({
+      name: job.name,
+      description:
+        typeof job.description === "string"
+          ? job.description
+          : JSON.stringify(job.description),
+    });
 
-  // Convert mixed data to separate arrays
-  if (job.long_description && typeof job.long_description === "object") {
-    const { pairs, sections } = convertMixedObjectToArrays(
-      job.long_description
-    );
-    setLongDescriptionPairs(pairs);
-    setBulletSections(sections);
-  } else {
-    setLongDescriptionPairs([{ key: "", value: "" }]);
-    setBulletSections([
-      { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
-    ]);
-  }
-
-  // Convert grading parameters - always ensure "Overall" is included
-  if (job.gradingParameters && job.gradingParameters.length > 0) {
-    const gradingParams = job.gradingParameters.map((param, index) => ({
-      id: param === "Overall" ? "overall" : (index + 1).toString(),
-      name: param,
-    }));
-    
-    // Ensure "Overall" is always present
-    const hasOverall = gradingParams.some(param => param.name === "Overall");
-    if (!hasOverall) {
-      gradingParams.unshift({ id: "overall", name: "Overall" });
+    // Convert mixed data to separate arrays
+    if (job.long_description && typeof job.long_description === "object") {
+      const { pairs, sections } = convertMixedObjectToArrays(
+        job.long_description
+      );
+      setLongDescriptionPairs(pairs);
+      setBulletSections(sections);
+    } else {
+      setLongDescriptionPairs([{ key: "", value: "" }]);
+      setBulletSections([
+        { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
+      ]);
     }
-    
-    // Add empty parameter if needed
-    if (gradingParams.length === 1 || !gradingParams.some(param => param.name === "")) {
-      gradingParams.push({ id: Date.now().toString(), name: "" });
+
+    // Convert grading parameters - always ensure "Overall" is included
+    if (job.gradingParameters && job.gradingParameters.length > 0) {
+      const gradingParams = job.gradingParameters.map((param, index) => ({
+        id: param === "Overall" ? "overall" : (index + 1).toString(),
+        name: param,
+      }));
+      
+      // Ensure "Overall" is always present
+      const hasOverall = gradingParams.some(param => param.name === "Overall");
+      if (!hasOverall) {
+        gradingParams.unshift({ id: "overall", name: "Overall" });
+      }
+      
+      // Add empty parameter if needed
+      if (gradingParams.length === 1 || !gradingParams.some(param => param.name === "")) {
+        gradingParams.push({ id: Date.now().toString(), name: "" });
+      }
+      
+      setGradingParameters(gradingParams);
+    } else {
+      setGradingParameters([
+        { id: "overall", name: "Overall" },
+        { id: "1", name: "" }
+      ]);
     }
-    
-    setGradingParameters(gradingParams);
-  } else {
-    setGradingParameters([
-      { id: "overall", name: "Overall" },
-      { id: "1", name: "" }
-    ]);
-  }
 
-  setShowEditDialog(true);
-};
-
+    setShowEditDialog(true);
+  };
 
   const openViewDialog = (job: IJob) => {
     setViewingJob(job);
@@ -585,26 +622,27 @@ const openEditDialog = (job: IJob) => {
   };
 
   const resetForm = () => {
-  setFormData({
-    name: "",
-    description: "",
-  });
-  setLongDescriptionPairs([{ key: "", value: "" }]);
-  setBulletSections([
-    { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
-  ]);
-  // ✅ FIXED: Always include "Overall" parameter
-  setGradingParameters([
-    { id: "overall", name: "Overall" },
-    { id: "1", name: "" }
-  ]);
-};
+    setFormData({
+      name: "",
+      description: "",
+    });
+    setLongDescriptionPairs([{ key: "", value: "" }]);
+    setBulletSections([
+      { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
+    ]);
+    setGradingParameters([
+      { id: "overall", name: "Overall" },
+      { id: "1", name: "" }
+    ]);
+    // Clear the jobPortalId when resetting form
+    setCurrentJobPortalId(null);
+  };
 
-const openCreateDialog = () => {
-  resetForm();
-  setShowCreateDialog(true);
-};
 
+  const openCreateDialog = () => {
+    resetForm();
+    setShowCreateDialog(true);
+  };
 
   const handleJobSelect = (jobId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -658,6 +696,186 @@ const openCreateDialog = () => {
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
   );
+
+  // Fetch missing jobs from your backend
+  const fetchMissingJobs = async () => {
+    try {
+      setLoadingMissingJobs(true);
+      const response = await api.get('/org/admin/check-missing-jobs');
+      
+      if (response.data.success) {
+        setMissingJobs(response.data.missingJobs || []);
+        return response.data.missingJobs || [];
+      } else {
+        toast.error('Failed to fetch missing jobs');
+        return [];
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch missing jobs:', error);
+      toast.error('Failed to fetch missing jobs');
+      return [];
+    } finally {
+      setLoadingMissingJobs(false);
+    }
+  };
+
+  // Fetch job details from your backend
+  const fetchJobDetails = async (jobId: string) => {
+    try {
+      const response = await api.get(`/org/admin/jobdetails?id=${jobId}`);
+      
+      if (response.data.success) {
+        return response.data.job;
+      } else {
+        toast.error('Failed to fetch job details');
+        return null;
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch job details:', error);
+      toast.error('Failed to fetch job details');
+      return null;
+    }
+  };
+
+  // Helper function to parse HTML and extract text content
+  const parseHtmlToText = (htmlString: string): string => {
+    if (!htmlString) return '';
+    // Create a temporary div to parse HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlString;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
+  // Helper function to parse HTML and extract bullet points
+  const parseHtmlToBullets = (htmlString: string): string[] => {
+    if (!htmlString) return [];
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlString;
+    const listItems = tempDiv.querySelectorAll('li');
+    return Array.from(listItems).map(li => li.textContent?.trim() || '').filter(Boolean);
+  };
+
+  // Convert Change Networks job to your internal format
+  const convertChangeNetworksJob = (cnJob: any) => {
+    // Parse description and requirements
+    const descriptionText = parseHtmlToText(cnJob.description || '');
+    const descriptionBullets = parseHtmlToBullets(cnJob.description || '');
+    const requirementsBullets = parseHtmlToBullets(cnJob.requirements || '');
+
+    // Create key-value pairs for job details
+    const jobDetails: { [key: string]: string | string[] } = {};
+    
+    // Add basic details as key-value pairs
+    if (cnJob.salary) jobDetails['Salary'] = cnJob.salary;
+    if (cnJob.location) jobDetails['Location'] = cnJob.location;
+    if (cnJob.time) jobDetails['Work Hours'] = cnJob.time;
+    if (cnJob.expInYears) jobDetails['Experience Required'] = cnJob.expInYears;
+    if (cnJob.type) jobDetails['Employment Type'] = cnJob.type;
+    if (cnJob.schedule) jobDetails['Schedule'] = cnJob.schedule;
+    if (cnJob.industry) jobDetails['Industry'] = cnJob.industry;
+    if (cnJob.category) jobDetails['Category'] = cnJob.category;
+    if (cnJob.vacancies) jobDetails['Vacancies'] = cnJob.vacancies.toString();
+
+    // Add bullet point sections
+    if (descriptionBullets.length > 0) {
+      jobDetails['Job Responsibilities'] = descriptionBullets;
+    }
+    if (requirementsBullets.length > 0) {
+      jobDetails['Requirements'] = requirementsBullets;
+    }
+    if (cnJob.primarySkills && cnJob.primarySkills.length > 0) {
+      jobDetails['Primary Skills'] = cnJob.primarySkills;
+    }
+    if (cnJob.secondarySkills && cnJob.secondarySkills.length > 0) {
+      jobDetails['Secondary Skills'] = cnJob.secondarySkills;
+    }
+    if (cnJob.position && cnJob.position.length > 0) {
+      jobDetails['Position Types'] = cnJob.position;
+    }
+
+    // Convert to your format
+    const { pairs, sections } = convertMixedObjectToArrays(jobDetails);
+
+    // Create grading parameters from skills and requirements
+    const gradingParams: GradingParameter[] = [
+      { id: "overall", name: "Overall" } // Always include Overall
+    ];
+
+    // Add skill-based parameters
+    if (cnJob.primarySkills && cnJob.primarySkills.length > 0) {
+      cnJob.primarySkills.slice(0, 3).forEach((skill: string, index: number) => {
+        gradingParams.push({
+          id: `skill_${index}`,
+          name: skill.length > 30 ? skill.substring(0, 27) + '...' : skill
+        });
+      });
+    }
+
+    // Add common job-related parameters
+    gradingParams.push(
+      { id: "tech_skills", name: "Technical Skills" },
+      { id: "communication", name: "Communication" },
+      { id: "problem_solving", name: "Problem Solving" }
+    );
+
+    // Add empty parameter for user to add more
+    gradingParams.push({ id: Date.now().toString(), name: "" });
+
+    return {
+      formData: {
+        name: cnJob.title || '',
+        description: descriptionText || cnJob.title || 'Job imported from Change Networks'
+      },
+      longDescriptionPairs: pairs,
+      bulletSections: sections,
+      gradingParameters: gradingParams
+    };
+  };
+
+  // Handle adding job from Change Networks
+  const handleAddFromChangeNetworks = async (jobId: string) => {
+    try {
+      const jobDetails = await fetchJobDetails(jobId);
+      if (!jobDetails) return;
+
+      const convertedJob = convertChangeNetworksJob(jobDetails);
+      
+      // Populate form with converted data
+      setFormData(convertedJob.formData);
+      setLongDescriptionPairs(convertedJob.longDescriptionPairs);
+      setBulletSections(convertedJob.bulletSections);
+      setGradingParameters(convertedJob.gradingParameters);
+      
+      // Set the current job portal ID
+      setCurrentJobPortalId(jobId);
+      
+      // Open create dialog
+      setShowCreateDialog(true);
+      
+      toast.success('Job details loaded from Change Networks portal');
+    } catch (error: any) {
+      console.error('Failed to add job from Change Networks:', error);
+      toast.error('Failed to load job details');
+    }
+  };
+
+
+  // Main function to sync with Change Networks
+  const syncWithChangeNetworks = async () => {
+    try {
+      const missingJobsList = await fetchMissingJobs();
+      if (missingJobsList.length === 0) {
+        toast.success('All Change Networks jobs are already synced!');
+        setShowMissingJobsSection(false);
+      } else {
+        toast.success(`Found ${missingJobsList.length} jobs that need to be synced`);
+        setShowMissingJobsSection(true);
+      }
+    } catch (error) {
+      console.error('Sync failed:', error);
+      toast.error('Failed to sync with Change Networks');
+    }
+  };
 
   if (initialLoading) {
     return (
@@ -741,6 +959,94 @@ const openCreateDialog = () => {
           </Card>
         </div>
 
+        {/* Change Networks Integration Section */}
+        {showMissingJobsSection && (
+          <Card className="mb-6 sm:mb-8">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-blue-600 dark:text-blue-400">
+                    🔗 Change Networks Jobs Integration
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Jobs from Change Networks portal that are not yet in your database
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowMissingJobsSection(false)}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingMissingJobs ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                  <span className="text-muted-foreground">
+                    Checking missing jobs...
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {missingJobs.length === 0 ? (
+                    <div className="text-center py-6">
+                      <Briefcase className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                      <p className="text-muted-foreground">All jobs are already synced!</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mb-4">
+                        <h3 className="font-medium mb-2">
+                          Missing Jobs ({missingJobs.length})
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Click "Add to Portal" to import these jobs with auto-filled details
+                        </p>
+                      </div>
+                      <div className="grid gap-3">
+                        {missingJobs.map((missingJob) => (
+                          <div
+                            key={missingJob._id}
+                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm sm:text-base truncate">
+                                {missingJob.title}
+                              </h4>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  📍 {missingJob.location}
+                                </span>
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                  💰 {missingJob.salary}
+                                </span>
+                                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                  📅 {missingJob.expInYears}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => handleAddFromChangeNetworks(missingJob._id)}
+                              size="sm"
+                              className="ml-3 shrink-0"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add to Portal
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Interface */}
         <Card>
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
@@ -755,6 +1061,23 @@ const openCreateDialog = () => {
                 <span className="hidden sm:inline">Add Job</span>
                 <span className="sm:hidden">Add</span>
               </Button>
+              
+              <Button
+                onClick={syncWithChangeNetworks}
+                variant="outline"
+                size="sm"
+                disabled={loadingMissingJobs}
+                className="h-8 sm:h-9"
+              >
+                {loadingMissingJobs ? (
+                  <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-current mr-1 sm:mr-2" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                )}
+                <span className="hidden sm:inline">Sync with Change Networks</span>
+                <span className="sm:hidden">Sync</span>
+              </Button>
+
               {selectedJobs.length > 0 && (
                 <Button
                   onClick={() => setShowBulkDeleteDialog(true)}
@@ -818,6 +1141,7 @@ const openCreateDialog = () => {
                 </Select>
               </div>
             </div>
+            
             {/* Select All Checkbox */}
             {filteredJobs.length > 0 && (
               <div className="flex items-center space-x-2 mb-4">
@@ -833,6 +1157,7 @@ const openCreateDialog = () => {
                 </Label>
               </div>
             )}
+            
             {/* Jobs List */}
             <div className="space-y-3 sm:space-y-4">
               {filteredJobs.length === 0 ? (
@@ -1115,7 +1440,10 @@ const openCreateDialog = () => {
           <DialogHeader>
             <DialogTitle>Create New Job</DialogTitle>
             <DialogDescription>
-              Add a new job posting to your organization with glory parameters
+              {currentJobPortalId 
+                ? "Importing job from Change Networks portal with auto-filled details" 
+                : "Add a new job posting to your organization with glory parameters"
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

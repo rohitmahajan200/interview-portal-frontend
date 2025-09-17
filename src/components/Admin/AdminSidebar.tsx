@@ -30,7 +30,9 @@ export function AdminSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { open } = useSidebar();
   const orgState = useAppSelector((s) => s.orgAuth);
   const dispatch = useDispatch();
-
+  const adminNotifications = useAppSelector((s) => s.adminNotifications);
+  const unreadTotal = Object.values(adminNotifications.roleBreakdown || {})
+  .reduce((sum, role) => sum + (role.unread || 0), 0);
   // helper so we don't repeat the arrow function every line
   const navItem = (
     title: string,
@@ -50,9 +52,9 @@ export function AdminSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const adminNav = [
     navItem("home", LayoutDashboard, "home"),
     navItem("users", Users, "users"),
-    navItem("Jobs", Briefcase, "JobManagement"),
+    navItem("jobs", Briefcase, "jobs"),
     navItem("roles", Shield, "roles"),
-    navItem("notifications", Bell, "notifications"),
+    navItem("notifications", Bell, "notifications", unreadTotal > 0 ? unreadTotal : undefined),
     navItem("config", Settings, "config"),
     navItem("analytics", BarChart3, "analytics"),
     navItem("audit", FileText, "audit"),

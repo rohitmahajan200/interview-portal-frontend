@@ -1,6 +1,7 @@
-import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -32,7 +33,6 @@ import {
   Volume2,
   Play,
   Pause,
-  Square,
   Upload,
   CheckCircle2,
   FileAudio,
@@ -41,9 +41,8 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { useEffect, useState, useRef } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { PhoneInput } from "@/components/ui/phone-input";
-import Spinner from "../components/ui/spinner";
 import { uploadToCloudinary } from "@/lib/clodinary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -53,6 +52,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 type Job = {
   _id: string;
   name: string;
+  jobPortalId?: string; // Add this optional field
 };
 
 type HRQuestion = {
@@ -103,12 +103,19 @@ export default function RegisterForm({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const [jobIdFromUrl, setJobIdFromUrl] = useState<string | null>(null);
   // Basic Details states
   const [hrQuestionnaireOpen, setHrQuestionnaireOpen] = useState(false);
   const [hrQuestions, setHrQuestions] = useState<HRQuestion[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [hrResponses, setHrResponses] = useState<FormValues['hr_responses']>([]);
+  // Helper function to get query parameter
+  const getQueryParam = (name: string): string | null => {
+    const urlParams = new URLSearchParams(location.search);
+    return urlParams.get(name);
+  };
+
 
   // Audio states for Basic Details
   const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
@@ -122,14 +129,57 @@ export default function RegisterForm({
 
   const selectedJobId = watch("applied_job");
 
-  // Load jobs on component mount
+  // Load jobs on component mount and handle jobId from URL
   useEffect(() => {
-    setLoadingJobs(true);
-    api.get("/candidates/jobs")
-      .then(res => setJobs(res.data.jobs))
-      .catch(() => setJobs([]))
-      .finally(() => setLoadingJobs(false));
-  }, []);
+    const loadJobsAndHandleUrl = async () => {
+      setLoadingJobs(true);
+      
+      try {
+        const res = await api.get("/candidates/jobs");
+        const fetchedJobs = res.data.jobs || [];
+        setJobs(fetchedJobs);
+        
+        // Extract jobId from URL
+        const urlJobId = getQueryParam('jobId');
+        
+        if (urlJobId) {
+          setJobIdFromUrl(urlJobId);
+          
+          // Check if the jobId exists in the fetched jobs (check both _id and jobPortalId)
+          const matchingJob = fetchedJobs.find((job: Job) => 
+            job._id === urlJobId || job.jobPortalId === urlJobId
+          );
+          
+          if (matchingJob) {
+            // Auto-select the job using the internal _id
+            setValue("applied_job", matchingJob._id, { shouldValidate: true });
+            
+            // Show success toast
+            toast.success(`🎯 Auto-applying for: ${matchingJob.name}`, {
+              duration: 4000,
+              style: {
+                background: '#10B981',
+                color: 'white',
+              },
+            });
+          } else {
+            // Show error toast for invalid jobId
+            toast.error(`❌ Invalid job ID. Please select a job manually.`, {
+              duration: 4000,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load jobs:', error);
+        setJobs([]);
+        toast.error('Failed to load available jobs');
+      } finally {
+        setLoadingJobs(false);
+      }
+    };
+
+    loadJobsAndHandleUrl();
+  }, [location.search, setValue]);
 
   // Load HR questions when dialog opens
   const loadHRQuestions = async () => {
@@ -661,7 +711,6 @@ case "checkbox": {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
-      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-5xl">
         <div className={cn("flex flex-col gap-6", className)} {...props}>
           <Card className="shadow-xl rounded-2xl border border-gray-200">
@@ -836,17 +885,26 @@ case "checkbox": {
                           variant="outline"
                           role="combobox"
                           aria-expanded={open}
-                          className="w-[300px] justify-between"
+                          className={`w-[300px] justify-between ${
+                            jobIdFromUrl && selectedJobId && 
+                            jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job.jobPortalId === jobIdFromUrl))
+                              ? 'border-green-500 bg-green-50' : ''
+                          }`}
                           type="button"
                         >
                           {selectedJobId
-                            ? jobs.find((r) => r._id === selectedJobId)?.name
+                            ? `${jobIdFromUrl && 
+                                jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job.jobPortalId === jobIdFromUrl))
+                                  ? '🎯 ' : ''}${
+                                  jobs.find((r) => r._id === selectedJobId)?.name
+                                }`
                             : loadingJobs
                               ? "Loading..."
                               : "Select job..."}
                           <ChevronsUpDown className="opacity-50" />
                         </Button>
                       </PopoverTrigger>
+
                       <PopoverContent className="w-[300px] p-0">
                         <Command>
                           <CommandInput placeholder="Search job..." className="h-9" />

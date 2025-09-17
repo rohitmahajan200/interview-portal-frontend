@@ -528,7 +528,7 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
   useEffect(() => {
     fetchResponsesList();
     fetchStatistics();
-  }, [submitGloryGrades]);
+  }, []);
 
   const rejectCandidate = async (candidateId: string, reason: string) => {
     setIsRejecting(true);
