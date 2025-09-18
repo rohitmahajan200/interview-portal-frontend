@@ -200,7 +200,7 @@ export default function Page() {
                   <header className="px-1 rounded-xl">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                        Welcome To Change Networks!
+                        Welcome To CHANGE Networks!
                       </span>
                     </div>
                   </header>

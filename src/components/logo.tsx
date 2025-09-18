@@ -3,13 +3,13 @@ export default function Logo() {
     <div className="flex items-center gap-2 px-4 py-2">
       <img
         src="https://www.change-networks.com/logo.png"
-        alt="Change Networks Logo"
+        alt="CHANGE Networks Logo"
         draggable={false}
         onContextMenu={(e) => e.preventDefault()}
         className="h-6 w-auto"
       />
       <span className="text-sm font-semibold tracking-wide text-card-foreground">
-        Change Networks
+        CHANGE Networks
       </span>
     </div>
   );
