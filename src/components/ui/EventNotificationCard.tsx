@@ -17,8 +17,7 @@ interface Props {
 }
 
 export const EventNotificationCard: React.FC<Props> = ({ 
-  events, 
-  candidateId = "", 
+  events,  
   onOpenDocumentForm 
 }) => {
   const dispatch = useDispatch();
@@ -59,9 +58,9 @@ export const EventNotificationCard: React.FC<Props> = ({
                   <span className={`font-semibold ${
                     event.type === "Document" ? "text-green-700 dark:text-green-300" : "text-primary"
                   }`}>
-                    {event.type}
-                  </span>{" "}
+                    {event.type}                  
                   - {event.title}
+                  </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {formatDateTime(event.date)}

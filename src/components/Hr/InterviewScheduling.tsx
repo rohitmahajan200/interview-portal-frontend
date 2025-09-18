@@ -21,7 +21,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, Users, MapPin, Video, Loader2, Edit, Trash2, Search, ChevronsUpDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Toaster } from 'react-hot-toast';
 import { z } from 'zod';
 import api from "@/lib/api";
 import type { RootState } from '@/app/store';
@@ -636,7 +635,6 @@ const InterviewCalendar = () => {
 
   return (
     <div className="container mx-auto p-6 overflow-y-auto mb-10" id='main'>
-      <Toaster />
       {/* Event Creation/Edit Form */}
       <Card className="mb-6">
         <CardHeader>

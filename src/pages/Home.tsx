@@ -143,7 +143,7 @@ const Home = () => {
           (i: any): Event => ({
             id: i._id,
             type: "Interview",
-            title: `${i.interview_type} Round ${i.round}`,
+            title: `${i.interview_type}`,
             date: i.scheduled_at,
           })
         );

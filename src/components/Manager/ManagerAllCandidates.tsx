@@ -1003,7 +1003,7 @@ const hasResume = (candidate) => {
                   {/* Candidate Info */}
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="relative">
-                      <Avatar className="w-12 h-12">
+                      <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
                         <AvatarImage src={candidate.profile_photo_url?.url} />
                         <AvatarFallback>
                           {candidate.first_name?.[0] || "U"}

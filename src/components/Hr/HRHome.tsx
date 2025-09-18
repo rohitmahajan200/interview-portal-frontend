@@ -1400,8 +1400,6 @@ const HRHome = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
-
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">HR Dashboard</h1>
@@ -1777,7 +1775,7 @@ const HRHome = () => {
                   {!personalCollapsed && (
                     <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
-                        <Avatar className="w-40 h-33 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                        <Avatar className="w-40 h-37 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
                           <AvatarImage
                             src={selectedCandidate.profile_photo_url?.url}
                             className="object-cover w-full h-full"

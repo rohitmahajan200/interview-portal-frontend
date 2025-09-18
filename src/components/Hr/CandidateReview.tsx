@@ -32,7 +32,7 @@ import {
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { format } from "date-fns";
 import api from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -559,7 +559,6 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
 
   return (
     <div className="h-full flex flex-col space-y-6 p-6">
-      <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
 
       {/* Enhanced Header with Statistics */}
       <div className="flex items-center justify-between">

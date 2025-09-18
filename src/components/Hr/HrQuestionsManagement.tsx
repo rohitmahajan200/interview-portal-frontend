@@ -20,7 +20,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Edit, Trash, Search, X, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // Updated schema to match backend exactly
 const hrQuestionsArraySchema = z.object({
@@ -300,7 +300,6 @@ const HrQuestionsManagement = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <Toaster position="bottom-right" toastOptions={{ style: { zIndex: 9999 } }} />
       
       {/* Header */}
       <div className="flex justify-between items-center">

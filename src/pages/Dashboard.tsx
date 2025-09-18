@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle, FileText, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import NotificationsPage from "./NotificationsPage";
+import { div } from "@tensorflow/tfjs";
 
 interface CandidateData {
   _id: string;
@@ -180,6 +181,7 @@ export default function Page() {
   }
 
   return (
+    
     <SidebarProvider>
       {/* Left navigation sidebar */}
       <AppSidebar />
@@ -211,7 +213,10 @@ export default function Page() {
           </div>
         </header>
 
+      <div className="flex items-start p-2">
+
         {/* Document Upload Banner */}
+        <div>
         {showDocumentBanner && candidateData && (
           <div className="mx-4 mt-4">
             <Alert className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
@@ -248,8 +253,10 @@ export default function Page() {
             </Alert>
           </div>
         )}
+        </div>
 
         {/* Documents Submitted Success Banner */}
+        <div>
         {documentsSubmitted && candidateData?.status === "hired" && (
           <div className="mx-4 mt-4">
             <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
@@ -265,11 +272,10 @@ export default function Page() {
             </Alert>
           </div>
         )}
+        </div>
 
-        {currentView ? renderView(currentView) : null}
-      </SidebarInset>
-
-      {/* Document Upload Form Modal */}
+        {/* Document Upload Form Modal */}
+        <div>
       {showDocumentUpload && candidateData && (
         <DocumentUploadForm
           candidateId={candidateData._id}
@@ -278,6 +284,21 @@ export default function Page() {
           onClose={handleCloseDocumentForm}
         />
       )}
+        </div>
+
+      </div>
+
+      
+{currentView ? renderView(currentView) : null}
+      
+
+      
+      
+      </SidebarInset>
+
+      
+      
     </SidebarProvider>
+    
   );
 }

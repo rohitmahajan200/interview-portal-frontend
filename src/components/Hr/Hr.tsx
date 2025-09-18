@@ -153,8 +153,6 @@ export default function Hr() {
 
   return (
     <div className="h-full flex overflow-hidden">
-      <Toaster position="bottom-right" />
-
       <SidebarProvider>
         <HRSidebar className="w-64 h-full flex-shrink-0" />
         <SidebarInset className="flex-1 h-full overflow-hidden flex flex-col">

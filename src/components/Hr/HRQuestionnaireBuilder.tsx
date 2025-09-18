@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
-import toast, {Toaster} from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // Validation Schemas
 const questionnaireSchema = z.object({
@@ -456,7 +456,6 @@ const HRQuestionnaireBuilder = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <Toaster position="bottom-right" />
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

@@ -45,6 +45,7 @@ import {
   MessageSquare,
   ClipboardList,
   MessageCircle,
+  Trophy,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -593,7 +594,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
             {/* Left: Enhanced Candidate Info */}
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <div className="relative shrink-0">
-                <Avatar className="w-12 h-12">
+                <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
                   <AvatarImage src={candidate.profile_photo_url?.url} />
                   <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                     {candidate.first_name[0]}
@@ -645,11 +646,15 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   )}
                   <div className="flex items-center gap-1.5">
                     <UserIcon className="h-3 w-3 text-purple-500 shrink-0" />
-                    <span>{candidate.gender} • {formatAge(candidate.date_of_birth)}y</span>
+                    <span>{candidate.gender[0].toLocaleUpperCase()}{candidate.gender.slice(1)} • {formatAge(candidate.date_of_birth)}y</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CalendarDaysIcon className="h-3 w-3 text-orange-500 shrink-0" />
                     <span>Reg: {formatDate(candidate.registration_date)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+                    <span>Location: {candidate.address}</span>
                   </div>
                 </div>
 
@@ -800,8 +805,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   size="sm"
                   className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8"
                 />
-  
-
                 <Button
                   size="sm"
                   variant="outline"
@@ -838,6 +841,16 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                 <div className="flex items-center gap-1 text-orange-600">
                   <ClockIcon className="h-3 w-3" />
                   <span>Login: {formatDate(candidate.last_login)}</span>
+                </div>
+              )}
+              {candidate.glory && (
+                <div className="flex items-center gap-1 text-blue-600">
+                  <Trophy className="h-3 w-3"/>
+                  <span>Glory:
+                    HR-{(candidateData.glory.hr.grades.Overall)||"Not Present"}{" "},
+                    Invigilator-{(candidateData.glory.invigilator.grades.Overall)||"Not Present"}{" "},
+                    Manager-{(candidateData.glory.manager.grades.Overall)||"Not Present"}{" "}
+                    </span>
                 </div>
               )}
             </div>
@@ -1522,10 +1535,10 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           {candidateToUpdateStage && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage
+              <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
+                  <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                    <AvatarImage 
                       src={candidateToUpdateStage.profile_photo_url?.url}
                     />
                     <AvatarFallback>

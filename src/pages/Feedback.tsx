@@ -17,7 +17,6 @@ const Feedback = () => {
         setLoading(true);
         const response = await api.get("/candidates/feedback");
         
-        
         if (response.data.success) {
           setFeedbacks(response.data.data);
           setError(null);
@@ -35,7 +34,6 @@ const Feedback = () => {
     fetchFeedbacks();
   }, []);
 
-  // Format date helper function
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -48,10 +46,10 @@ const Feedback = () => {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600 dark:text-gray-300">Loading feedbacks...</span>
+      <div className="p-4 md:p-6 w-full h-[80vh] flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <span className="text-sm text-muted-foreground">Loading feedbacks...</span>
         </div>
       </div>
     );
@@ -59,16 +57,14 @@ const Feedback = () => {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="text-center py-12">
-          <div className="text-red-600 dark:text-red-400 mb-2">
-            <MessageSquareText className="w-12 h-12 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold">Error Loading Feedbacks</h3>
-            <p className="text-sm mt-2">{error}</p>
-          </div>
+      <div className="p-4 md:p-6 w-full h-[80vh] flex items-center justify-center">
+        <div className="text-center">
+          <MessageSquareText className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
+          <h3 className="font-medium mb-2">Error Loading Feedbacks</h3>
+          <p className="text-sm text-muted-foreground mb-3">{error}</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
           >
             Try Again
           </button>
@@ -79,67 +75,82 @@ const Feedback = () => {
 
   if (feedbacks.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">
-          Candidate Feedbacks
-        </h2>
-        <div className="text-center py-12">
-          <MessageSquareText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300 mb-2">
-            No Feedbacks Found
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            There are no candidate feedbacks available at the moment.
-          </p>
+      <div className="p-4 md:p-6 w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Feedbacks</h2>
+        </div>
+        <div className="h-[70vh] flex items-center justify-center">
+          <div className="text-center">
+            <MessageSquareText className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+            <h3 className="font-medium mb-1">No Feedbacks Found</h3>
+            <p className="text-sm text-muted-foreground">
+              There are no candidate feedbacks available.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <h2 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6 text-center">
-        Candidate Feedbacks ({feedbacks.length})
-      </h2>
-      <div className="space-y-6">
-        {feedbacks.map((fb) => (
-          <div
-            key={fb._id}
-            className="border rounded-xl bg-white dark:bg-gray-900 dark:border-gray-700 shadow-sm p-5 hover:shadow-md transition duration-200"
-          >
-            {/* Header with feedback type and date */}
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
-              <span className="text-xs px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 capitalize w-fit">
-                {fb.feedback_type.replace(/_/g, " ").replace(/-/g, " ")}
-              </span>
-              <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>{formatDate(fb.createdAt)}</span>
-              </div>
-            </div>
+    <div className="p-4 md:p-6 w-full">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Feedbacks</h2>
+        <span className="text-sm text-muted-foreground">
+          {feedbacks.length} total
+        </span>
+      </div>
 
-            {/* Feedback provider information */}
-            <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 gap-2 mb-3">
-              <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              <span className="font-medium">Feedback by:</span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{fb.feedback_provider.name}</span>
-                <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-300">
+      {/* Compact Feedback List */}
+      <div 
+        className="overflow-y-auto border rounded-lg bg-background"
+        style={{
+          height: 'calc(100vh - 200px)',
+          minHeight: '400px',
+          scrollbarGutter: 'stable'
+        }}
+      >
+        <div className="p-3 space-y-2">
+          {feedbacks.map((fb) => (
+            <div
+              key={fb._id}
+              className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+            >
+              {/* Compact Header Row */}
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <span className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary capitalize truncate">
+                  {fb.feedback_type.replace(/_/g, " ").replace(/-/g, " ")}
+                </span>
+                <div className="flex items-center text-xs text-muted-foreground gap-1 shrink-0">
+                  <Calendar className="w-3 h-3" />
+                  <span>{formatDate(fb.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Provider Info Row */}
+              <div className="flex items-center gap-2 mb-2 text-sm">
+                <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="font-medium truncate">{fb.feedback_provider.name}</span>
+                <span className="text-xs px-1.5 py-0.5 bg-muted rounded text-muted-foreground shrink-0">
                   {fb.feedback_provider.role}
                 </span>
               </div>
+
+              {/* Compact Feedback Content */}
+              <div className="text-sm leading-relaxed border-l-2 border-primary/20 pl-3">
+                <MessageSquareText className="w-3 h-3 inline text-primary mr-1 mb-0.5" />
+                <span className="text-muted-foreground">
+                  {fb.content.split('\n').map((line, index) => (
+                    <span key={index} className={index > 0 ? 'block mt-1' : ''}>
+                      {line}
+                    </span>
+                  ))}
+                </span>
+              </div>
             </div>
-            {/* Feedback content */}
-            <div className="text-gray-800 dark:text-gray-100 text-sm leading-relaxed border-l-4 border-blue-200 dark:border-blue-700 pl-4 italic">
-              <MessageSquareText className="w-4 h-4 inline text-blue-400 dark:text-blue-300 mr-1 mb-1" />
-              {fb.content.split('\n').map((line, index) => (
-                <div key={index} className={index > 0 ? 'mt-2' : ''}>
-                  {line}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
