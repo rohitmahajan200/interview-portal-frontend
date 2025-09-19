@@ -665,40 +665,6 @@ const fetchData = useCallback(async (): Promise<void> => {
             : "Review, manage, and track candidates throughout their journey"}
         </p>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">Total</span>
-            </div>
-            <div className="text-2xl font-bold text-blue-900">{stats.total_candidates}</div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium text-green-800">Active</span>
-            </div>
-            <div className="text-2xl font-bold text-green-900">{stats.active_candidates}</div>
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Video className="h-5 w-5 text-purple-600" />
-              <span className="text-sm font-medium text-purple-800">Interviewed</span>
-            </div>
-            <div className="text-2xl font-bold text-purple-900">{stats.interviewed_candidates}</div>
-          </div>
-
-          <div className="bg-orange-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-600" />
-              <span className="text-sm font-medium text-orange-800">Pending</span>
-            </div>
-            <div className="text-2xl font-bold text-orange-900">{stats.pending_feedback_candidates}</div>
-          </div>
-        </div>
       </div>
 
       {/* Tabs for different views */}

@@ -1,4 +1,4 @@
-import React, {useState } from "react";
+import React, { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -80,29 +80,26 @@ const ManagerAllCandidates = ({
   };
 
   // Enhanced resume viewing handler with better feedback
-const handleViewResume = (candidate) => {  
-  const allDocs = 
-    candidate.documents || [];
-  
-  const resumeDoc = allDocs.find(doc => 
-    doc.document_type?.toLowerCase() === 'resume'
-  );
-  
-  if (resumeDoc && resumeDoc.document_url) {
-    window.open(resumeDoc.document_url, '_blank');
-    toast.success('Opening resume in new tab...');
-  } else {
-    toast.error('No resume available for this candidate.');
-  }
-};
+  const handleViewResume = (candidate) => {
+    const allDocs = candidate.documents || [];
 
-// Check if resume exists for styling
-const hasResume = (candidate) => {
-  const allDocs = 
-    candidate.documents || [];
-  return allDocs.some(doc => 
-    doc.document_type?.toLowerCase() === 'resume')
-};
+    const resumeDoc = allDocs.find(
+      (doc) => doc.document_type?.toLowerCase() === "resume"
+    );
+
+    if (resumeDoc && resumeDoc.document_url) {
+      window.open(resumeDoc.document_url, "_blank");
+      toast.success("Opening resume in new tab...");
+    } else {
+      toast.error("No resume available for this candidate.");
+    }
+  };
+
+  // Check if resume exists for styling
+  const hasResume = (candidate) => {
+    const allDocs = candidate.documents || [];
+    return allDocs.some((doc) => doc.document_type?.toLowerCase() === "resume");
+  };
 
   const hasActiveFilters =
     statusFilter !== "all" ||
@@ -784,7 +781,11 @@ const hasResume = (candidate) => {
               <span className="text-xs font-medium text-gray-600 min-w-[35px]">
                 Stage:
               </span>
-              <Select defaultValue="manager" value={stageFilter} onValueChange={setStageFilter}>
+              <Select
+                defaultValue="manager"
+                value={stageFilter}
+                onValueChange={setStageFilter}
+              >
                 <SelectTrigger className="h-7 text-xs min-w-[100px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -998,31 +999,32 @@ const hasResume = (candidate) => {
               key={candidate._id}
               className="overflow-hidden hover:shadow-lg transition-shadow"
             >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  {/* Candidate Info */}
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="relative">
-                      <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+              <CardHeader className="pb-3 px-3 sm:px-6 py-3 sm:py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  {/* Candidate Info - Mobile Optimized */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="relative shrink-0">
+                      <Avatar className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-18 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
                         <AvatarImage src={candidate.profile_photo_url?.url} />
-                        <AvatarFallback>
+                        <AvatarFallback className="text-xs sm:text-sm font-medium">
                           {candidate.first_name?.[0] || "U"}
                           {candidate.last_name?.[0] || "U"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="absolute -bottom-1 -right-1 flex gap-1">
+                      <div className="absolute -bottom-0.5 -right-0.5 flex gap-0.5">
                         {candidate.email_verified && (
-                          <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                            <ShieldCheckIcon className="w-2 h-2 text-white" />
+                          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full flex items-center justify-center">
+                            <ShieldCheckIcon className="w-1 h-1 sm:w-1.5 sm:h-1.5 text-white" />
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      {/* Name and Badges - Mobile Stacked */}
+                      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                         <h3
-                          className={`text-lg font-semibold whitespace-normal break-words ${
+                          className={`text-sm sm:text-base md:text-lg font-semibold break-words ${
                             candidate.status === "rejected"
                               ? "line-through text-red-600 opacity-75"
                               : candidate.status === "hired"
@@ -1033,101 +1035,120 @@ const hasResume = (candidate) => {
                           {candidate.status === "hired" && "🎉 "}
                           {candidate.first_name} {candidate.last_name || "User"}
                         </h3>
-                        <Badge className={getStatusColor(candidate.status)}>
-                          {candidate.status === "active" ? (
-                            <Circle className="w-3 h-3 mr-1" />
-                          ) : candidate.status === "hold" ? (
-                            <CirclePause className="w-3 h-3 mr-1" />
-                          ) : candidate.status === "rejected" ? (
-                            <CircleX className="w-3 h-3 mr-1" />
-                          ) : candidate.status === "hired" ? (
-                            <CircleCheck className="w-3 h-3 mr-1" />
-                          ) : null}
-                          {candidate.status}
-                        </Badge>
-                        <Badge
-                          className={getStageColor(candidate.current_stage)}
-                        >
-                          <StageCircle currentStage={candidate.current_stage} />
-                          Stage-
-                          {candidate.current_stage?.toUpperCase()}
-                        </Badge>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <Badge
+                            className={`${getStatusColor(
+                              candidate.status
+                            )} text-xs px-2 py-0.5`}
+                          >
+                            {candidate.status === "active" ? (
+                              <Circle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                            ) : candidate.status === "hold" ? (
+                              <CirclePause className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                            ) : candidate.status === "rejected" ? (
+                              <CircleX className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                            ) : candidate.status === "hired" ? (
+                              <CircleCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+                            ) : null}
+                            {candidate.status.toUpperCase()}
+                          </Badge>
+                          <Badge
+                            className={`${getStageColor(
+                              candidate.current_stage
+                            )} text-xs px-2 py-0.5`}
+                          >
+                            <StageCircle
+                              currentStage={candidate.current_stage}
+                            />
+                            Stage-{candidate.current_stage?.toUpperCase()}
+                          </Badge>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          <span className="whitespace-normal break-words">
+                      {/* Contact Info - Mobile Single Column */}
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          <span className="break-all truncate">
                             {candidate.email || "No email"}
                           </span>
                         </div>
                         {candidate.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <span className="whitespace-normal break-words">
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span className="break-words">
                               {candidate.phone}
                             </span>
                           </div>
                         )}
                       </div>
 
-                      <div className="text-sm font-medium text-blue-600 mb-2 whitespace-normal break-words">
+                      {/* Job Info */}
+                      <div className="text-xs sm:text-sm font-medium text-blue-600 break-words">
                         {candidate.applied_job?.name || "No job specified"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Quick Stats and Actions */}
-                  <div className="flex items-center gap-4 ml-4">
-                    <Button
-  variant={hasResume(candidate) ? "default" : "outline"}
-  size="sm"
-  onClick={() => handleViewResume(candidate)}
-  className="flex items-center gap-2"
-  disabled={!hasResume(candidate)}
->
-  <FileText className="h-4 w-4" />
-  {hasResume(candidate) ? "View Resume" : "No Resume"}
-</Button>
+                  {/* Quick Stats and Actions - Mobile Optimized */}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 shrink-0">
+                    {/* Mobile Stats Row */}
+                    <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4">
+                      <Button
+                        variant={hasResume(candidate) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleViewResume(candidate)}
+                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 h-8 text-xs sm:text-sm"
+                        disabled={!hasResume(candidate)}
+                      >
+                        <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">
+                          {hasResume(candidate) ? "View Resume" : "No Resume"}
+                        </span>
+                        <span className="sm:hidden">
+                          {hasResume(candidate) ? "Resume" : "No CV"}
+                        </span>
+                      </Button>
 
+                      <div className="text-right text-xs sm:text-sm">
+                        <div className="text-muted-foreground">Pending for</div>
+                        <div className="font-medium">
+                          {metrics.current_stage_duration} days
+                        </div>
+                      </div>
 
-                    <div className="text-right">
-                      <div className="text-xs text-muted-foreground">
-                        Pending for
-                      </div>
-                      <div className="text-sm font-medium">
-                        {metrics.current_stage_duration} days
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleCardExpansion(candidate._id)}
+                        disabled={isLoadingDetail}
+                        className="px-2 h-8"
+                      >
+                        {isLoadingDetail ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        ) : isExpanded ? (
+                          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                        )}
+                      </Button>
                     </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleCardExpansion(candidate._id)}
-                      disabled={isLoadingDetail}
-                    >
-                      {isLoadingDetail ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
                   </div>
                 </div>
               </CardHeader>
 
-              {/* Expanded Content */}
+              {/* Expanded Content - Mobile Optimized */}
               {isExpanded && (
-                <CardContent className="pt-0 border-t">
+                <CardContent className="pt-0 px-3 sm:px-6 pb-4 border-t">
                   {isLoadingDetail ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin mr-2" />
-                      <span>Loading candidate details...</span>
+                    <div className="flex items-center justify-center py-6 sm:py-8">
+                      <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mr-2" />
+                      <span className="text-sm sm:text-base">
+                        Loading candidate details...
+                      </span>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {/* Personal Details & Assessments */}
                       <PersonalDetailsAndAssessments
                         candidate={candidate}
@@ -1140,7 +1161,7 @@ const hasResume = (candidate) => {
                         candidateData={candidateData}
                       />
 
-                      {/* NEW: Assessment Results & Scores */}
+                      {/* Assessment Results & Scores */}
                       <AssessmentResultsSection
                         detailedCandidate={detailedCandidate}
                       />
@@ -1149,16 +1170,19 @@ const hasResume = (candidate) => {
                       <DocumentsSection candidateData={candidateData} />
 
                       <GloryDisplay glory={candidate.glory} />
-                      {/* Single card with Stage History & Internal Feedback side by side */}
-                      <div className="grid grid-cols-1 gap-4">
+
+                      {/* Stage History & Internal Feedback - Mobile Optimized */}
+                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
                         <Card>
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="flex items-center gap-2 text-base">
-                                <ArrowRight className="h-4 w-4 text-gray-600" />
-                                Stage History & Internal Feedback
-                                {/* Badge showing counts */}
-                                <div className="flex gap-2 ml-2">
+                          <CardHeader className="pb-2 px-3 sm:px-6 py-3 sm:py-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm sm:text-base">
+                                <div className="flex items-center gap-2">
+                                  <ArrowRight className="h-4 w-4 text-gray-600" />
+                                  <span>Stage History & Feedback</span>
+                                </div>
+                                {/* Badge counts - Mobile Stack */}
+                                <div className="flex gap-1.5 sm:gap-2">
                                   {detailedCandidate?.stage_history &&
                                     detailedCandidate.stage_history.length >
                                       0 && (
@@ -1192,7 +1216,7 @@ const hasResume = (candidate) => {
                                     "stageHistoryFeedback"
                                   )
                                 }
-                                className="text-xs"
+                                className="text-xs self-start sm:self-center"
                               >
                                 {isCollapsed(
                                   candidate._id,
@@ -1215,10 +1239,10 @@ const hasResume = (candidate) => {
                             candidate._id,
                             "stageHistoryFeedback"
                           ) && (
-                            <CardContent className="pt-2">
-                              {/* Grid layout to place sections side by side */}
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {/* Stage History Section */}
+                            <CardContent className="pt-2 px-3 sm:px-6 pb-4">
+                              {/* Grid layout - Single column on mobile, two columns on large screens */}
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                                {/* Stage History Section - Mobile Optimized */}
                                 <div>
                                   {detailedCandidate?.stage_history &&
                                     detailedCandidate.stage_history.length >
@@ -1232,16 +1256,16 @@ const hasResume = (candidate) => {
                                             (stage) => (
                                               <div
                                                 key={stage._id}
-                                                className="p-2 bg-gray-50 rounded border border-gray-200"
+                                                className="p-2 sm:p-3 bg-gray-50 rounded border border-gray-200"
                                               >
-                                                <div className="flex items-center justify-between mb-1">
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1">
                                                   <div className="flex items-center gap-2">
-                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs whitespace-normal break-words">
+                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs break-words">
                                                       {stage.from_stage ||
                                                         "Start"}
                                                     </span>
-                                                    <ArrowRight className="h-3 w-3 text-gray-400" />
-                                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs whitespace-normal break-words">
+                                                    <ArrowRight className="h-3 w-3 text-gray-400 shrink-0" />
+                                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs break-words">
                                                       {stage.to_stage}
                                                     </span>
                                                   </div>
@@ -1252,7 +1276,7 @@ const hasResume = (candidate) => {
                                                   </span>
                                                 </div>
                                                 {stage.remarks && (
-                                                  <div className="text-xs text-gray-600 italic whitespace-normal break-words">
+                                                  <div className="text-xs text-gray-600 italic break-words">
                                                     "{stage.remarks}"
                                                   </div>
                                                 )}
@@ -1264,7 +1288,7 @@ const hasResume = (candidate) => {
                                     )}
                                 </div>
 
-                                {/* Internal Feedback Section */}
+                                {/* Internal Feedback Section - Mobile Optimized */}
                                 <div>
                                   {candidateData.internal_feedback &&
                                     candidateData.internal_feedback.length >
@@ -1278,22 +1302,22 @@ const hasResume = (candidate) => {
                                             (feedback) => (
                                               <div
                                                 key={feedback._id}
-                                                className="p-2 bg-orange-50 rounded border border-orange-100"
+                                                className="p-2 sm:p-3 bg-orange-50 rounded border border-orange-100"
                                               >
-                                                <div className="flex items-center justify-between mb-1">
-                                                  <span className="text-sm font-medium text-orange-800 whitespace-normal break-words">
+                                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-2">
+                                                  <span className="text-sm font-medium text-orange-800 break-words">
                                                     {feedback.feedback_by.name}
                                                   </span>
                                                   <Badge
                                                     variant="outline"
-                                                    className="text-xs"
+                                                    className="text-xs self-start sm:self-center"
                                                   >
                                                     {formatDate(
                                                       feedback.feedback_at
                                                     )}
                                                   </Badge>
                                                 </div>
-                                                <div className="text-sm text-gray-700 whitespace-normal break-words">
+                                                <div className="text-xs sm:text-sm text-gray-700 break-words">
                                                   {feedback.feedback}
                                                 </div>
                                               </div>

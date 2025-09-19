@@ -888,7 +888,6 @@ const JobManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
-      <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -959,6 +958,7 @@ const JobManagement = () => {
           </Card>
         </div>
 
+        {/* Change Networks Integration Section */}
         {/* Change Networks Integration Section */}
         {showMissingJobsSection && (
           <Card className="mb-6 sm:mb-8">
@@ -1047,6 +1047,36 @@ const JobManagement = () => {
           </Card>
         )}
 
+{/* Main Interface */}
+<Card className="dark:bg-card dark:border-gray-700">
+  <CardHeader className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 p-4 sm:p-6">
+    <h2 className="text-lg sm:text-xl font-semibold text-foreground">Job Operations</h2>
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        onClick={openCreateDialog}
+        size="sm"
+        className="flex-1 sm:flex-none h-9"
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        <span className="sm:hidden">Add</span>
+        <span className="hidden sm:inline">Add Job</span>
+      </Button>
+      
+      <Button
+        onClick={syncWithChangeNetworks}
+        variant="outline"
+        size="sm"
+        disabled={loadingMissingJobs}
+        className="flex-1 sm:flex-none h-9"
+      >
+        {loadingMissingJobs ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+        ) : (
+          <RefreshCw className="h-4 w-4 mr-2" />
+        )}
+        <span className="sm:hidden">Sync</span>
+        <span className="hidden sm:inline">Sync with Change Networks</span>
+      </Button>
         {/* Main Interface */}
         <Card>
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
@@ -1078,361 +1108,359 @@ const JobManagement = () => {
                 <span className="sm:hidden">Sync</span>
               </Button>
 
-              {selectedJobs.length > 0 && (
-                <Button
-                  onClick={() => setShowBulkDeleteDialog(true)}
-                  variant="destructive"
-                  size="sm"
-                  className="h-8 sm:h-9"
-                >
-                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">
-                    Delete ({selectedJobs.length})
-                  </span>
-                  <span className="sm:hidden">Del ({selectedJobs.length})</span>
-                </Button>
-              )}
-              <Button
-                onClick={refreshData}
-                variant="outline"
-                size="sm"
-                disabled={loading}
-                className="h-8 sm:h-9"
-              >
-                <RefreshCw
-                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
-                    loading ? "animate-spin" : ""
-                  }`}
-                />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Search and Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search jobs by name or description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-9"
-                />
-              </div>
-              <div className="flex gap-2 sm:gap-3">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-32 sm:w-40 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="createdAt">Created</SelectItem>
-                    <SelectItem value="updatedAt">Updated</SelectItem>
-                    <SelectItem value="name">Name</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sortOrder} onValueChange={setSortOrder}>
-                  <SelectTrigger className="w-20 sm:w-24 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desc">Desc</SelectItem>
-                    <SelectItem value="asc">Asc</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            {/* Select All Checkbox */}
-            {filteredJobs.length > 0 && (
-              <div className="flex items-center space-x-2 mb-4">
-                <Checkbox
-                  checked={
-                    selectedJobs.length === filteredJobs.length &&
-                    filteredJobs.length > 0
-                  }
-                  onCheckedChange={handleSelectAll}
-                />
-                <Label className="text-sm">
-                  Select All ({filteredJobs.length})
-                </Label>
-              </div>
-            )}
-            
-            {/* Jobs List */}
-            <div className="space-y-3 sm:space-y-4">
-              {filteredJobs.length === 0 ? (
-                <div className="text-center py-12">
-                  <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    {searchTerm
-                      ? "No jobs match your search."
-                      : "No jobs available. Create your first job!"}
-                  </p>
-                  {!searchTerm && (
-                    <Button
-                      onClick={openCreateDialog}
-                      className="mt-4"
-                      size="sm"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Job
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                filteredJobs.map((job) => {
-                  const layout = getOptimalLayout(job.long_description);
+      {selectedJobs.length > 0 && (
+        <Button
+          onClick={() => setShowBulkDeleteDialog(true)}
+          variant="destructive"
+          size="sm"
+          className="flex-1 sm:flex-none h-9"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          <span className="sm:hidden">Del ({selectedJobs.length})</span>
+          <span className="hidden sm:inline">Delete ({selectedJobs.length})</span>
+        </Button>
+      )}
+      
+      <Button
+        onClick={refreshData}
+        variant="outline"
+        size="sm"
+        disabled={loading}
+        className="h-9 w-9 p-0 sm:w-auto sm:p-2"
+      >
+        <RefreshCw
+          className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+        />
+        <span className="hidden sm:inline ml-2">Refresh</span>
+      </Button>
+    </div>
+  </CardHeader>
+  
+  <CardContent className="p-4 sm:p-6">
+    {/* Search and Filter Controls */}
+    <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-4 mb-4 sm:mb-6">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search jobs by name or description..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-10 dark:bg-background dark:border-gray-700 dark:text-foreground"
+        />
+      </div>
+      <div className="flex gap-2 sm:gap-3">
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="flex-1 sm:w-40 h-10 dark:bg-background dark:border-gray-700 dark:text-foreground">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="dark:bg-background dark:border-gray-700">
+            <SelectItem value="createdAt" className="dark:text-foreground dark:focus:bg-gray-800">Created</SelectItem>
+            <SelectItem value="updatedAt" className="dark:text-foreground dark:focus:bg-gray-800">Updated</SelectItem>
+            <SelectItem value="name" className="dark:text-foreground dark:focus:bg-gray-800">Name</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortOrder} onValueChange={setSortOrder}>
+          <SelectTrigger className="flex-1 sm:w-24 h-10 dark:bg-background dark:border-gray-700 dark:text-foreground">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="dark:bg-background dark:border-gray-700">
+            <SelectItem value="desc" className="dark:text-foreground dark:focus:bg-gray-800">Desc</SelectItem>
+            <SelectItem value="asc" className="dark:text-foreground dark:focus:bg-gray-800">Asc</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+    
+    {/* Select All Checkbox */}
+    {filteredJobs.length > 0 && (
+      <div className="flex items-center space-x-2 mb-4">
+        <Checkbox
+          checked={
+            selectedJobs.length === filteredJobs.length &&
+            filteredJobs.length > 0
+          }
+          onCheckedChange={handleSelectAll}
+          className="dark:border-gray-600 dark:data-[state=checked]:bg-primary"
+        />
+        <Label className="text-sm dark:text-foreground">
+          Select All ({filteredJobs.length})
+        </Label>
+      </div>
+    )}
+    
+    {/* Jobs List */}
+    <div className="space-y-3 sm:space-y-4">
+      {filteredJobs.length === 0 ? (
+        <div className="text-center py-8 sm:py-12">
+          <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm sm:text-base">
+            {searchTerm
+              ? "No jobs match your search."
+              : "No jobs available. Create your first job!"}
+          </p>
+          {!searchTerm && (
+            <Button
+              onClick={openCreateDialog}
+              className="mt-4"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Job
+            </Button>
+          )}
+        </div>
+      ) : (
+        filteredJobs.map((job) => {
+          const layout = getOptimalLayout(job.long_description);
+          return (
+            <Card
+              key={job._id}
+              className="hover:shadow-md dark:hover:shadow-gray-900/25 transition-shadow dark:bg-card dark:border-gray-700"
+            >
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    checked={selectedJobs.includes(job._id)}
+                    onCheckedChange={(checked) =>
+                      handleJobSelect(job._id, !!checked)
+                    }
+                    className="mt-1 dark:border-gray-600 dark:data-[state=checked]:bg-primary"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col space-y-2 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 mb-3">
+                      <h3 className="font-semibold text-foreground text-base sm:text-lg break-words pr-2">
+                        {job.name}
+                        {job.gradingParameters &&
+                          job.gradingParameters.length > 0 && (
+                            <span className="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 rounded-full">
+                              <Award className="h-3 w-3 mr-1" />
+                              {job.gradingParameters.length} params
+                            </span>
+                          )}
+                      </h3>
+                      <div className="flex items-center space-x-1 self-start">
+                        <Button
+                          onClick={() => openViewDialog(job)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 dark:hover:bg-gray-700"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => openEditDialog(job)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 dark:hover:bg-gray-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setEditingJob(job);
+                            setShowDeleteDialog(true);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 dark:hover:bg-red-900/20"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
 
-                  return (
-                    <Card
-                      key={job._id}
-                      className="hover:shadow-md transition-shadow"
-                    >
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            checked={selectedJobs.includes(job._id)}
-                            onCheckedChange={(checked) =>
-                              handleJobSelect(job._id, !!checked)
-                            }
-                            className="mt-1"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
-                              <h3 className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg truncate pr-2">
-                                {job.name}
-                                {job.gradingParameters &&
-                                  job.gradingParameters.length > 0 && (
-                                    <span className="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                                      <Award className="h-3 w-3 mr-1" />
-                                      {job.gradingParameters.length} params
-                                    </span>
-                                  )}
-                              </h3>
-                              <div className="flex items-center space-x-1 mt-2 sm:mt-0">
-                                <Button
-                                  onClick={() => openViewDialog(job)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                                <Button
-                                  onClick={() => openEditDialog(job)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                                <Button
-                                  onClick={() => {
-                                    setEditingJob(job);
-                                    setShowDeleteDialog(true);
-                                  }}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                              </div>
-                            </div>
+                    <p className="text-muted-foreground text-xs sm:text-sm mb-3 break-words line-clamp-2 sm:line-clamp-none">
+                      {getContentPreview(job.description, 120)}
+                    </p>
 
-                            <p className="text-muted-foreground text-xs sm:text-sm mb-3 break-words">
-                              {getContentPreview(job.description, 120)}
-                            </p>
+                    {/* Display Grading Parameters */}
+                    {job.gradingParameters &&
+                      job.gradingParameters.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2">
+                            Glory Parameters:
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {job.gradingParameters
+                              .slice(0, 5)
+                              .map((param, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded border dark:border-purple-800"
+                                >
+                                  {param}
+                                </span>
+                              ))}
+                            {job.gradingParameters.length > 5 && (
+                              <span className="text-xs text-muted-foreground self-center">
+                                +{job.gradingParameters.length - 5} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
-                            {/* Display Grading Parameters */}
-                            {job.gradingParameters &&
-                              job.gradingParameters.length > 0 && (
-                                <div className="mb-3">
-                                  <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">
-                                    Glory Parameters:
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {job.gradingParameters
-                                      .slice(0, 5)
-                                      .map((param, index) => (
-                                        <span
-                                          key={index}
-                                          className="inline-flex items-center px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded"
-                                        >
-                                          {param}
-                                        </span>
-                                      ))}
-                                    {job.gradingParameters.length > 5 && (
-                                      <span className="text-xs text-muted-foreground">
-                                        +{job.gradingParameters.length - 5} more
-                                      </span>
+                    {/* Unified Bullet Display - Mobile Optimized */}
+                    {job.long_description &&
+                      typeof job.long_description === "object" && (
+                        <div className="mb-3">
+                          <div className="space-y-3">
+                            {/* Bullet Sections - render as bullets */}
+                            {Object.entries(job.long_description)
+                              .filter(([_, value]) =>
+                                Array.isArray(value)
+                              )
+                              .slice(0, 2)
+                              .map(
+                                ([sectionName, bullets]: [
+                                  string,
+                                  any
+                                ]) => (
+                                  <div
+                                    key={sectionName}
+                                    className="space-y-1.5"
+                                  >
+                                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 capitalize">
+                                      {sectionName}:
+                                    </div>
+                                    <ul className="space-y-1 ml-2">
+                                      {bullets
+                                        .slice(0, window.innerWidth < 640 ? 2 : 3)
+                                        .map(
+                                          (
+                                            bullet: string,
+                                            index: number
+                                          ) => (
+                                            <li
+                                              key={index}
+                                              className="flex items-start text-xs sm:text-sm"
+                                            >
+                                              <span className="text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0">
+                                                •
+                                              </span>
+                                              <span className="text-foreground break-words">
+                                                {bullet.length > (window.innerWidth < 640 ? 40 : 50)
+                                                  ? `${bullet.substring(
+                                                      0,
+                                                      window.innerWidth < 640 ? 40 : 50
+                                                    )}...`
+                                                  : bullet}
+                                              </span>
+                                            </li>
+                                          )
+                                        )}
+                                    </ul>
+                                    {bullets.length > (window.innerWidth < 640 ? 2 : 3) && (
+                                      <div className="text-xs text-muted-foreground ml-4">
+                                        +{bullets.length - (window.innerWidth < 640 ? 2 : 3)} more
+                                        points
+                                      </div>
                                     )}
                                   </div>
-                                </div>
+                                )
                               )}
 
-                            {/* Unified Bullet Display - Both key-value pairs AND bullet sections as bullets */}
-                            {job.long_description &&
-                              typeof job.long_description === "object" && (
-                                <div className="mb-3">
-                                  <div className="space-y-2">
-                                    {/* Bullet Sections - render as bullets */}
-                                    {Object.entries(job.long_description)
-                                      .filter(([_, value]) =>
-                                        Array.isArray(value)
-                                      )
-                                      .slice(0, 2)
-                                      .map(
-                                        ([sectionName, bullets]: [
-                                          string,
-                                          any
-                                        ]) => (
-                                          <div
-                                            key={sectionName}
-                                            className="space-y-1"
-                                          >
-                                            <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 capitalize mb-1">
-                                              {sectionName}:
-                                            </div>
-                                            <ul className="space-y-1 ml-2">
-                                              {bullets
-                                                .slice(0, 3)
-                                                .map(
-                                                  (
-                                                    bullet: string,
-                                                    index: number
-                                                  ) => (
-                                                    <li
-                                                      key={index}
-                                                      className="flex items-start text-sm"
-                                                    >
-                                                      <span className="text-blue-600 mr-2 mt-0.5 flex-shrink-0">
-                                                        •
-                                                      </span>
-                                                      <span className="text-gray-900 dark:text-gray-100 break-words">
-                                                        {bullet.length > 50
-                                                          ? `${bullet.substring(
-                                                              0,
-                                                              50
-                                                            )}...`
-                                                          : bullet}
-                                                      </span>
-                                                    </li>
-                                                  )
-                                                )}
-                                            </ul>
-                                            {bullets.length > 3 && (
-                                              <div className="text-xs text-muted-foreground ml-4">
-                                                +{bullets.length - 3} more
-                                                points
-                                              </div>
-                                            )}
-                                          </div>
-                                        )
-                                      )}
-
-                                    {/* Key-Value Pairs - render as bullets too */}
+                            {/* Key-Value Pairs - render as bullets too */}
+                            {Object.entries(
+                              job.long_description
+                            ).filter(
+                              ([_, value]) => !Array.isArray(value)
+                            ).length > 0 && (
+                              <div className="space-y-1.5">
+                                <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                  Extra Details:
+                                </div>
+                                <ul className="space-y-1 ml-2">
+                                  {Object.entries(job.long_description)
+                                    .filter(
+                                      ([_, value]) =>
+                                        !Array.isArray(value)
+                                    )
+                                    .slice(0, window.innerWidth < 640 ? 2 : 4)
+                                    .map(([key, value]) => (
+                                      <li
+                                        key={key}
+                                        className="flex items-start text-xs sm:text-sm"
+                                      >
+                                        <span className="text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0">
+                                          •
+                                        </span>
+                                        <span className="text-foreground break-words">
+                                          <span className="font-medium capitalize">
+                                            {key
+                                              .replace(
+                                                /([A-Z])/g,
+                                                " $1"
+                                              )
+                                              .trim()}
+                                            :
+                                          </span>{" "}
+                                          {String(value).length > (window.innerWidth < 640 ? 30 : 40)
+                                            ? `${String(
+                                                value
+                                              ).substring(0, window.innerWidth < 640 ? 30 : 40)}...`
+                                            : String(value)}
+                                        </span>
+                                      </li>
+                                    ))}
+                                </ul>
+                                {Object.entries(
+                                  job.long_description
+                                ).filter(
+                                  ([_, value]) => !Array.isArray(value)
+                                ).length > (window.innerWidth < 640 ? 2 : 4) && (
+                                  <div className="text-xs text-muted-foreground ml-4">
+                                    +
                                     {Object.entries(
                                       job.long_description
                                     ).filter(
-                                      ([_, value]) => !Array.isArray(value)
-                                    ).length > 0 && (
-                                      <div className="space-y-1">
-                                        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                                          Extra Details:
-                                        </div>
-                                        <ul className="space-y-1 ml-2">
-                                          {Object.entries(job.long_description)
-                                            .filter(
-                                              ([_, value]) =>
-                                                !Array.isArray(value)
-                                            )
-                                            .slice(0, 4)
-                                            .map(([key, value]) => (
-                                              <li
-                                                key={key}
-                                                className="flex items-start text-sm"
-                                              >
-                                                <span className="text-blue-600 mr-2 mt-0.5 flex-shrink-0">
-                                                  •
-                                                </span>
-                                                <span className="text-gray-900 dark:text-gray-100 break-words">
-                                                  <span className="font-medium capitalize">
-                                                    {key
-                                                      .replace(
-                                                        /([A-Z])/g,
-                                                        " $1"
-                                                      )
-                                                      .trim()}
-                                                    :
-                                                  </span>{" "}
-                                                  {String(value).length > 40
-                                                    ? `${String(
-                                                        value
-                                                      ).substring(0, 40)}...`
-                                                    : String(value)}
-                                                </span>
-                                              </li>
-                                            ))}
-                                        </ul>
-                                        {Object.entries(
-                                          job.long_description
-                                        ).filter(
-                                          ([_, value]) => !Array.isArray(value)
-                                        ).length > 4 && (
-                                          <div className="text-xs text-muted-foreground ml-4">
-                                            +
-                                            {Object.entries(
-                                              job.long_description
-                                            ).filter(
-                                              ([_, value]) =>
-                                                !Array.isArray(value)
-                                            ).length - 4}{" "}
-                                            more details
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* View More Button */}
-                                    {(Object.keys(job.long_description).filter(
-                                      (key) =>
-                                        Array.isArray(job.long_description[key])
-                                    ).length > 2 ||
-                                      Object.keys(job.long_description).filter(
-                                        (key) =>
-                                          !Array.isArray(
-                                            job.long_description[key]
-                                          )
-                                      ).length > 4) && (
-                                      <div className="text-center mt-3">
-                                        <button
-                                          onClick={() => openViewDialog(job)}
-                                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full"
-                                        >
-                                          View all details
-                                        </button>
-                                      </div>
-                                    )}
+                                      ([_, value]) =>
+                                        !Array.isArray(value)
+                                    ).length - (window.innerWidth < 640 ? 2 : 4)}{" "}
+                                    more details
                                   </div>
-                                </div>
-                              )}
+                                )}
+                              </div>
+                            )}
 
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground space-y-1 sm:space-y-0">
-                              <span>Created: {formatDate(job.createdAt)}</span>
-                              <span>Updated: {formatDate(job.updatedAt)}</span>
-                            </div>
+                            {/* View More Button */}
+                            {(Object.keys(job.long_description).filter(
+                              (key) =>
+                                Array.isArray(job.long_description[key])
+                            ).length > 2 ||
+                              Object.keys(job.long_description).filter(
+                                (key) =>
+                                  !Array.isArray(
+                                    job.long_description[key]
+                                  )
+                              ).length > (window.innerWidth < 640 ? 2 : 4)) && (
+                              <div className="text-center mt-3">
+                                <button
+                                  onClick={() => openViewDialog(job)}
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full border dark:border-blue-800 transition-colors"
+                                >
+                                  View all details
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                      )}
+
+                    <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 text-xs text-muted-foreground pt-2 border-t dark:border-gray-700">
+                      <span>Created: {formatDate(job.createdAt)}</span>
+                      <span>Updated: {formatDate(job.updatedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })
+      )}
+    </div>
+  </CardContent>
+</Card>
 
       {/* Create Job Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -1474,722 +1502,231 @@ const JobManagement = () => {
               />
             </div>
 
-            {/* Grading Parameters Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">
-                  <Award className="inline h-4 w-4 mr-2" />
-                  Add Glory Parameters
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addGradingParameter}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Parameter
-                </Button>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
-                {gradingParameters.map((param, index) => (
-                  <div key={param.id} className="flex gap-2 items-center">
-                    <Input
-                      placeholder="Parameter name (e.g., Technical Skills, Communication, Problem Solving)"
-                      value={param.name}
-                      onChange={(e) =>
-                        updateGradingParameter(param.id, e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    {gradingParameters.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeGradingParameter(param.id)}
-                        className="p-2 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Key-Value Pairs Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">
-                  Key-Value Details
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addKeyValuePair}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Field
-                </Button>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {longDescriptionPairs.map((pair, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <Input
-                      placeholder="Field name (e.g., Salary, Location)"
-                      value={pair.key}
-                      onChange={(e) =>
-                        updateKeyValuePair(index, "key", e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Value"
-                      value={pair.value}
-                      onChange={(e) =>
-                        updateKeyValuePair(index, "value", e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    {longDescriptionPairs.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeKeyValuePair(index)}
-                        className="p-2 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bullet Sections */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">
-                  Bullet Point Sections
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addBulletSection}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Section
-                </Button>
-              </div>
-              <div className="space-y-3 max-h-60 overflow-y-auto">
-                {bulletSections.map((section) => (
-                  <div
-                    key={section.id}
-                    className="border rounded-lg p-3 space-y-3 bg-gray-50 dark:bg-gray-800"
-                  >
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        placeholder="Section name (e.g., Responsibilities, Requirements, Benefits)"
-                        value={section.name}
-                        onChange={(e) =>
-                          updateBulletSectionName(section.id, e.target.value)
-                        }
-                        className="flex-1 font-medium"
-                      />
-                      {bulletSections.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeBulletSection(section.id)}
-                          className="p-2 text-red-600 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="space-y-2 ml-2">
-                      {section.bullets.map((bullet, bulletIndex) => (
-                        <div key={bullet.id} className="flex gap-2 items-start">
-                          <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground">
-                            •
-                          </div>
-                          <Textarea
-                            placeholder={`Point ${bulletIndex + 1}`}
-                            value={bullet.text}
-                            onChange={(e) =>
-                              updateBulletInSection(
-                                section.id,
-                                bullet.id,
-                                e.target.value
-                              )
-                            }
-                            className="flex-1 min-h-[36px] resize-none"
-                            rows={1}
-                            onInput={(e) => {
-                              const target = e.target as HTMLTextAreaElement;
-                              target.style.height = "auto";
-                              target.style.height = target.scrollHeight + "px";
-                            }}
-                          />
-                          {section.bullets.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                removeBulletFromSection(section.id, bullet.id)
-                              }
-                              className="p-2 text-red-600 hover:text-red-700 mt-1"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addBulletToSection(section.id)}
-                        className="ml-6 mt-2"
-                      >
-                        <PlusCircle className="h-3 w-3 mr-1" />
-                        Add Point
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateDialog(false)}
-              disabled={isCreating}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCreateJob} disabled={isCreating}>
-              {isCreating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Create Job
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Job Dialog - Similar to Create but with editing state */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto mx-4">
-          <DialogHeader>
-            <DialogTitle>Edit Job</DialogTitle>
-            <DialogDescription>
-              Update the job posting details and glory parameters
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-job-name">Job Name *</Label>
+      {/* Grading Parameters Section - Mobile Optimized */}
+      <div className="space-y-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <Label className="text-sm sm:text-base font-semibold text-purple-700 dark:text-purple-400">
+            <Award className="inline h-4 w-4 mr-2" />
+            Add Glory Parameters
+          </Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addGradingParameter}
+            className="w-full sm:w-auto"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Parameter
+          </Button>
+        </div>
+        <div className="space-y-2 max-h-48 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border dark:border-purple-800">
+          {gradingParameters.map((param, index) => (
+            <div key={param.id} className="flex gap-2 items-center">
               <Input
-                id="edit-job-name"
-                value={formData.name}
+                placeholder="Parameter name (e.g., Technical Skills, Communication, Problem Solving)"
+                value={param.name}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  updateGradingParameter(param.id, e.target.value)
                 }
-                placeholder="Enter job title"
+                className="flex-1 text-sm dark:bg-background dark:border-gray-700 dark:text-foreground"
               />
+              {gradingParameters.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeGradingParameter(param.id)}
+                  className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-job-description">Description *</Label>
-              <Textarea
-                id="edit-job-description"
-                value={formData.description}
+          ))}
+        </div>
+      </div>
+
+      {/* Key-Value Pairs Section - Mobile Optimized */}
+      <div className="space-y-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <Label className="text-sm sm:text-base font-semibold text-foreground">
+            Key-Value Details
+          </Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addKeyValuePair}
+            className="w-full sm:w-auto"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Field
+          </Button>
+        </div>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {longDescriptionPairs.map((pair, index) => (
+            <div key={index} className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:gap-2 sm:items-center">
+              <Input
+                placeholder="Field name (e.g., Salary, Location)"
+                value={pair.key}
                 onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
+                  updateKeyValuePair(index, "key", e.target.value)
                 }
-                placeholder="Enter job description"
-                rows={4}
+                className="flex-1 dark:bg-background dark:border-gray-700 dark:text-foreground"
               />
-            </div>
-
-            {/* Grading Parameters Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold text-purple-700 dark:text-purple-400">
-                  <Award className="inline h-4 w-4 mr-2" />
-                  Glory Parameters (A+, A, B, C, D, E)
-                </Label>
+              <Input
+                placeholder="Value"
+                value={pair.value}
+                onChange={(e) =>
+                  updateKeyValuePair(index, "value", e.target.value)
+                }
+                className="flex-1 dark:bg-background dark:border-gray-700 dark:text-foreground"
+              />
+              {longDescriptionPairs.length > 1 && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  onClick={addGradingParameter}
+                  onClick={() => removeKeyValuePair(index)}
+                  className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 self-start sm:self-auto"
                 >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Parameter
+                  <X className="h-4 w-4" />
                 </Button>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
-                {gradingParameters.map((param, index) => (
-                  <div key={param.id} className="flex gap-2 items-center">
-                    <Input
-                      placeholder="Parameter name (e.g., Technical Skills, Communication, Problem Solving)"
-                      value={param.name}
-                      onChange={(e) =>
-                        updateGradingParameter(param.id, e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    {gradingParameters.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeGradingParameter(param.id)}
-                        className="p-2 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
+              )}
             </div>
+          ))}
+        </div>
+      </div>
 
-            {/* Key-Value Pairs Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">
-                  Key-Value Details
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addKeyValuePair}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Field
-                </Button>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {longDescriptionPairs.map((pair, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <Input
-                      placeholder="Field name (e.g., Salary, Location)"
-                      value={pair.key}
-                      onChange={(e) =>
-                        updateKeyValuePair(index, "key", e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Value"
-                      value={pair.value}
-                      onChange={(e) =>
-                        updateKeyValuePair(index, "value", e.target.value)
-                      }
-                      className="flex-1"
-                    />
-                    {longDescriptionPairs.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeKeyValuePair(index)}
-                        className="p-2 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bullet Sections */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">
-                  Bullet Point Sections
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addBulletSection}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Section
-                </Button>
-              </div>
-              <div className="space-y-3 max-h-60 overflow-y-auto">
-                {bulletSections.map((section, sectionIndex) => (
-                  <div
-                    key={section.id}
-                    className="border rounded-lg p-3 space-y-3 bg-gray-50 dark:bg-gray-800"
+      {/* Bullet Sections - Mobile Optimized */}
+      <div className="space-y-3">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <Label className="text-sm sm:text-base font-semibold text-foreground">
+            Bullet Point Sections
+          </Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addBulletSection}
+            className="w-full sm:w-auto"
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Section
+          </Button>
+        </div>
+        <div className="space-y-3 max-h-60 overflow-y-auto">
+          {bulletSections.map((section) => (
+            <div
+              key={section.id}
+              className="border rounded-lg p-3 space-y-3 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
+            >
+              <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:gap-2 sm:items-center">
+                <Input
+                  placeholder="Section name (e.g., Responsibilities, Requirements, Benefits)"
+                  value={section.name}
+                  onChange={(e) =>
+                    updateBulletSectionName(section.id, e.target.value)
+                  }
+                  className="flex-1 font-medium dark:bg-background dark:border-gray-700 dark:text-foreground"
+                />
+                {bulletSections.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeBulletSection(section.id)}
+                    className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 self-start sm:self-auto"
                   >
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        placeholder="Section name (e.g., Responsibilities, Requirements, Benefits)"
-                        value={section.name}
-                        onChange={(e) =>
-                          updateBulletSectionName(section.id, e.target.value)
-                        }
-                        className="flex-1 font-medium"
-                      />
-                      {bulletSections.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeBulletSection(section.id)}
-                          className="p-2 text-red-600 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-2 ml-2">
+                {section.bullets.map((bullet, bulletIndex) => (
+                  <div key={bullet.id} className="flex gap-2 items-start">
+                    <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground shrink-0">
+                      •
                     </div>
-
-                    <div className="space-y-2 ml-2">
-                      {section.bullets.map((bullet, bulletIndex) => (
-                        <div key={bullet.id} className="flex gap-2 items-start">
-                          <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground">
-                            •
-                          </div>
-                          <Textarea
-                            placeholder={`Point ${bulletIndex + 1}`}
-                            value={bullet.text}
-                            onChange={(e) =>
-                              updateBulletInSection(
-                                section.id,
-                                bullet.id,
-                                e.target.value
-                              )
-                            }
-                            className="flex-1 min-h-[36px] resize-none"
-                            rows={1}
-                            onInput={(e) => {
-                              const target = e.target as HTMLTextAreaElement;
-                              target.style.height = "auto";
-                              target.style.height = target.scrollHeight + "px";
-                            }}
-                          />
-                          {section.bullets.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                removeBulletFromSection(section.id, bullet.id)
-                              }
-                              className="p-2 text-red-600 hover:text-red-700 mt-1"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-
+                    <Textarea
+                      placeholder={`Point ${bulletIndex + 1}`}
+                      value={bullet.text}
+                      onChange={(e) =>
+                        updateBulletInSection(
+                          section.id,
+                          bullet.id,
+                          e.target.value
+                        )
+                      }
+                      className="flex-1 min-h-[36px] resize-none dark:bg-background dark:border-gray-700 dark:text-foreground"
+                      rows={1}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = "auto";
+                        target.style.height = target.scrollHeight + "px";
+                      }}
+                    />
+                    {section.bullets.length > 1 && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => addBulletToSection(section.id)}
-                        className="ml-6 mt-2"
+                        onClick={() =>
+                          removeBulletFromSection(section.id, bullet.id)
+                        }
+                        className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 mt-1 shrink-0"
                       >
-                        <PlusCircle className="h-3 w-3 mr-1" />
-                        Add Point
+                        <X className="h-4 w-4" />
                       </Button>
-                    </div>
+                    )}
                   </div>
                 ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addBulletToSection(section.id)}
+                  className="ml-6 mt-2 w-full sm:w-auto"
+                >
+                  <PlusCircle className="h-3 w-3 mr-1" />
+                  Add Point
+                </Button>
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditDialog(false);
-                setEditingJob(null);
-                resetForm();
-              }}
-              disabled={isEditing}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleEditJob} disabled={isEditing}>
-              {isEditing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Update Job
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Job Dialog */}
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto mx-4">
-          <DialogHeader>
-            <DialogTitle className="text-xl">{viewingJob?.name}</DialogTitle>
-            <DialogDescription>Job details and information</DialogDescription>
-          </DialogHeader>
-          {viewingJob && (
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label className="font-semibold">Description</Label>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {typeof viewingJob.description === "string"
-                      ? viewingJob.description
-                      : JSON.stringify(viewingJob.description, null, 2)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Display Grading Parameters */}
-              {viewingJob.gradingParameters &&
-                viewingJob.gradingParameters.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="font-semibold text-purple-700 dark:text-purple-400">
-                      <Award className="inline h-4 w-4 mr-2" />
-                      Grading Parameters
-                    </Label>
-                    <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-md">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {viewingJob.gradingParameters.map((param, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center p-2 bg-white dark:bg-purple-800/30 rounded border"
-                          >
-                            <Star className="h-3 w-3 text-purple-600 mr-2" />
-                            <span className="text-sm font-medium">{param}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-2">
-                        Candidates will be graded on these parameters using A+,
-                        A, B, C, D, E scale
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              {viewingJob.long_description && (
-                <div className="space-y-4">
-                  {/* Unified Bullet Display in View Dialog */}
-                  <div className="space-y-2">
-                    <Label className="font-semibold">Additional Details</Label>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                      <div className="space-y-4">
-                        {/* Key-Value Pairs as Bullets */}
-                        {Object.entries(viewingJob.long_description).filter(
-                          ([_, value]) => !Array.isArray(value)
-                        ).length > 0 && (
-                          <div className="space-y-2">
-                            <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">
-                              Additional Details
-                            </div>
-                            <ul className="space-y-2 ml-2">
-                              {Object.entries(viewingJob.long_description)
-                                .filter(([_, value]) => !Array.isArray(value))
-                                .map(([key, value]) => (
-                                  <li key={key} className="flex items-start">
-                                    <span className="text-green-600 mr-2 mt-1 flex-shrink-0">
-                                      •
-                                    </span>
-                                    <span className="text-sm break-words flex-1">
-                                      <span className="font-medium capitalize">
-                                        {key.replace(/([A-Z])/g, " $1").trim()}:
-                                      </span>{" "}
-                                      {String(value)}
-                                    </span>
-                                  </li>
-                                ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Bullet Sections */}
-                        {Object.entries(viewingJob.long_description)
-                          .filter(([_, value]) => Array.isArray(value))
-                          .map(([sectionName, bullets]: [string, any]) => (
-                            <div key={sectionName} className="space-y-2">
-                              <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 capitalize border-b pb-1">
-                                {sectionName}
-                              </div>
-                              <ul className="space-y-2 ml-2">
-                                {bullets.map(
-                                  (bullet: string, index: number) => (
-                                    <li
-                                      key={index}
-                                      className="flex items-start"
-                                    >
-                                      <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">
-                                        •
-                                      </span>
-                                      <span className="text-sm break-words flex-1">
-                                        {bullet}
-                                      </span>
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
-                <div>
-                  <Label className="font-semibold text-xs">Created</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(viewingJob.createdAt)}
-                  </p>
-                </div>
-                <div>
-                  <Label className="font-semibold text-xs">Last Updated</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(viewingJob.updatedAt)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowViewDialog(false)}>
-              Close
-            </Button>
-            {viewingJob && (
-              <Button
-                onClick={() => {
-                  setShowViewDialog(false);
-                  openEditDialog(viewingJob);
-                }}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Job
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="mx-4">
-          <DialogHeader>
-            <DialogTitle>Delete Job</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{editingJob?.name}"? This action
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setEditingJob(null);
-              }}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => editingJob && handleDeleteJob(editingJob._id)}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Confirmation Dialog */}
-      <Dialog
-        open={showBulkDeleteDialog}
-        onOpenChange={setShowBulkDeleteDialog}
-      >
-        <DialogContent className="mx-4">
-          <DialogHeader>
-            <DialogTitle>Delete Multiple Jobs</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {selectedJobs.length} selected
-              jobs? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowBulkDeleteDialog(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete {selectedJobs.length} Jobs
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ))}
+        </div>
+      </div>
     </div>
+    <DialogFooter className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+      <Button
+        variant="outline"
+        onClick={() => setShowCreateDialog(false)}
+        disabled={isCreating}
+        className="w-full sm:w-auto"
+      >
+        Cancel
+      </Button>
+      <Button onClick={handleCreateJob} disabled={isCreating} className="w-full sm:w-auto">
+        {isCreating ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            Creating...
+          </>
+        ) : (
+          <>
+            <Save className="h-4 w-4 mr-2" />
+            Create Job
+          </>
+        )}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+ </div>
+ </div>
   );
 };
 

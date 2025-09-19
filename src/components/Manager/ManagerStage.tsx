@@ -589,287 +589,296 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
         key={candidate._id}
         className="overflow-hidden hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500"
       >
-        <CardHeader className="pb-2 px-4 py-3">
-          <div className="flex items-start justify-between gap-3">
-            {/* Left: Enhanced Candidate Info */}
-            <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="relative shrink-0">
-                <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
-                  <AvatarImage src={candidate.profile_photo_url?.url} />
-                  <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                    {candidate.first_name[0]}
-                    {candidate.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                {/* Compact Status indicators */}
-                <div className="absolute -bottom-0.5 -right-0.5 flex gap-0.5">
-                  {candidate.email_verified && (
-                    <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                      <ShieldCheckIcon className="w-1.5 h-1.5 text-white" />
-                    </div>
-                  )}
-                  {candidate.shortlisted && (
-                    <div className="w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
-                      <FlagIcon className="w-1.5 h-1.5 text-white" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex-1 min-w-0 space-y-1.5">
-                {/* Name and Badges Row */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-lg font-bold truncate text-gray-900">
-                    {candidate.first_name} {candidate.last_name}
-                  </h3>
-                  <div className="flex gap-1.5">
-                    <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(candidate.status)}`}>
-                      {candidate.status}
-                    </Badge>
-                    <Badge className={`text-xs px-2 py-0.5 ${getStageColor(candidate.current_stage)}`}>
-                      {candidate.current_stage?.toUpperCase()}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Compact Contact Info Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-1 text-xs text-gray-600">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Mail className="h-3 w-3 text-blue-500 shrink-0" />
-                    <span className="truncate">{candidate.email}</span>
-                  </div>
-                  {candidate.phone && (
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-3 w-3 text-green-500 shrink-0" />
-                      <span>{candidate.phone}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1.5">
-                    <UserIcon className="h-3 w-3 text-purple-500 shrink-0" />
-                    <span>{candidate.gender[0].toLocaleUpperCase()}{candidate.gender.slice(1)} • {formatAge(candidate.date_of_birth)}y</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CalendarDaysIcon className="h-3 w-3 text-orange-500 shrink-0" />
-                    <span>Reg: {formatDate(candidate.registration_date)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
-                    <span>Location: {candidate.address}</span>
-                  </div>
-                </div>
-
-                {/* Job Info - Compact */}
-                <div className="space-y-1">
-                  <div className="text-sm font-semibold text-blue-700 truncate">
-                    {candidate.applied_job?.name}
-                  </div>
-                  {candidate.applied_job?.description && (
-                    <div className="flex gap-3 text-xs text-gray-500 flex-wrap">
-                      {candidate.applied_job.description.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPinIcon className="h-3 w-3" />
-                          <span>{candidate.applied_job.description.location}</span>
-                        </div>
-                      )}
-                      {candidate.applied_job.description.country && (
-                        <div className="flex items-center gap-1">
-                          <GlobeIcon className="h-3 w-3" />
-                          <span>{candidate.applied_job.description.country}</span>
-                        </div>
-                      )}
-                      {candidate.applied_job.description.expInYears && (
-                        <div className="flex items-center gap-1">
-                          <BriefcaseIcon className="h-3 w-3" />
-                          <span>{candidate.applied_job.description.expInYears}</span>
-                        </div>
-                      )}
-                      {candidate.applied_job.description.salary && (
-                        <div className="flex items-center gap-1">
-                          <DollarSignIcon className="h-3 w-3" />
-                          <span>{candidate.applied_job.description.salary}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+        <CardHeader className="pb-2 px-3 sm:px-4 py-3">
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    {/* Left: Enhanced Candidate Info - Mobile Optimized */}
+    <div className="flex items-start gap-3 flex-1 min-w-0">
+      <div className="relative shrink-0">
+        <Avatar className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-18 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+          <AvatarImage src={candidate.profile_photo_url?.url} />
+          <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+            {candidate.first_name[0]}
+            {candidate.last_name?.[0]}
+          </AvatarFallback>
+        </Avatar>
+        {/* Compact Status indicators - Mobile Sized */}
+        <div className="absolute -bottom-0.5 -right-0.5 flex gap-0.5">
+          {candidate.email_verified && (
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full flex items-center justify-center">
+              <ShieldCheckIcon className="w-1 h-1 sm:w-1.5 sm:h-1.5 text-white" />
             </div>
-
-            {/* Right: Action Buttons - Compact Layout */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Active Meeting - Priority Button */}
-              {activeInterview && (
-                <Button
-                  size="sm"
-                  onClick={() => joinMeeting(activeInterview._id)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 h-8"
-                >
-                  <Video className="h-3 w-3 mr-1" />
-                  Join
-                </Button>
-              )}
-
-              {/* Upcoming Interview Badge */}
-              {upcomingInterview && !activeInterview && (
-                <Badge variant="outline" className="text-xs px-2 py-1 text-blue-600 border-blue-300 whitespace-nowrap">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  {formatDateTime(upcomingInterview.scheduled_at || "")}
-                </Badge>
-              )}
-
-              {/* Action Buttons Group - Horizontal on larger screens */}
-              <div className="flex items-center gap-1">
-                {candidate.status === "hold" || candidate.status !== "hired" && candidate.status !== "rejected" &&(
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setCandidateToHire(candidate);
-                      setHiringNote("");
-                      setHireDialogOpen(true);
-                    }}
-                    className="text-green-600 hover:text-green-700 px-2 py-1.5 h-8 border-green-200"
-                  >
-                    <ThumbsUp className="h-3 w-3 lg:mr-1" />
-                    <span className="hidden lg:inline">Hire</span>
-                  </Button>
-                )}
-
-                {candidate.status === "hold" || candidate.status !== "rejected" && candidate.status !== "hired" &&(
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setCandidateToReject(candidate);
-                      setRejectionReason("");
-                      setRejectDialogOpen(true);
-                    }}
-                    className="text-red-600 hover:text-red-700 px-2 py-1.5 h-8 border-red-200"
-                  >
-                    <ThumbsDown className="h-3 w-3 lg:mr-1" />
-                    <span className="hidden lg:inline">Reject</span>
-                  </Button>
-                )}
-
-                {candidate.status!="hired" && candidate.status!="rejected" && candidate.status !== "hold" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setCandidateToHold(candidate);
-                      setHoldReason("");
-                      setHoldDialogOpen(true);
-                    }}
-                    className="text-yellow-600 hover:text-yellow-700 px-2 py-1.5 h-8 border-yellow-200"
-                  >
-                    <CirclePause className="h-3 w-3 lg:mr-1" />
-                    <span className="hidden lg:inline">Hold</span>
-                  </Button>
-                )}
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setCandidateToGiveFeedback(candidate);
-                    setFeedbackContent("");
-                    setFeedbackType("general");
-                    setFeedbackDialogOpen(true);
-                  }}
-                  className="text-blue-600 hover:text-blue-700 px-2 py-1.5 h-8 border-blue-200"
-                >
-                  <MessageSquare className="h-3 w-3 lg:mr-1" />
-                  <span className="hidden lg:inline">Feedback</span>
-                </Button>
-
-{ candidate.status !== "rejected" && candidate.status !== "hired" &&
-                <Button
-                  onClick={() => {
-                    setCandidateToUpdateStage(candidate);
-                    setSelectedNewStage("");
-                    setStageUpdateReason("");
-                    setStageFeedback("");
-                    setStageUpdateModal(true);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8 border-purple-200"
-                >
-                  🔄 <span className="hidden lg:inline ml-1">Stage</span>
-                </Button>
-  }
-                <GloryButton
-                  candidate={candidate}
-                  onOpenGlory={openGloryDialog}
-                  variant="outline"
-                  size="sm"
-                  className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => toggleCardExpansion(candidate._id)}
-                  disabled={isLoadingDetail}
-                  className="px-2 py-1.5 h-8 border-gray-300"
-                >
-                  {isLoadingDetail ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : isExpanded ? (
-                    <ChevronDown className="h-3 w-3" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
+          )}
+          {candidate.shortlisted && (
+            <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-orange-500 rounded-full flex items-center justify-center">
+              <FlagIcon className="w-1 h-1 sm:w-1.5 sm:h-1.5 text-white" />
             </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0 space-y-1.5">
+        {/* Name and Badges Row - Mobile Stacked */}
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+          <h3 className="text-sm sm:text-base md:text-lg font-bold truncate text-gray-900">
+            {candidate.first_name} {candidate.last_name}
+          </h3>
+          <div className="flex gap-1.5 flex-wrap">
+            <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(candidate.status)}`}>
+              {candidate.status}
+            </Badge>
+            <Badge className={`text-xs px-2 py-0.5 ${getStageColor(candidate.current_stage)}`}>
+              {candidate.current_stage?.toUpperCase()}
+            </Badge>
           </div>
+        </div>
 
-          {/* Compact Info Row */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1 text-blue-600">
-                <BarChart3 className="h-3 w-3" />
-                <span>{candidateData.assessments?.length || 0} Tests</span>
-              </div>
-              <div className="flex items-center gap-1 text-green-600">
-                <FileText className="h-3 w-3" />
-                <span>
-                  {Array.isArray(candidateData.documents) ? candidateData.documents.length : 0} Docs
-                </span>
-              </div>
-              {candidate.last_login && (
-                <div className="flex items-center gap-1 text-orange-600">
-                  <ClockIcon className="h-3 w-3" />
-                  <span>Login: {formatDate(candidate.last_login)}</span>
-                </div>
-              )}
-              {candidate.glory && (
-                <div className="flex items-center gap-1 text-blue-600">
-                  <Trophy className="h-3 w-3"/>
-                  <span>Glory:
-                    HR-{(candidateData.glory.hr.grades.Overall)||"Not Present"}{" "},
-                    Invigilator-{(candidateData.glory.invigilator.grades.Overall)||"Not Present"}{" "},
-                    Manager-{(candidateData.glory.manager.grades.Overall)||"Not Present"}{" "}
-                    </span>
-                </div>
-              )}
-            </div>
-            
-            {/* Quick Status Indicators */}
-            <div className="flex items-center gap-2">
-              {candidate.email_verified && (
-                <Badge variant="outline" className="text-xs px-2 py-0.5 text-green-600 border-green-200">
-                  Verified
-                </Badge>
-              )}
-              {candidate.shortlisted && (
-                <Badge variant="outline" className="text-xs px-2 py-0.5 text-orange-600 border-orange-200">
-                  Shortlisted
-                </Badge>
-              )}
-            </div>
+        {/* Compact Contact Info Grid - Mobile Single Column */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-600">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Mail className="h-3 w-3 text-blue-500 shrink-0" />
+            <span className="truncate break-all">{candidate.email}</span>
           </div>
-        </CardHeader>
+          {candidate.phone && (
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-3 w-3 text-green-500 shrink-0" />
+              <span>{candidate.phone}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <UserIcon className="h-3 w-3 text-purple-500 shrink-0" />
+            <span>{candidate.gender[0].toLocaleUpperCase()}{candidate.gender.slice(1)} • {formatAge(candidate.date_of_birth)}y</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CalendarDaysIcon className="h-3 w-3 text-orange-500 shrink-0" />
+            <span>Reg: {formatDate(candidate.registration_date)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 col-span-1 sm:col-span-2">
+            <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+            <span className="truncate">Location: {candidate.address}</span>
+          </div>
+        </div>
+
+        {/* Job Info - Compact Mobile */}
+        <div className="space-y-1">
+          <div className="text-xs sm:text-sm font-semibold text-blue-700 truncate">
+            {candidate.applied_job?.name}
+          </div>
+          {candidate.applied_job?.description && (
+            <div className="flex gap-2 text-xs text-gray-500 flex-wrap">
+              {candidate.applied_job.description.location && (
+                <div className="flex items-center gap-1">
+                  <MapPinIcon className="h-3 w-3" />
+                  <span className="truncate max-w-20 sm:max-w-none">{candidate.applied_job.description.location}</span>
+                </div>
+              )}
+              {candidate.applied_job.description.country && (
+                <div className="flex items-center gap-1">
+                  <GlobeIcon className="h-3 w-3" />
+                  <span>{candidate.applied_job.description.country}</span>
+                </div>
+              )}
+              {candidate.applied_job.description.expInYears && (
+                <div className="flex items-center gap-1">
+                  <BriefcaseIcon className="h-3 w-3" />
+                  <span>{candidate.applied_job.description.expInYears}</span>
+                </div>
+              )}
+              {candidate.applied_job.description.salary && (
+                <div className="flex items-center gap-1">
+                  <DollarSignIcon className="h-3 w-3" />
+                  <span>{candidate.applied_job.description.salary}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Right: Action Buttons - Mobile Optimized Layout */}
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-1.5 shrink-0">
+      {/* Priority Actions Row */}
+      <div className="flex items-center gap-1.5 justify-end sm:justify-start">
+        {/* Active Meeting - Priority Button */}
+        {activeInterview && (
+          <Button
+            size="sm"
+            onClick={() => joinMeeting(activeInterview._id)}
+            className="bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-1.5 h-8 text-xs"
+          >
+            <Video className="h-3 w-3 sm:mr-1" />
+            <span className="hidden sm:inline">Join</span>
+          </Button>
+        )}
+
+        {/* Upcoming Interview Badge */}
+        {upcomingInterview && !activeInterview && (
+          <Badge variant="outline" className="text-xs px-2 py-1 text-blue-600 border-blue-300 whitespace-nowrap hidden sm:flex">
+            <Calendar className="h-3 w-3 mr-1" />
+            <span className="truncate max-w-16">
+              {formatDateTime(upcomingInterview.scheduled_at || "")}
+            </span>
+          </Badge>
+        )}
+
+        {/* Expand/Collapse Button */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => toggleCardExpansion(candidate._id)}
+          disabled={isLoadingDetail}
+          className="px-2 py-1.5 h-8 border-gray-300"
+        >
+          {isLoadingDetail ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : isExpanded ? (
+            <ChevronDown className="h-3 w-3" />
+          ) : (
+            <ChevronRight className="h-3 w-3" />
+          )}
+        </Button>
+      </div>
+
+      {/* Main Action Buttons - Mobile Grid */}
+      <div className="grid grid-cols-2 gap-1.5 sm:flex sm:gap-1">
+        {(candidate.status === "hold" || (candidate.status !== "hired" && candidate.status !== "rejected")) && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setCandidateToHire(candidate);
+              setHiringNote("");
+              setHireDialogOpen(true);
+            }}
+            className="text-green-600 hover:text-green-700 px-2 py-1.5 h-8 border-green-200 text-xs"
+          >
+            <ThumbsUp className="h-3 w-3 sm:mr-1" />
+            <span className="hidden sm:inline">Hire</span>
+          </Button>
+        )}
+
+        {(candidate.status === "hold" || (candidate.status !== "rejected" && candidate.status !== "hired")) && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setCandidateToReject(candidate);
+              setRejectionReason("");
+              setRejectDialogOpen(true);
+            }}
+            className="text-red-600 hover:text-red-700 px-2 py-1.5 h-8 border-red-200 text-xs"
+          >
+            <ThumbsDown className="h-3 w-3 sm:mr-1" />
+            <span className="hidden sm:inline">Reject</span>
+          </Button>
+        )}
+
+        {candidate.status !== "hired" && candidate.status !== "rejected" && candidate.status !== "hold" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setCandidateToHold(candidate);
+              setHoldReason("");
+              setHoldDialogOpen(true);
+            }}
+            className="text-yellow-600 hover:text-yellow-700 px-2 py-1.5 h-8 border-yellow-200 text-xs"
+          >
+            <CirclePause className="h-3 w-3 sm:mr-1" />
+            <span className="hidden sm:inline">Hold</span>
+          </Button>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setCandidateToGiveFeedback(candidate);
+            setFeedbackContent("");
+            setFeedbackType("general");
+            setFeedbackDialogOpen(true);
+          }}
+          className="text-blue-600 hover:text-blue-700 px-2 py-1.5 h-8 border-blue-200 text-xs"
+        >
+          <MessageSquare className="h-3 w-3 sm:mr-1" />
+          <span className="hidden sm:inline">Feedback</span>
+        </Button>
+
+        {candidate.status !== "rejected" && candidate.status !== "hired" && (
+          <Button
+            onClick={() => {
+              setCandidateToUpdateStage(candidate);
+              setSelectedNewStage("");
+              setStageUpdateReason("");
+              setStageFeedback("");
+              setStageUpdateModal(true);
+            }}
+            variant="outline"
+            size="sm"
+            className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8 border-purple-200 text-xs"
+          >
+            🔄 <span className="hidden sm:inline ml-1">Stage</span>
+          </Button>
+        )}
+
+        <GloryButton
+          candidate={candidate}
+          onOpenGlory={openGloryDialog}
+          variant="outline"
+          size="sm"
+          className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8 text-xs col-span-2 sm:col-span-1"
+        />
+      </div>
+    </div>
+  </div>
+
+  {/* Compact Info Row - Mobile Optimized */}
+  <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-100 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
+      <div className="flex items-center gap-1 text-blue-600">
+        <BarChart3 className="h-3 w-3" />
+        <span>{candidateData.assessments?.length || 0} Tests</span>
+      </div>
+      <div className="flex items-center gap-1 text-green-600">
+        <FileText className="h-3 w-3" />
+        <span>
+          {Array.isArray(candidateData.documents) ? candidateData.documents.length : 0} Docs
+        </span>
+      </div>
+      {candidate.last_login && (
+        <div className="flex items-center gap-1 text-orange-600">
+          <ClockIcon className="h-3 w-3" />
+          <span>Login: {formatDate(candidate.last_login)}</span>
+        </div>
+      )}
+      {candidate.glory && (
+        <div className="flex items-center gap-1 text-blue-600">
+          <Trophy className="h-3 w-3"/>
+          <span className="break-words">Glory:
+            HR-{(candidateData.glory?.hr?.grades?.Overall)||"Not Present"}{" "},
+            Invigilator-{(candidateData.glory?.invigilator?.grades?.Overall)||"Not Present"}{" "},
+            Manager-{(candidateData.glory?.manager?.grades?.Overall)||"Not Present"}{" "}
+          </span>
+        </div>
+      )}
+    </div>
+    
+    {/* Quick Status Indicators - Mobile Flex Wrap */}
+    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+      {candidate.email_verified && (
+        <Badge variant="outline" className="text-xs px-2 py-0.5 text-green-600 border-green-200">
+          Verified
+        </Badge>
+      )}
+      {candidate.shortlisted && (
+        <Badge variant="outline" className="text-xs px-2 py-0.5 text-orange-600 border-orange-200">
+          Shortlisted
+        </Badge>
+      )}
+    </div>
+  </div>
+</CardHeader>
+
 
         {/* Expanded Content with Collapsible Sections */}
         {isExpanded && (

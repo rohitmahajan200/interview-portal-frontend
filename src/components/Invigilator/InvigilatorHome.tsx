@@ -984,78 +984,79 @@ const InvigilatorHome = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="flex flex-wrap gap-3 w-full 
-                md:flex-row flex-col">
-        <Card className="flex-1 basis-0 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total in Assessment
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Candidates in assessment stage
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 w-full">
+  <Card className="w-full">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 py-3 sm:py-4">
+      <CardTitle className="text-xs sm:text-sm font-medium">
+        Total in Assessment
+      </CardTitle>
+      <Users className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+    </CardHeader>
+    <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+      <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
+      <p className="text-xs text-muted-foreground">
+        Candidates in assessment stage
+      </p>
+    </CardContent>
+  </Card>
 
-        <Card className="flex-1 basis-0 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.completed}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Completed assessments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="flex-1 basis-0 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assigned</CardTitle>
-            <UserCheck className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.assigned}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Assessments in progress
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="flex-1 basis-0 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Not Assigned</CardTitle>
-            <UserX className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.notAssigned}
-            </div>
-            <p className="text-xs text-muted-foreground">Pending assignment</p>
-          </CardContent>
-        </Card>
-        <Card className="flex-1 basis-0 min-w-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expired</CardTitle>
-            <UserX className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {stats.expired}
-            </div>
-            <p className="text-xs text-muted-foreground">Expired assessments</p>
-          </CardContent>
-        </Card>
+  <Card className="w-full">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 py-3 sm:py-4">
+      <CardTitle className="text-xs sm:text-sm font-medium">Completed</CardTitle>
+      <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+    </CardHeader>
+    <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+      <div className="text-xl sm:text-2xl font-bold text-green-600">
+        {stats.completed}
       </div>
+      <p className="text-xs text-muted-foreground">
+        Completed assessments
+      </p>
+    </CardContent>
+  </Card>
+
+  <Card className="w-full">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 py-3 sm:py-4">
+      <CardTitle className="text-xs sm:text-sm font-medium">Assigned</CardTitle>
+      <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+    </CardHeader>
+    <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+      <div className="text-xl sm:text-2xl font-bold text-blue-600">
+        {stats.assigned}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Assessments in progress
+      </p>
+    </CardContent>
+  </Card>
+
+  <Card className="w-full">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 py-3 sm:py-4">
+      <CardTitle className="text-xs sm:text-sm font-medium">Not Assigned</CardTitle>
+      <UserX className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
+    </CardHeader>
+    <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+      <div className="text-xl sm:text-2xl font-bold text-yellow-600">
+        {stats.notAssigned}
+      </div>
+      <p className="text-xs text-muted-foreground">Pending assignment</p>
+    </CardContent>
+  </Card>
+
+  <Card className="w-full">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-3 sm:px-6 py-3 sm:py-4">
+      <CardTitle className="text-xs sm:text-sm font-medium">Expired</CardTitle>
+      <UserX className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+    </CardHeader>
+    <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+      <div className="text-xl sm:text-2xl font-bold text-red-600">
+        {stats.expired}
+      </div>
+      <p className="text-xs text-muted-foreground">Expired assessments</p>
+    </CardContent>
+  </Card>
+</div>
+
 
       {/* Main Content Card */}
       <Card>

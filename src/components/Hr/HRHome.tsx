@@ -21,7 +21,6 @@ import {
   Mail,
   ChevronDown,
   ChevronUp,
-  
 } from "lucide-react";
 import {
   Table,
@@ -279,7 +278,7 @@ type Candidate = {
       email: string;
       role: string;
     };
-    remarks?: InterviewRemark[]; 
+    remarks?: InterviewRemark[];
   }[];
   stage_history?: StageHistory[];
   default_hr_responses?: Array<{
@@ -410,7 +409,7 @@ const HRHome = () => {
   const [personalCollapsed, setPersonalInfoCollapsed] = useState(false);
   const [interviewCollapsed, setInterViewCollapsed] = useState(false);
   const [feedbackCollapsed, setFeedbackCollapsed] = useState(false);
-  const [historyCollapsed,setHistoryCollapsed] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
 
   interface KeyValuePair {
     id: string;
@@ -472,13 +471,20 @@ const HRHome = () => {
   // Add this helper function with your other helper functions
   const getGradeColor = (grade: string) => {
     switch (grade.toUpperCase()) {
-      case "A+": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "A": return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
-      case "B": return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
-      case "C": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
-      case "D": return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
-      case "E": return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300";
-      default: return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
+      case "A+":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "A":
+        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+      case "B":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
+      case "C":
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
+      case "D":
+        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
+      case "E":
+        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
     }
   };
 
@@ -1049,10 +1055,14 @@ const HRHome = () => {
     setIsUpdatingStage(true);
     try {
       const hrGlory = selectedCandidate?.glory?.hr;
-      if (!hrGlory || !hrGlory.grades || Object.keys(hrGlory.grades).length === 0) {
-      toast.error("Glory Required To Stage Update");
-    return;
-    }
+      if (
+        !hrGlory ||
+        !hrGlory.grades ||
+        Object.keys(hrGlory.grades).length === 0
+      ) {
+        toast.error("Glory Required To Stage Update");
+        return;
+      }
       const response = await api.patch(`/org/candidates/${candidateId}/stage`, {
         newStage,
         remarks,
@@ -1126,6 +1136,7 @@ const HRHome = () => {
 
   const shortlistCandidate = async (candidateId: string, reason?: string) => {
     try {
+      setLoadingCandidate(true);
       const response = await api.patch(
         `/org/candidates/${candidateId}/shortlist`,
         {
@@ -1141,6 +1152,9 @@ const HRHome = () => {
       toast.error(
         error?.response?.data?.message || "Failed to shortlist candidate"
       );
+    }
+    finally {
+      setLoadingCandidate(false);
     }
   };
 
@@ -1806,17 +1820,20 @@ const HRHome = () => {
                         </Avatar>
 
                         <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-                          <p className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
-                            <strong>Applied For - {selectedCandidate.applied_job?.name}</strong>
+                          <p className="text-lg sm:text-xs font-sm dark:text-purple-400 mb-2">
+                            <strong>
+                              Applied For -{" "}
+                              {selectedCandidate.applied_job?.name}
+                            </strong>
                           </p>
                           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {selectedCandidate.first_name}{" "}
                             {selectedCandidate.last_name}
                           </h3>
                           <div className="flex justify-center sm:justify-start">
-                            <span className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
-                            <strong>Current Stage -</strong>
-                          </span>
+                            <span className="text-lg sm:text-xs font-sma dark:text-purple-400 mb-2">
+                              <strong>Current Stage -</strong>
+                            </span>
                             <Badge
                               className={getStageColor(
                                 selectedCandidate.current_stage
@@ -1827,21 +1844,22 @@ const HRHome = () => {
                             </Badge>
                           </div>
                           <div className="inline-flex items-center gap-2">
-
-  <div className="text-xs text-gray-600">
-  <strong className="text-purple-600">Status:</strong>{" "}
-  <span className={`inline-flex items-center gap-1 px-1 ${
-    selectedCandidate.status.toLowerCase() === 'hired' 
-      ? 'text-green-700' 
-      : 'text-gray-700'
-  }`}>
-    {selectedCandidate.status}
-    {selectedCandidate.status.toLowerCase() === 'hired' && (
-      <Check className="w-3 h-3" />
-    )}
-  </span>
-</div>
-</div>
+                            <div className="text-xs text-gray-600">
+                              <strong>Status:</strong>{" "}
+                              <span
+                                className={`inline-flex items-center gap-1 px-1 ${
+                                  selectedCandidate.status.toLowerCase() ===
+                                  "hired"
+                                    ? "text-green-700"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {selectedCandidate.status.toUpperCase()}
+                                {selectedCandidate.status.toLowerCase() ===
+                                  "hired" && <Check className="w-3 h-3" />}
+                              </span>
+                            </div>
+                          </div>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
                             <span className="break-all">
                               📧 {selectedCandidate.email}
@@ -2637,7 +2655,8 @@ const HRHome = () => {
 
                 <CardContent>
                   {!interviewCollapsed &&
-                    (selectedCandidate.interviews && selectedCandidate.interviews.length > 0 ? (
+                    (selectedCandidate.interviews &&
+                    selectedCandidate.interviews.length > 0 ? (
                       <div className="space-y-6">
                         {selectedCandidate.interviews.map((interview) => (
                           <div
@@ -2647,13 +2666,18 @@ const HRHome = () => {
                             {/* Top Header */}
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
                               <div>
-                                <h4 className="font-semibold">{interview.title}</h4>
+                                <h4 className="font-semibold">
+                                  {interview.title}
+                                </h4>
                                 <div className="flex flex-wrap gap-2 mt-1">
                                   <Badge variant="outline" className="text-xs">
                                     {interview.type.toUpperCase()}
                                   </Badge>
                                   {interview.platform && (
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
                                       {interview.platform}
                                     </Badge>
                                   )}
@@ -2670,31 +2694,47 @@ const HRHome = () => {
                               </div>
                               <div className="text-sm text-gray-600 dark:text-gray-400">
                                 Scheduled by{" "}
-                                <span className="font-medium">{interview.scheduled_by.name}</span>
+                                <span className="font-medium">
+                                  {interview.scheduled_by.name}
+                                </span>
                               </div>
                             </div>
 
                             {/* Description */}
                             {interview.description && (
-                              <p className="text-sm text-gray-600 mb-3">{interview.description}</p>
+                              <p className="text-sm text-gray-600 mb-3">
+                                {interview.description}
+                              </p>
                             )}
 
                             {/* Interviewers */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
                               <div>
-                                <span className="text-gray-600">Interviewers:</span>
+                                <span className="text-gray-600">
+                                  Interviewers:
+                                </span>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {interview.interviewers.map((interviewer) => (
-                                    <Badge key={interviewer._id} variant="outline" className="text-xs">
+                                    <Badge
+                                      key={interviewer._id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
                                       {interviewer.name} ({interviewer.role})
                                     </Badge>
                                   ))}
                                 </div>
                               </div>
                               <div>
-                                <span className="text-gray-600">Scheduled by:</span>
-                                <div className="font-medium">{interview.scheduled_by.name}</div>
-                                <div className="text-xs text-gray-500">{interview.scheduled_by.role}</div>
+                                <span className="text-gray-600">
+                                  Scheduled by:
+                                </span>
+                                <div className="font-medium">
+                                  {interview.scheduled_by.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {interview.scheduled_by.role}
+                                </div>
                               </div>
                             </div>
 
@@ -2704,7 +2744,12 @@ const HRHome = () => {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => window.open(interview.meeting_link, "_blank")}
+                                  onClick={() =>
+                                    window.open(
+                                      interview.meeting_link,
+                                      "_blank"
+                                    )
+                                  }
                                   className="text-xs"
                                 >
                                   Join Meeting
@@ -2713,66 +2758,83 @@ const HRHome = () => {
                             )}
 
                             {/* Remarks Section */}
-                            {interview.remarks && interview.remarks.length > 0 && (
-                              <div className="mt-3 border-t pt-3">
-                                <h5 className="text-sm font-medium mb-2">Remarks & Grades</h5>
-                                <div className="space-y-3">
-                                  {interview.remarks.map((remark) => {
-                                    const interviewer =
-                                      interview.interviewers.find((int) => int._id === remark.provider) ||
-                                      interview.scheduled_by;
+                            {interview.remarks &&
+                              interview.remarks.length > 0 && (
+                                <div className="mt-3 border-t pt-3">
+                                  <h5 className="text-sm font-medium mb-2">
+                                    Remarks & Grades
+                                  </h5>
+                                  <div className="space-y-3">
+                                    {interview.remarks.map((remark) => {
+                                      const interviewer =
+                                        interview.interviewers.find(
+                                          (int) => int._id === remark.provider
+                                        ) || interview.scheduled_by;
 
-                                    const getGradeColor = (grade: string) => {
-                                      switch (grade.toUpperCase()) {
-                                        case "A+":
-                                        case "A":
-                                          return "bg-green-100 text-green-800";
-                                        case "B":
-                                          return "bg-blue-100 text-blue-800";
-                                        case "C":
-                                          return "bg-yellow-100 text-yellow-800";
-                                        case "D":
-                                          return "bg-orange-100 text-orange-800";
-                                        case "E":
-                                          return "bg-red-100 text-red-800";
-                                        default:
-                                          return "bg-gray-100 text-gray-800";
-                                      }
-                                    };
+                                      const getGradeColor = (grade: string) => {
+                                        switch (grade.toUpperCase()) {
+                                          case "A+":
+                                          case "A":
+                                            return "bg-green-100 text-green-800";
+                                          case "B":
+                                            return "bg-blue-100 text-blue-800";
+                                          case "C":
+                                            return "bg-yellow-100 text-yellow-800";
+                                          case "D":
+                                            return "bg-orange-100 text-orange-800";
+                                          case "E":
+                                            return "bg-red-100 text-red-800";
+                                          default:
+                                            return "bg-gray-100 text-gray-800";
+                                        }
+                                      };
 
-                                    return (
-                                      <div
-                                        key={remark._id}
-                                        className="p-3 rounded-lg bg-white dark:bg-gray-800 border shadow-sm"
-                                      >
-                                        <div className="flex items-start justify-between">
-                                          <div>
-                                            <p className="text-sm font-medium">{interviewer?.name || "Unknown"}</p>
-                                            <p className="text-xs text-gray-500">{interviewer?.role || "Interviewer"}</p>
-                                            <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                              "{remark.remark}"
-                                            </p>
+                                      return (
+                                        <div
+                                          key={remark._id}
+                                          className="p-3 rounded-lg bg-white dark:bg-gray-800 border shadow-sm"
+                                        >
+                                          <div className="flex items-start justify-between">
+                                            <div>
+                                              <p className="text-sm font-medium">
+                                                {interviewer?.name || "Unknown"}
+                                              </p>
+                                              <p className="text-xs text-gray-500">
+                                                {interviewer?.role ||
+                                                  "Interviewer"}
+                                              </p>
+                                              <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                                "{remark.remark}"
+                                              </p>
+                                            </div>
+                                            <Badge
+                                              className={`text-xs font-bold ${getGradeColor(
+                                                remark.grade
+                                              )}`}
+                                            >
+                                              {remark.grade}
+                                            </Badge>
                                           </div>
-                                          <Badge className={`text-xs font-bold ${getGradeColor(remark.grade)}`}>
-                                            {remark.grade}
-                                          </Badge>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-muted-foreground">No interviews scheduled yet</p>
+                        <p className="text-muted-foreground">
+                          No interviews scheduled yet
+                        </p>
                         <Button
                           className="mt-4"
                           variant="outline"
-                          onClick={() => handleAssignInterview(selectedCandidate)}
+                          onClick={() =>
+                            handleAssignInterview(selectedCandidate)
+                          }
                         >
                           Schedule Interview
                         </Button>
@@ -2780,8 +2842,6 @@ const HRHome = () => {
                     ))}
                 </CardContent>
               </Card>
-
-
 
               {/* Internal Feedback Section - Enhanced with Stage Information */}
               {selectedCandidate.internal_feedback &&
@@ -2893,9 +2953,7 @@ const HRHome = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() =>
-                            setHistoryCollapsed(!historyCollapsed)
-                          }
+                          onClick={() => setHistoryCollapsed(!historyCollapsed)}
                           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                           <span className="text-sm font-medium">
@@ -2911,41 +2969,42 @@ const HRHome = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {!historyCollapsed && (selectedCandidate.stage_history.map(
-                          (stage: StageHistory) => (
-                            <div
-                              key={stage._id}
-                              className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
-                            >
-                              <div className="flex justify-between items-center mb-1">
-                                <p className="text-sm font-semibold capitalize">
-                                  {stage.from_stage
-                                    ? `${stage.from_stage} → ${stage.to_stage}`
-                                    : stage.to_stage}
-                                </p>
-                                <span className="text-xs text-gray-500">
-                                  {formatDate(stage.changed_at)}
-                                </span>
+                        {!historyCollapsed &&
+                          selectedCandidate.stage_history.map(
+                            (stage: StageHistory) => (
+                              <div
+                                key={stage._id}
+                                className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
+                              >
+                                <div className="flex justify-between items-center mb-1">
+                                  <p className="text-sm font-semibold capitalize">
+                                    {stage.from_stage
+                                      ? `${stage.from_stage} → ${stage.to_stage}`
+                                      : stage.to_stage}
+                                  </p>
+                                  <span className="text-xs text-gray-500">
+                                    {formatDate(stage.changed_at)}
+                                  </span>
+                                </div>
+
+                                {stage.changed_by && (
+                                  <p className="text-xs text-gray-600">
+                                    Changed by:{" "}
+                                    <span className="font-medium">
+                                      {stage.changed_by.name}
+                                    </span>{" "}
+                                    ({stage.changed_by.email})
+                                  </p>
+                                )}
+
+                                {stage.remarks && (
+                                  <p className="text-xs text-gray-600 mt-1 italic">
+                                    "{stage.remarks}"
+                                  </p>
+                                )}
                               </div>
-
-                              {stage.changed_by && (
-                                <p className="text-xs text-gray-600">
-                                  Changed by:{" "}
-                                  <span className="font-medium">
-                                    {stage.changed_by.name}
-                                  </span>{" "}
-                                  ({stage.changed_by.email})
-                                </p>
-                              )}
-
-                              {stage.remarks && (
-                                <p className="text-xs text-gray-600 mt-1 italic">
-                                  "{stage.remarks}"
-                                </p>
-                              )}
-                            </div>
-                          )
-                        ))}
+                            )
+                          )}
                       </div>
                     </CardContent>
                   </Card>

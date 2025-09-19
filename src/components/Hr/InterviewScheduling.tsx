@@ -634,489 +634,513 @@ const InterviewCalendar = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 overflow-y-auto mb-10" id='main'>
-      {/* Event Creation/Edit Form */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            {isEditing ? 'Edit Interview Event' : 'Create Interview Event'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Event Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Event Title *</Label>
-              <Input
-                id="title"
-                placeholder="e.g., Technical Interview - John Doe"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-              />
-            </div>
+    <div className="container mx-auto p-3 sm:p-6 overflow-y-auto mb-10" id='main'>
+  {/* Event Creation/Edit Form */}
+  <Card className="mb-4 sm:mb-6">
+    <CardHeader className="p-4 sm:p-6">
+      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+        <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+        {isEditing ? 'Edit Interview Event' : 'Create Interview Event'}
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Basic Info Grid - Stack on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Event Title */}
+        <div className="space-y-2">
+          <Label htmlFor="title" className="text-sm sm:text-base">Event Title *</Label>
+          <Input
+            id="title"
+            placeholder="e.g., Technical Interview - John Doe"
+            value={formData.title}
+            onChange={(e) => handleInputChange('title', e.target.value)}
+            className="text-sm sm:text-base"
+          />
+        </div>
 
-            {/* Interview Type */}
-            <div className="space-y-2">
-              <Label>Interview Type *</Label>
-              <Select value={formData.interview_type} onValueChange={(value) => handleInputChange('interview_type', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose interview type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="technical_interview">Technical Interview</SelectItem>
-                  <SelectItem value="managerial_round">Managerial Round</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Interview Type */}
+        <div className="space-y-2">
+          <Label className="text-sm sm:text-base">Interview Type *</Label>
+          <Select value={formData.interview_type} onValueChange={(value) => handleInputChange('interview_type', value)}>
+            <SelectTrigger className="text-sm sm:text-base">
+              <SelectValue placeholder="Choose interview type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="technical_interview">Technical Interview</SelectItem>
+              <SelectItem value="managerial_round">Managerial Round</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-            {/* Candidate Selection */}
-            <div className="space-y-2">
-              <Label>Select Candidate *</Label>
-              <Popover open={candidateSearchOpen} onOpenChange={setCandidateSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={candidateSearchOpen}
-                    className="w-full justify-between h-auto p-2"
-                  >
-                    {formData.candidate ? (
-                      <div className="flex items-center justify-between w-full p-2 min-h-[1.5rem] bg-gray-50 rounded-md border hover:bg-gray-100 transition-colors">
-                        <div className="flex gap-2 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="font-medium text-sm text-gray-900 truncate">
-                              {(() => {
-                                const selected = candidates.find(c => c._id === formData.candidate);
-                                return selected ? `${selected.first_name} ${selected.last_name}` : '';
-                              })()}
-                            </span>
-                            <span className="text-xs text-gray-500 truncate">
-                              {(() => {
-                                const selected = candidates.find(c => c._id === formData.candidate);
-                                return selected?.email || '';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
+      {/* Candidate Selection - Full width for better mobile experience */}
+      <div className="space-y-2">
+        <Label className="text-sm sm:text-base">Select Candidate *</Label>
+        <Popover open={candidateSearchOpen} onOpenChange={setCandidateSearchOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={candidateSearchOpen}
+              className="w-full justify-between h-auto p-2 text-left"
+            >
+              {formData.candidate ? (
+                <div className="flex items-center justify-between w-full p-2 min-h-[1.5rem] bg-gray-50 rounded-md border hover:bg-gray-100 transition-colors">
+                  <div className="flex gap-2 flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                      <span className="font-medium text-sm text-gray-900 truncate">
+                        {(() => {
+                          const selected = candidates.find(c => c._id === formData.candidate);
+                          return selected ? `${selected.first_name} ${selected.last_name}` : '';
+                        })()}
+                      </span>
+                      <span className="text-xs text-gray-500 truncate">
+                        {(() => {
+                          const selected = candidates.find(c => c._id === formData.candidate);
+                          return selected?.email || '';
+                        })()}
+                      </span>
+                    </div>
+                  </div>
 
-                        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                          {(() => {
-                            const selected = candidates.find(c => c._id === formData.candidate);
-                            return selected ? (
-                              <>
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded whitespace-nowrap ${getStageColor(selected.current_stage)}`}>
-                                  {selected.current_stage}
-                                </span>
-                                <span className="text-xs text-gray-400 max-w-[80px] truncate">
-                                  {selected.applied_job?.name || 'No Job'}
-                                </span>
-                              </>
-                            ) : null;
-                          })()}
-                        </div>
-                      </div>
-
-                    ) : (
-                      <div className="flex items-center justify-center gap-3 w-full p-2 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
-                        <Search className=" text-gray-400" />
-                        <span className="text-sm text-gray-500 font-medium">Search candidate by name or email...</span>
-                      </div>
-                    )}
-
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                  <Command>
-                    <CommandInput
-                      placeholder="Search candidates by name or email..."
-                      className="h-9"
-                    />
-                    <CommandEmpty>No candidate found.</CommandEmpty>
-                    <CommandGroup className="max-h-64 overflow-y-auto">
-                      {candidates.map((candidate) => (
-                        <CommandItem
-                          key={candidate._id}
-                          value={`${candidate.first_name} ${candidate.last_name} ${candidate.email}`}
-                          onSelect={() => {
-                            handleInputChange('candidate', candidate._id);
-                            setCandidateSearchOpen(false);
-                          }}
-                          className="p-3"
-                        >
-                          <div className="flex items-center w-full gap-3">
-                            <Check
-                              className={cn(
-                                "h-4 w-4 flex-shrink-0",
-                                formData.candidate === candidate._id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-sm block truncate">
-                                {candidate.first_name} {candidate.last_name}
-                              </span>
-                              <span className="text-xs text-gray-500 block truncate">
-                                {candidate.email}
-                              </span>
-                            </div>
-
-                            <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${getStageColor(candidate.current_stage)}`}>
-                              {candidate.current_stage}
-                            </span>
-
-                            <span className="text-xs text-gray-600 max-w-[80px] truncate">
-                              {candidate.applied_job?.name || 'No Job'}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => handleInputChange('startDate', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time *</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => handleInputChange('startTime', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End Time *</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => handleInputChange('endTime', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Online/Offline Selection */}
-          <div className="space-y-3">
-            <Label>Interview Format</Label>
-            <div className="flex gap-6">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="online"
-                  name="type"
-                  value="online"
-                  checked={formData.type === 'online'}
-                  onChange={(e) => handleInputChange('type', e.target.value as 'online' | 'offline')}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="online" className="flex items-center gap-2">
-                  <Video className="h-4 w-4" />
-                  Online
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="offline"
-                  name="type"
-                  value="offline"
-                  checked={formData.type === 'offline'}
-                  onChange={(e) => handleInputChange('type', e.target.value as 'online' | 'offline')}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="offline" className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Offline
-                </Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Meeting Link/Address and Platform */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              {formData.type === 'online' ? (
-                <>
-                  <Label htmlFor="meetingLink">Meeting Link *</Label>
-                  <Input
-                    id="meetingLink"
-                    placeholder="https://zoom.us/j/... or https://meet.google.com/..."
-                    value={formData.meetingLink}
-                    onChange={(e) => handleInputChange('meetingLink', e.target.value)}
-                  />
-                </>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
+                    {(() => {
+                      const selected = candidates.find(c => c._id === formData.candidate);
+                      return selected ? (
+                        <>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded whitespace-nowrap ${getStageColor(selected.current_stage)}`}>
+                            {selected.current_stage}
+                          </span>
+                          <span className="text-xs text-gray-400 max-w-[80px] sm:max-w-none truncate">
+                            {selected.applied_job?.name || 'No Job'}
+                          </span>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
               ) : (
-                <>
-                  <Label htmlFor="address">Address *</Label>
-                  <Input
-                    id="address"
-                    placeholder="Office address or meeting location"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                  />
-                </>
+                <div className="flex items-center justify-center gap-3 w-full p-2 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+                  <Search className="text-gray-400" />
+                  <span className="text-sm text-gray-500 font-medium">Search candidate...</span>
+                </div>
               )}
-            </div>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+            <Command>
+              <CommandInput
+                placeholder="Search candidates by name or email..."
+                className="h-9 text-sm"
+              />
+              <CommandEmpty>No candidate found.</CommandEmpty>
+              <CommandGroup className="max-h-48 sm:max-h-64 overflow-y-auto">
+                {candidates.map((candidate) => (
+                  <CommandItem
+                    key={candidate._id}
+                    value={`${candidate.first_name} ${candidate.last_name} ${candidate.email}`}
+                    onSelect={() => {
+                      handleInputChange('candidate', candidate._id);
+                      setCandidateSearchOpen(false);
+                    }}
+                    className="p-2 sm:p-3"
+                  >
+                    <div className="flex items-center w-full gap-2 sm:gap-3">
+                      <Check
+                        className={cn(
+                          "h-4 w-4 flex-shrink-0",
+                          formData.candidate === candidate._id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
 
-            {formData.type === 'online' && (
-              <div className="space-y-2">
-                <Label htmlFor="platform">Platform</Label>
-                <Input
-                  id="platform"
-                  placeholder="e.g., Zoom, Google Meet, Teams"
-                  value={formData.platform}
-                  onChange={(e) => handleInputChange('platform', e.target.value)}
-                />
-              </div>
-            )}
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-sm block truncate">
+                          {candidate.first_name} {candidate.last_name}
+                        </span>
+                        <span className="text-xs text-gray-500 block truncate">
+                          {candidate.email}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 flex-shrink-0">
+                        <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${getStageColor(candidate.current_stage)}`}>
+                          {candidate.current_stage}
+                        </span>
+                        <span className="text-xs text-gray-600 max-w-[60px] sm:max-w-[80px] truncate">
+                          {candidate.applied_job?.name || 'No Job'}
+                        </span>
+                      </div>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Date and Time - Stack on mobile, 3 columns on tablet+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date" className="text-sm sm:text-base">Date *</Label>
+          <Input
+            id="date"
+            type="date"
+            value={formData.startDate}
+            onChange={(e) => handleInputChange('startDate', e.target.value)}
+            className="text-sm sm:text-base"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="startTime" className="text-sm sm:text-base">Start Time *</Label>
+          <Input
+            id="startTime"
+            type="time"
+            value={formData.startTime}
+            onChange={(e) => handleInputChange('startTime', e.target.value)}
+            className="text-sm sm:text-base"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endTime" className="text-sm sm:text-base">End Time *</Label>
+          <Input
+            id="endTime"
+            type="time"
+            value={formData.endTime}
+            onChange={(e) => handleInputChange('endTime', e.target.value)}
+            className="text-sm sm:text-base"
+          />
+        </div>
+      </div>
+
+      {/* Interview Format */}
+      <div className="space-y-3">
+        <Label className="text-sm sm:text-base">Interview Format</Label>
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+          <div className="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="online"
+              name="type"
+              value="online"
+              checked={formData.type === 'online'}
+              onChange={(e) => handleInputChange('type', e.target.value as 'online' | 'offline')}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="online" className="flex items-center gap-2 text-sm sm:text-base">
+              <Video className="h-4 w-4" />
+              Online
+            </Label>
           </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="radio"
+              id="offline"
+              name="type"
+              value="offline"
+              checked={formData.type === 'offline'}
+              onChange={(e) => handleInputChange('type', e.target.value as 'online' | 'offline')}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="offline" className="flex items-center gap-2 text-sm sm:text-base">
+              <MapPin className="h-4 w-4" />
+              Offline
+            </Label>
+          </div>
+        </div>
+      </div>
 
-          {/* Description */}
+      {/* Meeting Link/Address and Platform - Stack on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          {formData.type === 'online' ? (
+            <>
+              <Label htmlFor="meetingLink" className="text-sm sm:text-base">Meeting Link *</Label>
+              <Input
+                id="meetingLink"
+                placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+                value={formData.meetingLink}
+                onChange={(e) => handleInputChange('meetingLink', e.target.value)}
+                className="text-sm sm:text-base"
+              />
+            </>
+          ) : (
+            <>
+              <Label htmlFor="address" className="text-sm sm:text-base">Address *</Label>
+              <Input
+                id="address"
+                placeholder="Office address or meeting location"
+                value={formData.address}
+                onChange={(e) => handleInputChange('address', e.target.value)}
+                className="text-sm sm:text-base"
+              />
+            </>
+          )}
+        </div>
+
+        {formData.type === 'online' && (
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Interview details, preparation notes, etc."
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              rows={3}
+            <Label htmlFor="platform" className="text-sm sm:text-base">Platform</Label>
+            <Input
+              id="platform"
+              placeholder="e.g., Zoom, Google Meet, Teams"
+              value={formData.platform}
+              onChange={(e) => handleInputChange('platform', e.target.value)}
+              className="text-sm sm:text-base"
             />
           </div>
+        )}
+      </div>
 
-          {/* Interviewers Selection */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Select Interviewers *
-            </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {orgUsers.map(user => (
-                <div key={user._id} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id={`interviewer-${user._id}`}
-                    checked={formData.interviewers.includes(user._id)}
-                    onChange={() => handleInterviewerToggle(user._id)}
-                    className="rounded border-gray-300 h-4 w-4"
-                  />
-                  <Label htmlFor={`interviewer-${user._id}`} className="text-sm">
-                    {user.name} ({user.role})
-                  </Label>
-                </div>
-              ))}
+      {/* Description */}
+      <div className="space-y-2">
+        <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
+        <Textarea
+          id="description"
+          placeholder="Interview details, preparation notes, etc."
+          value={formData.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          rows={3}
+          className="text-sm sm:text-base"
+        />
+      </div>
+
+      {/* Interviewers Selection - Responsive grid */}
+      <div className="space-y-3">
+        <Label className="flex items-center gap-2 text-sm sm:text-base">
+          <Users className="h-4 w-4" />
+          Select Interviewers *
+        </Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {orgUsers.map(user => (
+            <div key={user._id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`interviewer-${user._id}`}
+                checked={formData.interviewers.includes(user._id)}
+                onChange={() => handleInterviewerToggle(user._id)}
+                className="rounded border-gray-300 h-4 w-4"
+              />
+              <Label htmlFor={`interviewer-${user._id}`} className="text-sm">
+                {user.name} ({user.role})
+              </Label>
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Action Buttons */}
+      {/* Action Buttons - Stack on mobile */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button
+          onClick={isEditing ? handleUpdateInterview : handleCreateInterview}
+          disabled={loading.submitting}
+          className="flex-1"
+        >
+          {loading.submitting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Clock className="h-4 w-4 mr-2" />
+          )}
+          {isEditing ? 'Update Interview' : 'Create Interview'}
+        </Button>
+
+        {isEditing && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setIsEditing(false);
+              setEditingInterviewId(null);
+              setSelectedInterview(null);
+              resetForm();
+            }}
+            className="sm:w-auto"
+          >
+            Cancel
+          </Button>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Interview Details Dialog - Enhanced mobile responsiveness */}
+  <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
+    <DialogContent className="w-full h-screen sm:h-[90vh] max-w-full sm:max-w-4xl md:max-w-[70vw] lg:max-w-[90vw] flex flex-col overflow-hidden">
+      <DialogHeader className="p-4 sm:p-6 border-b flex-shrink-0">
+        <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <span className="text-lg sm:text-xl">Interview Details</span>
           <div className="flex gap-2">
-            <Button
-              onClick={isEditing ? handleUpdateInterview : handleCreateInterview}
-              disabled={loading.submitting}
-              className="flex-1"
-            >
-              {loading.submitting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Clock className="h-4 w-4 mr-2" />
-              )}
-              {isEditing ? 'Update Interview' : 'Create Interview'}
+            <Button variant="outline" size="sm" onClick={handleEditInterview}>
+              <Edit className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Edit</span>
             </Button>
-
-            {isEditing && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditingInterviewId(null);
-                  setSelectedInterview(null);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </Button>
-            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => selectedInterview && handleDeleteInterview(selectedInterview._id)}
+              disabled={loading.submitting}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Delete</span>
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </DialogTitle>
+      </DialogHeader>
 
-      {/* Selected Interview Details + Remarks */}
-      <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
-        <DialogContent className="max-w-4xl md:max-w-[70vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className='mt-10'>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Interview Details</span>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleEditInterview}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => selectedInterview && handleDeleteInterview(selectedInterview._id)}
-                  disabled={loading.submitting}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedInterview && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              {/* Instruction if my remark is pending */}
-              {!isAdmin && needsRemarkForUser(selectedInterview) && (
-                <div className="md:col-span-2 mb-2 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm font-medium">
-                  ⚠️ Please provide your remark and grade for this interview. This is required because the interview has already been conducted and your input is pending.
-                </div>
-              )}
-
-              <div>
-                <h4 className="font-semibold mb-3">Interview Information</h4>
-                <div className="space-y-2">
-                  <p><strong>Title:</strong> {selectedInterview.title}</p>
-                  <p><strong>Type:</strong> {selectedInterview.interview_type.replace('_', ' ').toUpperCase()}</p>
-                  <p><strong>Status:</strong> {selectedInterview.status}</p>
-                  <p><strong>Date:</strong> {new Date(selectedInterview.scheduled_at).toLocaleDateString()}</p>
-                  <p><strong>Time:</strong> {new Date(selectedInterview.scheduled_at).toLocaleTimeString()} - {new Date(selectedInterview.end_time).toLocaleTimeString()}</p>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-3">Candidate</h4>
-                <div className="space-y-2">
-                  <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
-                  <p><strong>Email:</strong> {selectedInterview.candidate.email}</p>
-                  <p><strong>Stage:</strong> {selectedInterview.candidate.current_stage}</p>
-                  <p><strong>Job:</strong> {selectedInterview.candidate.applied_job?.name || 'N/A'}</p>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-3">Interviewers</h4>
-                <div className="space-y-1">
-                  {selectedInterview.interviewers.map(interviewer => (
-                    <p key={interviewer._id}>{interviewer.name} ({interviewer.role})</p>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-3">Meeting Details</h4>
-                <div className="space-y-2">
-                  <p><strong>Format:</strong> {selectedInterview.type}</p>
-                  {selectedInterview.type === 'online' ? (
-                    <>
-                      <p><strong>Platform:</strong> {selectedInterview.platform || 'Not specified'}</p>
-                      <p><strong>Link:</strong>
-                        <a href={selectedInterview.meeting_link} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:underline break-all">
-                          {selectedInterview.meeting_link}
-                        </a>
-                      </p>
-                    </>
-                  ) : (
-                    <p><strong>Address:</strong> {selectedInterview.address}</p>
-                  )}
-                  {selectedInterview.description && (
-                    <p><strong>Description:</strong> {selectedInterview.description}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* My remark (read-only) OR form */}
-              {selectedInterview && !isAdmin && (
-                <div className="md:col-span-2 space-y-3">
-                  {myRemark ? (
-                    <div className="p-3 border rounded-lg bg-muted/30">
-                      <h4 className="font-semibold mb-1">📝 Your Submitted Remark</h4>
-                      <div className="text-sm">
-                        <p className="mb-2"><strong>Grade:</strong> {myRemark.grade}</p>
-                        <p className="whitespace-pre-wrap">{myRemark.remark}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Submitted at {new Date(myRemark.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ) : needsRemarkForUser(selectedInterview) ? (
-                    <div className="p-3 border rounded-lg bg-muted/30">
-                      <h4 className="font-semibold mb-2">📝 Your Remark (required)</h4>
-                      <Textarea
-                        value={remarkText}
-                        onChange={(e) => setRemarkText(e.target.value)}
-                        placeholder="Share your observations…"
-                        rows={3}
-                        className="text-sm"
-                      />
-                      <div className="mt-3">
-                        <Select value={remarkGrade} onValueChange={(v) => setRemarkGrade(v as Grade)}>
-                          <SelectTrigger className="w-full text-sm">
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gradeOptions.map((g) => (
-                              <SelectItem key={g} value={g}>{g}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex justify-end mt-3">
-                        <Button size="sm" onClick={handleSubmitRemark}>Submit</Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        You’re seeing this because the interview has already started and you haven’t added your remark yet.
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-              )}
+      {selectedInterview && (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* Warning if remark is pending */}
+          {!isAdmin && needsRemarkForUser(selectedInterview) && (
+            <div className="mb-4 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm font-medium">
+              ⚠️ Please provide your remark and grade for this interview. This is required because the interview has already been conducted and your input is pending.
             </div>
           )}
-        </DialogContent>
-      </Dialog>
 
-      {/* FullCalendar Component */}
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-        headerToolbar={{
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,listWeek'
-        }}
-        initialView="dayGridMonth"
-        events={events}
-        dayMaxEvents={true}
-        weekends={true}
-        eventClick={handleEventClick}
-        height="auto"
-        businessHours={{
-          daysOfWeek: [1, 2, 3, 4, 5],
-          startTime: '09:00',
-          endTime: '18:00'
-        }}
-        eventDidMount={(info) => {
-          const candidateName = info.event.extendedProps?.candidateName || 'Unknown Candidate';
-          const interviewerNames = info.event.extendedProps?.interviewerNames || [];
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Interview Information */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-base sm:text-lg">Interview Information</h4>
+              <div className="space-y-2 text-sm sm:text-base">
+                <p><strong>Title:</strong> {selectedInterview.title}</p>
+                <p><strong>Type:</strong> {selectedInterview.interview_type.replace('_', ' ').toUpperCase()}</p>
+                <p><strong>Status:</strong> {selectedInterview.status}</p>
+                <p><strong>Date:</strong> {new Date(selectedInterview.scheduled_at).toLocaleDateString()}</p>
+                <p><strong>Time:</strong> {new Date(selectedInterview.scheduled_at).toLocaleTimeString()} - {new Date(selectedInterview.end_time).toLocaleTimeString()}</p>
+              </div>
+            </div>
 
-          info.el.title = `${info.event.title}\nCandidate: ${candidateName}\nInterviewers: ${interviewerNames.join(', ') || 'No interviewers assigned'}`;
-        }}
-      />
-    </div>
+            {/* Candidate Information */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-base sm:text-lg">Candidate</h4>
+              <div className="space-y-2 text-sm sm:text-base">
+                <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
+                <p className="break-all"><strong>Email:</strong> {selectedInterview.candidate.email}</p>
+                <p><strong>Stage:</strong> {selectedInterview.candidate.current_stage}</p>
+                <p><strong>Job:</strong> {selectedInterview.candidate.applied_job?.name || 'N/A'}</p>
+              </div>
+            </div>
+
+            {/* Interviewers */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-base sm:text-lg">Interviewers</h4>
+              <div className="space-y-1 text-sm sm:text-base">
+                {selectedInterview.interviewers.map(interviewer => (
+                  <p key={interviewer._id}>{interviewer.name} ({interviewer.role})</p>
+                ))}
+              </div>
+            </div>
+
+            {/* Meeting Details */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-base sm:text-lg">Meeting Details</h4>
+              <div className="space-y-2 text-sm sm:text-base">
+                <p><strong>Format:</strong> {selectedInterview.type}</p>
+                {selectedInterview.type === 'online' ? (
+                  <>
+                    <p><strong>Platform:</strong> {selectedInterview.platform || 'Not specified'}</p>
+                    <p><strong>Link:</strong></p>
+                    <a 
+                      href={selectedInterview.meeting_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-600 hover:underline break-all block pl-4"
+                    >
+                      {selectedInterview.meeting_link}
+                    </a>
+                  </>
+                ) : (
+                  <p><strong>Address:</strong> {selectedInterview.address}</p>
+                )}
+                {selectedInterview.description && (
+                  <p><strong>Description:</strong> {selectedInterview.description}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Remark Section - Full width on mobile */}
+            {selectedInterview && !isAdmin && (
+              <div className="lg:col-span-2 space-y-3">
+                {myRemark ? (
+                  <div className="p-3 border rounded-lg bg-muted/30">
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base">📝 Your Submitted Remark</h4>
+                    <div className="text-sm">
+                      <p className="mb-2"><strong>Grade:</strong> {myRemark.grade}</p>
+                      <p className="whitespace-pre-wrap">{myRemark.remark}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Submitted at {new Date(myRemark.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ) : needsRemarkForUser(selectedInterview) ? (
+                  <div className="p-3 border rounded-lg bg-muted/30">
+                    <h4 className="font-semibold mb-2 text-sm sm:text-base">📝 Your Remark (required)</h4>
+                    <Textarea
+                      value={remarkText}
+                      onChange={(e) => setRemarkText(e.target.value)}
+                      placeholder="Share your observations…"
+                      rows={3}
+                      className="text-sm"
+                    />
+                    <div className="mt-3">
+                      <Select value={remarkGrade} onValueChange={(v) => setRemarkGrade(v as Grade)}>
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder="Select grade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gradeOptions.map((g) => (
+                            <SelectItem key={g} value={g}>{g}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end mt-3">
+                      <Button size="sm" onClick={handleSubmitRemark}>Submit</Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      You're seeing this because the interview has already started and you haven't added your remark yet.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </DialogContent>
+  </Dialog>
+
+  {/* FullCalendar with Mobile Optimizations */}
+  <div className="overflow-x-auto">
+    {/* FullCalendar Component - CORRECT VERSION */}
+<FullCalendar
+  plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+  headerToolbar={{
+    left: 'prev,next today',
+    center: 'title',
+    right: 'dayGridMonth,timeGridWeek,listWeek'
+  }}
+  initialView="dayGridMonth"
+  events={events}
+  dayMaxEvents={true}
+  weekends={true}
+  eventClick={handleEventClick}
+  height="auto"
+  businessHours={{
+    daysOfWeek: [1, 2, 3, 4, 5],
+    startTime: '09:00',
+    endTime: '18:00'
+  }}
+  eventDidMount={(info) => {
+    const candidateName = info.event.extendedProps?.candidateName || 'Unknown Candidate';
+    const interviewerNames = info.event.extendedProps?.interviewerNames || [];
+
+    info.el.title = `${info.event.title}\nCandidate: ${candidateName}\nInterviewers: ${interviewerNames.join(', ') || 'No interviewers assigned'}`;
+  }}
+/>
+
+  </div>
+</div>
+
   );
 };
 

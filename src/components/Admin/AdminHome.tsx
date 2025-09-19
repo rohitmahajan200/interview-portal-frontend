@@ -46,11 +46,15 @@ import {
   Calendar,
   Trash2,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Check,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import GloryDisplay from "../GloryDisplay";
+import { differenceInYears } from "date-fns";
 
 // Types
 type Candidate = {
@@ -77,8 +81,20 @@ type Candidate = {
       salary: string;
     };
   };
-  current_stage: "registered" | "hr" | "assessment" | "tech" | "manager" | "feedback";
-  status: "active" | "inactive" | "withdrawn" | "rejected" | "hired" | "deleted";
+  current_stage:
+    | "registered"
+    | "hr"
+    | "assessment"
+    | "tech"
+    | "manager"
+    | "feedback";
+  status:
+    | "active"
+    | "inactive"
+    | "withdrawn"
+    | "rejected"
+    | "hired"
+    | "deleted";
   email_verified: boolean;
   flagged_for_deletion: boolean;
   shortlisted: boolean;
@@ -147,7 +163,9 @@ const AdminHome = () => {
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
+    null
+  );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCandidate, setLoadingCandidate] = useState(false);
   const [stageFilter, setStageFilter] = useState<string>("all");
@@ -155,7 +173,9 @@ const AdminHome = () => {
 
   // Deletion state
   const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
-  const [candidateToDelete, setCandidateToDelete] = useState<Candidate | null>(null);
+  const [candidateToDelete, setCandidateToDelete] = useState<Candidate | null>(
+    null
+  );
   const [isDeletingCandidate, setIsDeletingCandidate] = useState(false);
   function truncateTag(tag: string, isreq=false, maxLength = 12) {
     if (tag.length <= maxLength) return tag;
@@ -174,6 +194,11 @@ const AdminHome = () => {
     return isCompact;
   }
   const isCompact = useIsCompact(1220);
+  const [personalCollapsed, setPersonalInfoCollapsed] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [documentCollapsed, setDocumentCollapsed] = useState(false);
+  
+
   // Helper Functions
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -256,8 +281,10 @@ const AdminHome = () => {
 
     try {
       setIsDeletingCandidate(true);
-      const response = await api.delete(`/org/admin/delete-candidate/${candidateToDelete._id}`);
-      
+      const response = await api.delete(
+        `/org/admin/delete-candidate/${candidateToDelete._id}`
+      );
+
       if (response.data.success) {
         toast.success("Candidate deleted successfully");
         setDeletionDialogOpen(false);
@@ -265,7 +292,9 @@ const AdminHome = () => {
         await fetchCandidates(); // Refresh the list
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to delete candidate");
+      toast.error(
+        error?.response?.data?.message || "Failed to delete candidate"
+      );
     } finally {
       setIsDeletingCandidate(false);
     }
@@ -282,23 +311,35 @@ const AdminHome = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (candidate) =>
-          candidate.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          candidate.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          candidate.first_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          candidate.last_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
           candidate.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (stageFilter !== "all") {
-      filtered = filtered.filter((candidate) => candidate.current_stage === stageFilter);
+      filtered = filtered.filter(
+        (candidate) => candidate.current_stage === stageFilter
+      );
     }
 
     if (statusFilter !== "all") {
       if (statusFilter === "shortlisted") {
-        filtered = filtered.filter((candidate) => candidate.shortlisted === true);
+        filtered = filtered.filter(
+          (candidate) => candidate.shortlisted === true
+        );
       } else if (statusFilter === "flagged-deletion") {
-        filtered = filtered.filter((candidate) => candidate.flagged_for_deletion === true);
+        filtered = filtered.filter(
+          (candidate) => candidate.flagged_for_deletion === true
+        );
       } else {
-        filtered = filtered.filter((candidate) => candidate.status === statusFilter);
+        filtered = filtered.filter(
+          (candidate) => candidate.status === statusFilter
+        );
       }
     }
 
@@ -309,7 +350,8 @@ const AdminHome = () => {
   const stats = {
     total: candidates.length,
     active: candidates.filter((c) => c.status === "active").length,
-    flagged_for_deletion: candidates.filter((c) => c.flagged_for_deletion).length,
+    flagged_for_deletion: candidates.filter((c) => c.flagged_for_deletion)
+      .length,
     hired: candidates.filter((c) => c.status === "hired").length,
   };
 
@@ -327,7 +369,9 @@ const AdminHome = () => {
 
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Candidate Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Candidate Management
+        </h1>
         <p className="text-muted-foreground">
           View and manage all candidates in the system (Admin View)
         </p>
@@ -337,7 +381,9 @@ const AdminHome = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Candidates</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Candidates
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -347,11 +393,15 @@ const AdminHome = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Candidates</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Candidates
+            </CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.active}
+            </div>
           </CardContent>
         </Card>
 
@@ -361,17 +411,23 @@ const AdminHome = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{stats.hired}</div>
+            <div className="text-2xl font-bold text-emerald-600">
+              {stats.hired}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Flagged for Deletion</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Flagged for Deletion
+            </CardTitle>
             <UserX className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.flagged_for_deletion}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {stats.flagged_for_deletion}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -422,7 +478,9 @@ const AdminHome = () => {
                 <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="hired">Hired</SelectItem>
                 <SelectItem value="shortlisted">⭐ Shortlisted</SelectItem>
-                <SelectItem value="flagged-deletion">🚨 Flagged for Deletion</SelectItem>
+                <SelectItem value="flagged-deletion">
+                  🚨 Flagged for Deletion
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -461,7 +519,8 @@ const AdminHome = () => {
                             {candidate.first_name} {candidate.last_name}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {candidate.gender} • {formatDate(candidate.date_of_birth)}
+                            {candidate.gender} •{" "}
+                            {formatDate(candidate.date_of_birth)}
                           </div>
                         </div>
                       </div>
@@ -557,255 +616,340 @@ const AdminHome = () => {
           <ScrollArea className="flex-1 pr-4">
             {selectedCandidate && (
               <div className="space-y-6">
-                {/* Personal Information Card */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Personal Information</CardTitle>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <CardTitle>Personal Information</CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setPersonalInfoCollapsed(!personalCollapsed)
+                        }
+                        className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <span className="text-sm font-medium">
+                          {personalCollapsed ? "Show" : "Hide"}
+                        </span>
+                        {personalCollapsed ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Profile Info */}
-                    <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 border-2 p-4 sm:p-6 rounded-xl w-full lg:w-auto">
-                        <Avatar className="w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-gray-200 dark:ring-gray-700 flex-shrink-0">
-                          <AvatarImage src={selectedCandidate.profile_photo_url?.url} />
-                          <AvatarFallback className="text-lg font-semibold">
-                            {selectedCandidate.first_name?.[0]}
-                            {selectedCandidate.last_name?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
 
-                        <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                            {selectedCandidate.first_name} {selectedCandidate.last_name}
-                          </h3>
-                          <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                            <Badge className={getStageColor(selectedCandidate.current_stage)} variant="outline">
-                              {selectedCandidate.current_stage?.toUpperCase()}
-                            </Badge>
-                            <Badge className={getStatusColor(selectedCandidate.status)} variant="outline">
-                              {selectedCandidate.status?.toUpperCase()}
-                            </Badge>
-                            {selectedCandidate.flagged_for_deletion && (
-                              <Badge variant="destructive" className="animate-pulse">
-                                🚨 FLAGGED FOR DELETION
+                  <CardContent className="space-y-4">
+                    {/* Profile Info */}
+                    {!personalCollapsed && (
+                      <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
+                          <Avatar className="w-40 h-37 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                            <AvatarImage
+                              src={selectedCandidate.profile_photo_url?.url}
+                              className="object-cover w-full h-full"
+                            />
+                            <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
+                              {selectedCandidate.first_name?.[0]}
+                              {selectedCandidate.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+
+                          <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+                            <p className="text-lg sm:text-xs font-sm dark:text-purple-400 mb-2">
+                              <strong>
+                                Applied For -{" "}
+                                {selectedCandidate.applied_job?.name}
+                              </strong>
+                            </p>
+                            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                              {selectedCandidate.first_name}{" "}
+                              {selectedCandidate.last_name}
+                            </h3>
+                            <div className="flex justify-center sm:justify-start">
+                              <span className="text-lg sm:text-xs font-sma dark:text-purple-400 mb-2">
+                                <strong>Current Stage -</strong>
+                              </span>
+                              <Badge
+                                className={getStageColor(
+                                  selectedCandidate.current_stage
+                                )}
+                                variant="secondary"
+                              >
+                                {selectedCandidate.current_stage?.toUpperCase()}
                               </Badge>
+                            </div>
+                            <div className="inline-flex items-center gap-2">
+                              <div className="text-xs text-gray-600">
+                                <strong>Status:</strong>{" "}
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1 ${
+                                    selectedCandidate.status.toLowerCase() ===
+                                    "hired"
+                                      ? "text-green-700"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  {selectedCandidate.status.toUpperCase()}
+                                  {selectedCandidate.status.toLowerCase() ===
+                                    "hired" && <Check className="w-3 h-3" />}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <span className="break-all">
+                                📧 {selectedCandidate.email}
+                              </span>
+                              <span>📱 {selectedCandidate.phone}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Applied Position */}
+                        <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                          {/* Personal Details Grid */}
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                                DATE OF BIRTH
+                                <sup>
+                                  <i className="text-blue-400">
+                                    {differenceInYears(
+                                      new Date(),
+                                      new Date(selectedCandidate.date_of_birth)
+                                    ) + " year"}
+                                  </i>
+                                </sup>
+                              </p>
+                              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                                {formatDate(selectedCandidate.date_of_birth)}
+                              </p>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                                REGISTRATION
+                              </p>
+                              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                                {formatDate(
+                                  selectedCandidate.registration_date
+                                )}
+                              </p>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                                SHORTLISTED
+                              </p>
+                              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                                {selectedCandidate.shortlisted
+                                  ? "✅ Yes"
+                                  : "❌ No"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Address */}
+                          {selectedCandidate.address && (
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
+                                Address
+                              </p>
+                              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
+                                {selectedCandidate.address}
+                              </p>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            {selectedCandidate.applied_job?.description
+                              ?.location && (
+                              <div>
+                                📍{" "}
+                                {
+                                  selectedCandidate.applied_job.description
+                                    .location
+                                }
+                              </div>
+                            )}
+                            {selectedCandidate.applied_job?.description
+                              ?.country && (
+                              <div>
+                                🌍{" "}
+                                {
+                                  selectedCandidate.applied_job.description
+                                    .country
+                                }
+                              </div>
+                            )}
+                            {selectedCandidate.applied_job?.description
+                              ?.time && (
+                              <div>
+                                ⏰{" "}
+                                {selectedCandidate.applied_job.description.time}
+                              </div>
+                            )}
+                            {selectedCandidate.applied_job?.description
+                              ?.expInYears && (
+                              <div>
+                                💼{" "}
+                                {
+                                  selectedCandidate.applied_job.description
+                                    .expInYears
+                                }
+                              </div>
+                            )}
+                            {selectedCandidate.applied_job?.description
+                              ?.salary && (
+                              <div className="sm:col-span-2">
+                                💰{" "}
+                                {
+                                  selectedCandidate.applied_job.description
+                                    .salary
+                                }
+                              </div>
                             )}
                           </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="break-all">📧 {selectedCandidate.email}</span>
-                            <span>📱 {selectedCandidate.phone}</span>
-                          </div>
                         </div>
-                      </div>
-
-                      {/* Applied Position */}
-                      <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">
-                          Applied Position
-                        </h4>
-                        <p className="text-lg sm:text-xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-                          {selectedCandidate.applied_job?.name}
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          {selectedCandidate.applied_job?.description?.location && (
-                            <div>📍 {selectedCandidate.applied_job.description.location}</div>
-                          )}
-                          {selectedCandidate.applied_job?.description?.country && (
-                            <div>🌍 {selectedCandidate.applied_job.description.country}</div>
-                          )}
-                          {selectedCandidate.applied_job?.description?.time && (
-                            <div>⏰ {selectedCandidate.applied_job.description.time}</div>
-                          )}
-                          {selectedCandidate.applied_job?.description?.expInYears && (
-                            <div>💼 {selectedCandidate.applied_job.description.expInYears}</div>
-                          )}
-                          {selectedCandidate.applied_job?.description?.salary && (
-                            <div className="sm:col-span-2">
-                              💰 {selectedCandidate.applied_job.description.salary}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Glory Grades Display */}
-                    {selectedCandidate.glory && (
-                      <GloryDisplay glory={selectedCandidate.glory} />
-                    )}
-
-                    {/* Personal Details Grid */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">GENDER</p>
-                        <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                          {selectedCandidate.gender || "Not specified"}
-                        </p>
-                      </div>
-
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">DATE OF BIRTH</p>
-                        <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                          {formatDate(selectedCandidate.date_of_birth)}
-                        </p>
-                      </div>
-
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">REGISTRATION</p>
-                        <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                          {formatDate(selectedCandidate.registration_date)}
-                        </p>
-                      </div>
-
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">SHORTLISTED</p>
-                        <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                          {selectedCandidate.shortlisted ? "✅ Yes" : "❌ No"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Address */}
-                    {selectedCandidate.address && (
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
-                          Address
-                        </p>
-                        <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
-                          {selectedCandidate.address}
-                        </p>
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Application Status */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Application Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Current Stage</div>
-                        <Badge className={getStageColor(selectedCandidate.current_stage)}>
-                          {selectedCandidate.current_stage?.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Status</div>
-                        <Badge className={getStatusColor(selectedCandidate.status)}>
-                          {selectedCandidate.status?.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Email Verified</div>
-                        <Badge
-                          className={
-                            selectedCandidate.email_verified
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }
-                        >
-                          {selectedCandidate.email_verified ? "Verified" : "Not Verified"}
-                        </Badge>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Registration Date</div>
-                        <div className="text-sm">{formatDate(selectedCandidate.registration_date)}</div>
-                      </div>
-                    </div>
-
-                    {selectedCandidate.flagged_for_deletion && (
-                      <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
-                          <AlertTriangle className="h-5 w-5" />
-                          <span className="font-semibold">DELETION REQUEST</span>
-                        </div>
-                        <p className="text-sm text-red-700 dark:text-red-300 mt-2">
-                          This candidate has requested account deletion. As an admin, you can permanently delete this account.
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                {selectedCandidate.glory && (
+                  <GloryDisplay glory={selectedCandidate.glory} />
+                )}
 
                 {/* Documents Section - Read Only */}
-                {selectedCandidate.documents && selectedCandidate.documents.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Documents ({selectedCandidate.documents.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {selectedCandidate.documents.map((doc) => (
-                          <div
-                            key={doc._id}
-                            className={`border rounded-lg p-4 ${
-                              doc.isVerified
-                                ? "bg-green-50 border-green-200 dark:bg-green-900/10"
-                                : "bg-gray-50 border-gray-200 dark:bg-gray-800"
-                            }`}
+                {selectedCandidate.documents &&
+                  selectedCandidate.documents.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <CardTitle>
+                            Documents ({selectedCandidate.documents.length})
+                          </CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setDocumentCollapsed(!documentCollapsed)
+                            }
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                           >
-                            <div className="flex justify-between items-center">
-                              <h3 className="text-sm font-medium capitalize">{doc.document_type}</h3>
-                              <Badge
-                                className={
-                                  doc.isVerified
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-yellow-100 text-yellow-800"
+                            <span className="text-sm font-medium">
+                              {documentCollapsed ? "Show" : "Hide"}
+                            </span>
+                            {documentCollapsed ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronUp className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      {(!documentCollapsed && <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedCandidate.documents.map((doc) => (
+                            <div
+                              key={doc._id}
+                              className={`border rounded-lg p-4 ${
+                                doc.isVerified
+                                  ? "bg-green-50 border-green-200 dark:bg-green-900/10"
+                                  : "bg-gray-50 border-gray-200 dark:bg-gray-800"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <h3 className="text-sm font-medium capitalize">
+                                  {doc.document_type}
+                                </h3>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 w-full"
+                                onClick={() =>
+                                  window.open(doc.document_url, "_blank")
                                 }
                               >
-                                {doc.isVerified ? "✓ Verified" : "⏳ Pending"}
-                              </Badge>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-2 w-full"
-                              onClick={() => window.open(doc.document_url, "_blank")}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View Document
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Stage History - Read Only */}
-                {selectedCandidate.stage_history && selectedCandidate.stage_history.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Stage History ({selectedCandidate.stage_history.length})</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {selectedCandidate.stage_history
-                          .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())
-                          .map((stage) => (
-                            <div key={stage._id} className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                              <div className="flex justify-between items-center mb-1">
-                                <p className="text-sm font-semibold capitalize">
-                                  {stage.from_stage ? `${stage.from_stage} → ${stage.to_stage}` : stage.to_stage}
-                                </p>
-                                <span className="text-xs text-gray-500">{formatDate(stage.changed_at)}</span>
-                              </div>
-                              {stage.changed_by && (
-                                <p className="text-xs text-gray-600">
-                                  Changed by: <span className="font-medium">{stage.changed_by.name}</span> ({stage.changed_by.role})
-                                </p>
-                              )}
-                              {stage.remarks && (
-                                <p className="text-xs text-gray-600 mt-1 italic">"{stage.remarks}"</p>
-                              )}
+                                <Eye className="w-4 h-4 mr-1" />
+                                View Document
+                              </Button>
                             </div>
                           ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                        </div>
+                      </CardContent>)}
+                    </Card>
+                  )}
+
+                {/* Stage History */}
+                {selectedCandidate.stage_history &&
+                  selectedCandidate.stage_history.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <CardTitle>Stage History</CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setHistoryCollapsed(!historyCollapsed)
+                            }
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                          >
+                            <span className="text-sm font-medium">
+                              {historyCollapsed ? "Show" : "Hide"}
+                            </span>
+                            {historyCollapsed ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronUp className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {!historyCollapsed &&
+                            selectedCandidate.stage_history.map(
+                              (stage: any) => (
+                                <div
+                                  key={stage._id}
+                                  className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
+                                >
+                                  <div className="flex justify-between items-center mb-1">
+                                    <p className="text-sm font-semibold capitalize">
+                                      {stage.from_stage
+                                        ? `${stage.from_stage} → ${stage.to_stage}`
+                                        : stage.to_stage}
+                                    </p>
+                                    <span className="text-xs text-gray-500">
+                                      {formatDate(stage.changed_at)}
+                                    </span>
+                                  </div>
+
+                                  {stage.changed_by && (
+                                    <p className="text-xs text-gray-600">
+                                      Changed by:{" "}
+                                      <span className="font-medium">
+                                        {stage.changed_by.name}
+                                      </span>{" "}
+                                      ({stage.changed_by.email})
+                                    </p>
+                                  )}
+
+                                  {stage.remarks && (
+                                    <p className="text-xs text-gray-600 mt-1 italic">
+                                      "{stage.remarks}"
+                                    </p>
+                                  )}
+                                </div>
+                              )
+                            )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
             )}
           </ScrollArea>
@@ -832,7 +976,10 @@ const AdminHome = () => {
       </Dialog>
 
       {/* Deletion Confirmation Dialog */}
-      <AlertDialog open={deletionDialogOpen} onOpenChange={setDeletionDialogOpen}>
+      <AlertDialog
+        open={deletionDialogOpen}
+        onOpenChange={setDeletionDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-600">
@@ -848,10 +995,12 @@ const AdminHome = () => {
                 ({candidateToDelete?.email}).
               </p>
               <p className="text-red-600 font-semibold">
-                ⚠️ This action cannot be undone. All candidate data, documents, assessments, and history will be permanently removed.
+                ⚠️ This action cannot be undone. All candidate data, documents,
+                assessments, and history will be permanently removed.
               </p>
               <p>
-                The candidate has requested deletion of their account. Are you sure you want to proceed?
+                The candidate has requested deletion of their account. Are you
+                sure you want to proceed?
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
