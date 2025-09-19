@@ -122,7 +122,24 @@ const HrQuestionsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  function truncateTag(tag: string, maxLength = 12) {
+    if (tag.length <= maxLength) return tag;
+    return tag.slice(0, maxLength) + "…";
+  }
 
+    function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
+
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isCompact = useIsCompact(1220);
   // Tag mode states
   const [useSameTagsForAll, setUseSameTagsForAll] = useState(false);
   const [globalTags, setGlobalTags] = useState('');
@@ -302,15 +319,18 @@ const HrQuestionsManagement = () => {
     <div className="container mx-auto p-6 space-y-6">
       
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col items-center text-center md:flex-row md:justify-between md:items-center md:text-left gap-4">
         <div>
-          <h1 className="text-3xl font-bold">HR Questions Management</h1>
-          <p className="text-muted-foreground">Create and manage HR interview questions</p>
+          <h1 className="text-2xl md:text-3xl font-bold">HR Questions Management</h1>
+          <p className="text-muted-foreground">
+            Create and manage HR interview questions
+          </p>
         </div>
-        <Button onClick={openCreateDialog}>
+        <Button onClick={openCreateDialog} className="w-full md:w-auto">
           <Plus className="mr-2 w-4 h-4" /> Add Question
         </Button>
       </div>
+
 
       {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -399,9 +419,9 @@ const HrQuestionsManagement = () => {
                   <TableRow>
                     <TableHead>Question</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Options</TableHead>
+                    {!isCompact && <TableHead>Options</TableHead>}
                     <TableHead>Tags</TableHead>
-                    <TableHead>Created By</TableHead>
+                    {!isCompact &&<TableHead>Created By</TableHead>}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -433,7 +453,7 @@ const HrQuestionsManagement = () => {
                           {question.input_type.toUpperCase()}
                         </Badge>
                       </TableCell>
-                     <TableCell>
+                     {!isCompact && <TableCell>
                       {question.options && question.options.length > 0 ? (
                         <div className="flex flex-wrap gap-1 max-w-[200px]">
                           {question.options.slice(0, 2).map((option, index) => (
@@ -450,28 +470,32 @@ const HrQuestionsManagement = () => {
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>
                       )}
+                    </TableCell>}
+                    <TableCell>
+                      {question.tags && question.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {question.tags.map((tag, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs"
+                              title={tag} // full text on hover
+                            >
+                              {isCompact ? truncateTag(tag, 12) : tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No tags</span>
+                      )}
                     </TableCell>
-
-                      <TableCell>
-                        {question.tags && question.tags.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {question.tags.map((tag, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">No tags</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      {!isCompact && <TableCell className="text-sm text-muted-foreground">
                         {question.created_by ? 
                         <span className='flex gap-2'>
                         {question.created_by.name && <Badge>{question.created_by.name}</Badge>}
                         {question.created_by.role && <Badge>{question.created_by.role}</Badge>}
                         </span> : "-" }
-                      </TableCell>
+                      </TableCell>}
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button

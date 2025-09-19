@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentRole } from "@/features/Org/View/adminViewSlice";
 import { useNavigate } from "react-router-dom";
@@ -88,12 +88,7 @@ const OrgDashboard = () => {
       >
         <div className="flex h-full flex-col">
           {/* Fixed Tab Header - Height: 64px */}
-          <TabsList className="flex-shrink-0 w-fit gap-2 p-1 border bg-background h-16 md:ml-64">
-            <TabsTrigger value="ADMIN" className="px-6 py-2 whitespace-nowrap">Admin</TabsTrigger>
-            <TabsTrigger value="HR" className="px-6 py-2 whitespace-nowrap">HR</TabsTrigger>
-            <TabsTrigger value="INVIGILATOR" className="px-6 py-2 whitespace-nowrap">Invigilator</TabsTrigger>
-            <TabsTrigger value="MANAGER" className="px-6 py-2 whitespace-nowrap">Manager</TabsTrigger>
-          </TabsList>
+
 
           {/* Main Content Area - Remaining Height with Scroll */}
           <div className="flex-1 w-full h-[calc(100vh-4rem)] overflow-hidden">

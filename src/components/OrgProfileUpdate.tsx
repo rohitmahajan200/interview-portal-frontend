@@ -85,50 +85,37 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
     }
   };
 
-    const onSubmit = async (data: OrgProfileUpdateData) => {
-      if (!currentUser) return;
+  const onSubmit = async (data: OrgProfileUpdateData) => {
+    if (!currentUser) return;
 
-      try {
-        setIsSubmitting(true);
-        
-        // Prepare the update payload
-        const updatePayload: { name: string; profilephotourl?: string } = {
-          name: data.name,
-        };
+    try {
+      setIsSubmitting(true);
+      
+      // Prepare the update payload
+      const updatePayload: { name: string; profilephotourl?: string } = {
+        name: data.name,
+      };
 
-        // Include profile photo URL if there's a pending one
-        if (pendingProfilePhoto) {
-          updatePayload.profilephotourl = pendingProfilePhoto;
-        }
+      // Include profile photo URL if there's a pending one
+      if (pendingProfilePhoto) {
+        updatePayload.profilephotourl = pendingProfilePhoto;
+      }
 
-        const response = await api.patch('/org/profile', updatePayload);
+      const response = await api.patch('/org/profile', updatePayload);
 
-        if (response.data.success) {
-          // Fetch fresh user data from server
-          try {
-            const userResponse = await api.get('/org/me');
+      if (response.data.success) {
+        // Fetch fresh user data from server
+        try {
+          const userResponse = await api.get('/org/me');
+          
+          if (userResponse.data.success && userResponse.data.user) {
+            // Update Redux state with fresh data from server
+            dispatch(setUser(userResponse.data.user));
             
-            if (userResponse.data.success && userResponse.data.user) {
-              // Update Redux state with fresh data from server
-              dispatch(setUser(userResponse.data.user));
-              
-              toast.success('Profile updated successfully');
-              reset(data); // Reset form dirty state
-              setPendingProfilePhoto(null); // Clear pending photo
-            } else {
-              // Fallback to manual update if /org/me fails
-              dispatch(setUser({
-                ...currentUser,
-                name: data.name,
-                ...(pendingProfilePhoto && { profilephotourl: pendingProfilePhoto }),
-              }));
-              
-              toast.success('Profile updated successfully');
-              window.location.reload();
-            }
-          } catch (fetchError) {
-            console.error('Failed to fetch updated user data:', fetchError);
-            
+            toast.success('Profile updated successfully');
+            reset(data); // Reset form dirty state
+            setPendingProfilePhoto(null); // Clear pending photo
+          } else {
             // Fallback to manual update if /org/me fails
             dispatch(setUser({
               ...currentUser,
@@ -137,18 +124,30 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
             }));
             
             toast.success('Profile updated successfully');
-            reset(data);
-            setPendingProfilePhoto(null);
+            window.location.reload();
           }
+        } catch (fetchError) {
+          console.error('Failed to fetch updated user data:', fetchError);
+          
+          // Fallback to manual update if /org/me fails
+          dispatch(setUser({
+            ...currentUser,
+            name: data.name,
+            ...(pendingProfilePhoto && { profilephotourl: pendingProfilePhoto }),
+          }));
+          
+          toast.success('Profile updated successfully');
+          reset(data);
+          setPendingProfilePhoto(null);
         }
-      } catch (error: any) {
-        console.error('Failed to update profile:', error);
-        toast.error(error?.response?.data?.message || 'Failed to update profile');
-      } finally {
-        setIsSubmitting(false);
       }
-    };
-
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -166,9 +165,9 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
 
   if (!currentUser) {
     return (
-      <Card className={className}>
-        <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">
+      <Card className={`w-full ${className}`}>
+        <CardContent className="p-4 sm:p-6">
+          <div className="text-center text-muted-foreground text-sm sm:text-base">
             No user data available
           </div>
         </CardContent>
@@ -177,26 +176,26 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Profile Settings
+    <Card className={`w-full ${className}`}>
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+          <User className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+          <span className="truncate">Profile Settings</span>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm sm:text-base">
           Update your profile information and photo
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
         {/* Profile Photo Section */}
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="relative">
-            <Avatar className="w-20 h-20">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+          <div className="relative flex-shrink-0">
+            <Avatar className="w-16 h-16 sm:w-20 sm:h-20">
               <AvatarImage 
                 src={displayPhotoUrl} 
                 alt={currentUser.name}
               />
-              <AvatarFallback className="text-lg font-semibold">
+              <AvatarFallback className="text-base sm:text-lg font-semibold">
                 {getInitials(currentUser.name)}
               </AvatarFallback>
             </Avatar>
@@ -207,9 +206,9 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
               className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 hover:opacity-100 cursor-pointer transition-opacity"
             >
               {uploading ? (
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 text-white animate-spin" />
               ) : (
-                <Camera className="h-5 w-5 text-white" />
+                <Camera className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               )}
             </label>
             
@@ -223,14 +222,14 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
             />
           </div>
           
-          <div className="text-center sm:text-left">
-            <h3 className="font-medium">{currentUser.name}</h3>
-            <p className="text-sm text-muted-foreground">{currentUser.role}</p>
-            <p className="text-xs text-muted-foreground mt-1">
+          <div className="text-center sm:text-left min-w-0 flex-1">
+            <h3 className="font-medium text-base sm:text-lg truncate">{currentUser.name}</h3>
+            <p className="text-sm sm:text-base text-muted-foreground">{currentUser.role}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Click on avatar to change photo (Max 5MB)
             </p>
             {pendingProfilePhoto && (
-              <p className="text-xs text-amber-600 mt-1 font-medium">
+              <p className="text-xs sm:text-sm text-amber-600 mt-1 font-medium">
                 New photo ready - click Save Changes to update
               </p>
             )}
@@ -240,33 +239,34 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
         {/* Profile Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name" className="text-sm sm:text-base">Name</Label>
             <Input
               id="name"
               placeholder="Enter your full name"
               {...register('name')}
               disabled={isSubmitting}
+              className="text-sm sm:text-base"
             />
             {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+              <p className="text-xs sm:text-sm text-destructive">{errors.name.message}</p>
             )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-2">
             <Button 
               type="submit" 
               disabled={!hasChanges || isSubmitting}
-              className="min-w-[120px]"
+              className="w-full sm:w-auto sm:min-w-[140px]"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin flex-shrink-0" />
+                  <span className="truncate">Saving...</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
+                  <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">Save Changes</span>
                 </>
               )}
             </Button>

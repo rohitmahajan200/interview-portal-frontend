@@ -746,16 +746,15 @@ const AssessmentReview = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <ScrollArea className="h-[400px]">
+            <div className="h-[400px] overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Score</TableHead>
                     <TableHead>Glory</TableHead>
                     <TableHead>Completed</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {<TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -783,21 +782,6 @@ const AssessmentReview = () => {
                             </p>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            item.status === "completed"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className={cn(
-                            item.status === "completed" &&
-                              "bg-green-100 text-green-800 hover:bg-green-200"
-                          )}
-                        >
-                          {item.status}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         {item.ai_score !== undefined ? (
@@ -836,7 +820,7 @@ const AssessmentReview = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {item.ai_score === undefined && (
+                          {item.ai_score === undefined ? (
                             <Button
                               size="sm"
                               variant="default"
@@ -853,27 +837,14 @@ const AssessmentReview = () => {
                                 ? "Evaluating..."
                                 : "Evaluate"}
                             </Button>
-                          )}
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openAssessmentDialog(item._id);
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Review
-                          </Button>
+                          ) : "None"}
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>

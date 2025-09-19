@@ -23,7 +23,6 @@ import {
 import {
   Calendar,
   Clock,
-  Eye,
   FileText,
   Play,
   User,
@@ -35,7 +34,6 @@ import {
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import api from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import GloryDialog from "../GloryDialog";
@@ -561,35 +559,33 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
     <div className="h-full flex flex-col space-y-6 p-6">
 
       {/* Enhanced Header with Statistics */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Candidate Reviews</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">Candidate Reviews</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Review and evaluate candidate questionnaire responses
           </p>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex flex-wrap gap-2 md:gap-4">
           {statistics && (
-            <div className="flex gap-4 text-sm">
-              <Badge variant="outline">
-                Total: {statistics.totalResponses}
-              </Badge>
-              <Badge variant="secondary">
-                Pending: {statistics.pendingEvaluation}
-              </Badge>
+            <>
+              <Badge variant="outline">Total: {statistics.totalResponses}</Badge>
+              <Badge variant="secondary">Pending: {statistics.pendingEvaluation}</Badge>
               <Badge variant="default">
                 AI Evaluated: {statistics.aiEvaluatedResponses}
               </Badge>
               <Badge variant="outline">
                 Avg Score: {statistics.averageScore.toFixed(1)}/10
               </Badge>
-            </div>
+            </>
           )}
           <Badge variant="outline" className="text-sm">
             {responsesList.length} Total Responses
           </Badge>
         </div>
       </div>
+
 
       {/* Responses Table */}
       <Card className="flex-1">
@@ -605,15 +601,13 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <ScrollArea className="h-[400px]">
+            <div className="h-[400px] overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
                     <TableHead>Applied Job</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Submitted</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -651,45 +645,16 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            item.questionnaire_status === "submitted"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className={cn(
-                            item.questionnaire_status === "submitted" &&
-                              "bg-green-100 text-green-800 hover:bg-green-200"
-                          )}
-                        >
-                          {item.questionnaire_status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           {formatDate(item.submitted_at)}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openCandidateDialog(item._id);
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Review
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -4,12 +4,9 @@ import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "@/app/store";
 
 import { AdminSidebar } from "./AdminSidebar";
-import { Breadcrumb, BreadcrumbList } from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -19,7 +16,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import ThemeToggle from "@/components/themeToggle";
 
 import { setUser } from "@/features/Org/Auth/orgAuthSlice";
 import { setAdminNotifications } from "@/features/Org/Notifications/AdminNotificationSlice";
@@ -38,6 +34,7 @@ import JobManagement from "./JobManagement";
 
 // toasts
 import {  toast } from "react-hot-toast";
+import { Header } from "../Header";
 
 export default function AdminDashboard() {
   const dispatch = useDispatch();
@@ -152,10 +149,6 @@ export default function AdminDashboard() {
         return <RolePermissions />;
       case "config":
         return <SystemConfiguration />;
-      case "analytics":
-        return <ReportsAnalytics />;
-      case "audit":
-        return <AuditLogs />;
       case "notifications":
         return <AdminNotifications />;
       case "jobs":
@@ -185,26 +178,7 @@ export default function AdminDashboard() {
             </DialogContent>
           </Dialog>
 
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background dark:bg-gray-900">
-            <div className="flex items-center gap-2 px-4 justify-between w-full">
-              <div className="flex items-center gap-2 px-4">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <header className="px-1 rounded-xl">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                          Admin Portal - Change Networks
-                        </span>
-                      </div>
-                    </header>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </div>
-              <ThemeToggle />
-            </div>
-          </header>
+          <Header />
 
           <div className="flex-1 overflow-y-auto p-6 pb-24">
             {currentView ? renderAdminView(currentView) : null}

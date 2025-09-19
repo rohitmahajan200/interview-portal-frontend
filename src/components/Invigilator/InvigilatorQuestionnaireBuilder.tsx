@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash, Search,Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -118,7 +118,23 @@ const AssessmentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+    function truncateTag(tag: string, maxLength = 12) {
+    if (tag.length <= maxLength) return tag;
+    return tag.slice(0, maxLength) + "…";
+  }
+  function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
 
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isCompact = useIsCompact(1220);
   // Update createForm defaultValues
   const createForm = useForm<CreateFormData>({
     resolver: zodResolver(assessmentSchema),
@@ -471,18 +487,26 @@ const AssessmentManagement = () => {
     <div className="container mx-auto p-6 space-y-6">
       <Toaster position="bottom-right" />
       
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Assessment Management</h1>
-          <p className="text-muted-foreground">
-            Assign and manage technical assessments for candidates
-          </p>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div className="text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-bold">Assessment Management</h1>
+            <p className="text-muted-foreground">
+              Assign and manage technical assessments for candidates
+            </p>
+          </div>
+          <div className="w-full md:w-auto">
+            <Button
+              onClick={openCreateDialog}
+              disabled={getAvailableCandidates().length === 0}
+              className="w-full md:w-auto"
+            >
+              <Plus className="mr-2 w-4 h-4" /> Assign Assessment
+            </Button>
+          </div>
         </div>
-        <Button onClick={openCreateDialog} disabled={getAvailableCandidates().length === 0}>
-          <Plus className="mr-2 w-4 h-4" /> Assign Assessment
-        </Button>
-      </div>
+        
+
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -592,17 +616,20 @@ const AssessmentManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
-                    <TableHead>Questions</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Due Date</TableHead>
                     <TableHead>Assigned By</TableHead>
-                    <TableHead>Created</TableHead>
+                    {!isCompact && <TableHead>Created</TableHead>}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAssessments.map((assessment) => (
-                    <TableRow key={assessment._id}>
+                     <TableRow
+                        key={assessment._id}
+                        onClick={() => openViewDialog(assessment)}
+                        className="cursor-pointer hover:bg-muted"
+                      >
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar>
@@ -622,24 +649,11 @@ const AssessmentManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {assessment.questions.slice(0, 2).map((question) => (
-                            <Badge key={question._id} variant="outline" className="text-xs">
-                              {question.type.toUpperCase()}
-                            </Badge>
-                          ))}
-                          {assessment.questions.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{assessment.questions.length - 2} more
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
                         <Badge className={getStatusColor(assessment.status)}>
-                          {assessment.status.toUpperCase()}
+                          {isCompact ? truncateTag(assessment.status.toUpperCase(), 3) : assessment.status.toUpperCase()}
                         </Badge>
                       </TableCell>
+
                       <TableCell className="text-sm">
                         {assessment.due_at ? formatDate(assessment.due_at) : 'No due date'}
                       </TableCell>
@@ -649,18 +663,11 @@ const AssessmentManagement = () => {
                           <div className="text-muted-foreground">{`(${assessment.assigned_by.role})`}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      {!isCompact && <TableCell className="text-sm text-muted-foreground">
                         {formatDate(assessment.createdAt)}
-                      </TableCell>
+                      </TableCell>}
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openViewDialog(assessment)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
