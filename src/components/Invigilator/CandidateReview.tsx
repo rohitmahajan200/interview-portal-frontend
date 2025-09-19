@@ -727,6 +727,7 @@ const AssessmentReview = () => {
           ) : (
             <div className="overflow-x-auto">
             <div className="h-[400px] overflow-x-auto">
+            </div>
               <Table>
                 <TableHeader>
                   <TableRow className="border-border dark:border-border">
@@ -1478,9 +1479,8 @@ const AssessmentReview = () => {
                       {candidateToReject.email}
                     </p>
                     <Badge
-                      className={getStageColor(candidateToReject.current_stage)}
+                      className={`${getStageColor(candidateToReject.current_stage)}mt-1 text-xs border-border dark:border-border`}
                       variant="outline"
-                      className="mt-1 text-xs border-border dark:border-border"
                     >
                       {candidateToReject.current_stage?.toUpperCase()}
                     </Badge>

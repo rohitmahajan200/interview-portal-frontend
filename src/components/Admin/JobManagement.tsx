@@ -414,7 +414,7 @@ const JobManagement = () => {
       
       // Handle specific case where job already exists
       if (error?.response?.status === 409) {
-        toast.error("This job has already been imported from CHANGE Networks");
+        toast.error("This job has already been imported from Change Networks");
         // Remove from missing jobs list since it already exists
         if (currentJobPortalId) {
           setMissingJobs(prev => prev.filter(job => job._id !== currentJobPortalId));
@@ -824,7 +824,7 @@ const JobManagement = () => {
     return {
       formData: {
         name: cnJob.title || '',
-        description: descriptionText || cnJob.title || 'Job imported from CHANGE Networks'
+        description: descriptionText || cnJob.title || 'Job imported from Change Networks'
       },
       longDescriptionPairs: pairs,
       bulletSections: sections,
@@ -852,9 +852,9 @@ const JobManagement = () => {
       // Open create dialog
       setShowCreateDialog(true);
       
-      toast.success('Job details loaded from CHANGE Networks portal');
+      toast.success('Job details loaded from Change Networks portal');
     } catch (error: any) {
-      console.error('Failed to add job from CHANGE Networks:', error);
+      console.error('Failed to add job from Change Networks:', error);
       toast.error('Failed to load job details');
     }
   };
@@ -865,7 +865,7 @@ const JobManagement = () => {
     try {
       const missingJobsList = await fetchMissingJobs();
       if (missingJobsList.length === 0) {
-        toast.success('All CHANGE Networks jobs are already synced!');
+        toast.success('All Change Networks jobs are already synced!');
         setShowMissingJobsSection(false);
       } else {
         toast.success(`Found ${missingJobsList.length} jobs that need to be synced`);
@@ -873,7 +873,7 @@ const JobManagement = () => {
       }
     } catch (error) {
       console.error('Sync failed:', error);
-      toast.error('Failed to sync with CHANGE Networks');
+      toast.error('Failed to sync with Change Networks');
     }
   };
 
@@ -960,92 +960,93 @@ const JobManagement = () => {
 
         {/* Change Networks Integration Section */}
         {/* Change Networks Integration Section */}
-        {showMissingJobsSection && (
-          <Card className="mb-6 sm:mb-8">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-blue-600 dark:text-blue-400">
-                    🔗 CHANGE Networks Jobs Integration
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Jobs from CHANGE Networks portal that are not yet in your database
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowMissingJobsSection(false)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+{showMissingJobsSection && (
+  <Card className="mb-4 sm:mb-6 lg:mb-8">
+    <CardHeader className="p-4 sm:p-6">
+      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div>
+          <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-blue-600 dark:text-blue-400">
+            🔗 Change Networks Jobs Integration
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Jobs from Change Networks portal that are not yet in your database
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowMissingJobsSection(false)}
+          variant="ghost"
+          size="sm"
+          className="shrink-0 self-start sm:self-auto"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4 sm:p-6">
+      {loadingMissingJobs ? (
+        <div className="flex items-center justify-center py-6 sm:py-8">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mr-3"></div>
+          <span className="text-xs sm:text-sm text-muted-foreground">
+            Checking missing jobs...
+          </span>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {missingJobs.length === 0 ? (
+            <div className="text-center py-6 sm:py-8">
+              <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 dark:text-green-400 mx-auto mb-3" />
+              <p className="text-xs sm:text-sm text-muted-foreground">All jobs are already synced!</p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h3 className="font-medium text-sm sm:text-base mb-2 text-foreground">
+                  Missing Jobs ({missingJobs.length})
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Click "Add to Portal" to import these jobs with auto-filled details
+                </p>
               </div>
-            </CardHeader>
-            <CardContent>
-              {loadingMissingJobs ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
-                  <span className="text-muted-foreground">
-                    Checking missing jobs...
-                  </span>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {missingJobs.length === 0 ? (
-                    <div className="text-center py-6">
-                      <Briefcase className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                      <p className="text-muted-foreground">All jobs are already synced!</p>
+              <div className="grid gap-3">
+                {missingJobs.map((missingJob) => (
+                  <div
+                    key={missingJob._id}
+                    className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 p-3 sm:p-4 border border-border dark:border-gray-700 rounded-lg hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm sm:text-base text-foreground truncate">
+                        {missingJob.title}
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                          📍 {missingJob.location}
+                        </span>
+                        <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 px-2 py-1 rounded">
+                          💰 {missingJob.salary}
+                        </span>
+                        <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
+                          📅 {missingJob.expInYears}
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="mb-4">
-                        <h3 className="font-medium mb-2">
-                          Missing Jobs ({missingJobs.length})
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Click "Add to Portal" to import these jobs with auto-filled details
-                        </p>
-                      </div>
-                      <div className="grid gap-3">
-                        {missingJobs.map((missingJob) => (
-                          <div
-                            key={missingJob._id}
-                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-sm sm:text-base truncate">
-                                {missingJob.title}
-                              </h4>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                  📍 {missingJob.location}
-                                </span>
-                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                  💰 {missingJob.salary}
-                                </span>
-                                <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                  📅 {missingJob.expInYears}
-                                </span>
-                              </div>
-                            </div>
-                            <Button
-                              onClick={() => handleAddFromChangeNetworks(missingJob._id)}
-                              size="sm"
-                              className="ml-3 shrink-0"
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Add to Portal
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                    <Button
+                      onClick={() => handleAddFromChangeNetworks(missingJob._id)}
+                      size="sm"
+                      className="w-full sm:w-auto shrink-0"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add to Portal
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+)}
 
 {/* Main Interface */}
 <Card className="dark:bg-card dark:border-gray-700">
@@ -1077,36 +1078,6 @@ const JobManagement = () => {
         <span className="sm:hidden">Sync</span>
         <span className="hidden sm:inline">Sync with Change Networks</span>
       </Button>
-        {/* Main Interface */}
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
-            <h2 className="text-lg sm:text-xl font-semibold">Job Operations</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                onClick={openCreateDialog}
-                size="sm"
-                className="h-8 sm:h-9"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Add Job</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
-              
-              <Button
-                onClick={syncWithChangeNetworks}
-                variant="outline"
-                size="sm"
-                disabled={loadingMissingJobs}
-                className="h-8 sm:h-9"
-              >
-                {loadingMissingJobs ? (
-                  <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-current mr-1 sm:mr-2" />
-                ) : (
-                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                )}
-                <span className="hidden sm:inline">Sync with CHANGE Networks</span>
-                <span className="sm:hidden">Sync</span>
-              </Button>
 
       {selectedJobs.length > 0 && (
         <Button
@@ -1462,45 +1433,47 @@ const JobManagement = () => {
   </CardContent>
 </Card>
 
-      {/* Create Job Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto mx-4">
-          <DialogHeader>
-            <DialogTitle>Create New Job</DialogTitle>
-            <DialogDescription>
-              {currentJobPortalId 
-                ? "Importing job from CHANGE Networks portal with auto-filled details" 
-                : "Add a new job posting to your organization with glory parameters"
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="job-name">Job Name *</Label>
-              <Input
-                id="job-name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                placeholder="Enter job title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="job-description">Description *</Label>
-              <Textarea
-                id="job-description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                placeholder="Enter job description"
-                rows={4}
-              />
-            </div>
+{/* Create Job Dialog - Mobile Optimized */}
+<Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+  <DialogContent className="w-[95vw] max-w-[700px] max-h-[90vh] overflow-y-auto mx-auto dark:bg-background dark:border-gray-700">
+    <DialogHeader>
+      <DialogTitle className="text-foreground">Create New Job</DialogTitle>
+      <DialogDescription className="text-muted-foreground">
+        {currentJobPortalId 
+          ? "Importing job from Change Networks portal with auto-filled details" 
+          : "Add a new job posting to your organization with glory parameters"
+        }
+      </DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="job-name" className="text-foreground">Job Name *</Label>
+        <Input
+          id="job-name"
+          value={formData.name}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, name: e.target.value }))
+          }
+          placeholder="Enter job title"
+          className="dark:bg-background dark:border-gray-700 dark:text-foreground"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="job-description" className="text-foreground">Description *</Label>
+        <Textarea
+          id="job-description"
+          value={formData.description}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              description: e.target.value,
+            }))
+          }
+          placeholder="Enter job description"
+          rows={4}
+          className="dark:bg-background dark:border-gray-700 dark:text-foreground"
+        />
+      </div>
 
       {/* Grading Parameters Section - Mobile Optimized */}
       <div className="space-y-3">
@@ -1726,6 +1699,7 @@ const JobManagement = () => {
   </DialogContent>
 </Dialog>
  </div>
+
  </div>
   );
 };

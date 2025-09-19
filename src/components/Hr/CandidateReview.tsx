@@ -30,6 +30,7 @@ import {
   Briefcase,
   ChevronUp,
   ChevronDown,
+  Eye,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
@@ -40,6 +41,7 @@ import GloryDialog from "../GloryDialog";
 import GloryButton from "../GloryButton";
 import { useGlory } from "@/hooks/useGlory";
 import GloryDisplay from "../GloryDisplay";
+import { cn } from "@/lib/utils";
 
 // Keep all existing interfaces
 interface CandidateStatistics {
@@ -1282,9 +1284,8 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                   {candidateToReject.email}
                 </p>
                 <Badge
-                  className={getStageColor(candidateToReject.current_stage)}
+                  className={`${getStageColor(candidateToReject.current_stage)} text-xs`}
                   variant="outline"
-                  size="sm"
                 >
                   {candidateToReject.current_stage?.toUpperCase()}
                 </Badge>
