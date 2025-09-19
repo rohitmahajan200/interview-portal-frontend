@@ -6,7 +6,7 @@ import {
   Bell, // Added Bell icon
   Settings,
 } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +26,7 @@ import { NavOrgUser } from "../NavOrgUser";
 type ManagerSidebarProps = React.ComponentProps<typeof Sidebar>;
 
 export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
-  const { open } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
   const orgState = useAppSelector((s) => s.orgAuth);
   const orgNotifications = useAppSelector((s) => s.orgNotifications); // Added notifications state
   const dispatch = useDispatch();
@@ -78,17 +78,18 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
       className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700 h-full"
       {...props}
     >
-      {open && (
-        <SidebarHeader className="border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0">
-          <Logo />
+        <SidebarHeader className="border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 flex flex-row items-center">
+          <Logo open={open}/>
         </SidebarHeader>
-      )}
 
       {/* Scrollable nav area */}
       <SidebarContent className="bg-white dark:bg-gray-900 flex-1 overflow-y-auto">
         <NavMainManager items={managerNav} />
       </SidebarContent>
-
+            <div className="flex w-full items-center" onClick={() => {toggleSidebar()}}>
+      <SidebarTrigger />
+      {open && <span>Collapse</span>}
+      </div>
       {/* Sticky footer */}
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 shrink-0">
         {orgState.user && (
@@ -100,11 +101,7 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
                       }}
                     />
         )}
-        {isAdmin && (
-          <div className="px-4 py-2 text-xs text-center bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
-            Admin Mode: Full Access
-          </div>
-        )}
+
       </SidebarFooter>
     </Sidebar>
   );

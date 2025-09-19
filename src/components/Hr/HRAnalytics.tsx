@@ -164,17 +164,19 @@ const HRAnalyticsDashboard: React.FC = () => {
     trend?: { value: number; isPositive: boolean },
     color = 'text-blue-600'
   ) => (
-    <Card>
+    <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={color}>{icon}</div>
+        <CardTitle className="text-sm font-medium truncate pr-2">{title}</CardTitle>
+        <div className={`${color} flex-shrink-0`}>{icon}</div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{typeof value === 'number' ? formatNumber(value) : value}</div>
+        <div className="text-xl sm:text-2xl font-bold truncate">
+          {typeof value === 'number' ? formatNumber(value) : value}
+        </div>
         {trend && (
           <p className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'} flex items-center mt-1`}>
-            {trend.isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-            {Math.abs(trend.value)}% from last month
+            {trend.isPositive ? <TrendingUp className="w-3 h-3 mr-1 flex-shrink-0" /> : <TrendingDown className="w-3 h-3 mr-1 flex-shrink-0" />}
+            <span className="truncate">{Math.abs(trend.value)}% from last month</span>
           </p>
         )}
       </CardContent>
@@ -184,25 +186,25 @@ const HRAnalyticsDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-16 w-16 sm:h-32 sm:w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 max-w-full">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">HR Analytics</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">HR Analytics</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Comprehensive insights into your recruitment process
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Time Range" />
             </SelectTrigger>
             <SelectContent>
@@ -213,27 +215,30 @@ const HRAnalyticsDashboard: React.FC = () => {
             </SelectContent>
           </Select>
           
-          <Button onClick={fetchAnalytics} variant="outline">
-            <Activity className="w-4 h-4 mr-2" />
-            Refresh
+          <Button onClick={fetchAnalytics} variant="outline" className="w-full sm:w-auto">
+            <Activity className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>Refresh</span>
           </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
-          <TabsTrigger value="stages">Stages</TabsTrigger>
-          <TabsTrigger value="assessments">Assessments</TabsTrigger>
-          <TabsTrigger value="interviews">Interviews</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        {/* Responsive Tabs - Scrollable on mobile */}
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex w-full min-w-max grid-cols-6 h-auto p-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">Overview</TabsTrigger>
+            <TabsTrigger value="jobs" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">Jobs</TabsTrigger>
+            <TabsTrigger value="stages" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">Stages</TabsTrigger>
+            <TabsTrigger value="assessments" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">Assessments</TabsTrigger>
+            <TabsTrigger value="interviews" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">Interviews</TabsTrigger>
+            <TabsTrigger value="trends" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">Trends</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+          {/* Key Metrics - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {renderMetricCard(
               "Total Candidates",
               dashboardData?.overview.totalCandidates || 0,
@@ -265,7 +270,7 @@ const HRAnalyticsDashboard: React.FC = () => {
           </div>
 
           {/* Completion Rates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {renderMetricCard(
               "Assessment Completion Rate",
               formatPercentage(dashboardData?.completionRates.assessmentCompletionRate || 0),
@@ -282,101 +287,152 @@ const HRAnalyticsDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Charts - Stack on mobile, side by side on desktop */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {/* Stage Distribution */}
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Stage Distribution</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Stage Distribution</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={dashboardData?.distributions.stageDistribution || []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {dashboardData?.distributions.stageDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getStageColor(entry.stage)} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={dashboardData?.distributions.stageDistribution || []}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        outerRadius="70%"
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {dashboardData?.distributions.stageDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getStageColor(entry.stage)} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
             {/* Status Distribution */}
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Status Distribution</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Status Distribution</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={dashboardData?.distributions.statusDistribution || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="status" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#8884d8">
-                      {dashboardData?.distributions.statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getStatusColor(entry.status)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboardData?.distributions.statusDistribution || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="status" 
+                        tick={{ fontSize: 12 }}
+                        interval={0}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#8884d8">
+                        {dashboardData?.distributions.statusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getStatusColor(entry.status)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         {/* Jobs Tab */}
-        <TabsContent value="jobs" className="space-y-6">
-          <Card>
+        <TabsContent value="jobs" className="space-y-4 sm:space-y-6">
+          <Card className="w-full">
             <CardHeader>
-              <CardTitle>Job Performance Analytics</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Job Performance Analytics</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+            <CardContent className="p-0 sm:p-6">
+              {/* Mobile Cards View */}
+              <div className="block md:hidden space-y-3 p-3">
+                {jobAnalytics.map((job) => (
+                  <Card key={job._id} className="p-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm truncate">{job.jobName}</h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-600">Applications:</span>
+                          <div className="font-medium">{formatNumber(job.totalApplications)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Active:</span>
+                          <div><Badge variant="secondary" className="text-xs">{formatNumber(job.activeApplications)}</Badge></div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Shortlisted:</span>
+                          <div><Badge variant="default" className="text-xs">{formatNumber(job.shortlistedApplications)}</Badge></div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Hired:</span>
+                          <div><Badge className="bg-green-100 text-green-800 text-xs">{formatNumber(job.hiredApplications)}</Badge></div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t">
+                        <div>
+                          <span className="text-gray-600">Shortlisting Rate:</span>
+                          <div className="font-medium">{formatPercentage(job.shortlistingRate)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Hiring Rate:</span>
+                          <div className="font-medium">{formatPercentage(job.hiringRate)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full min-w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-4">Job Title</th>
-                      <th className="text-right p-4">Applications</th>
-                      <th className="text-right p-4">Active</th>
-                      <th className="text-right p-4">Shortlisted</th>
-                      <th className="text-right p-4">Hired</th>
-                      <th className="text-right p-4">Shortlisting Rate</th>
-                      <th className="text-right p-4">Hiring Rate</th>
+                      <th className="text-left p-4 text-sm font-medium">Job Title</th>
+                      <th className="text-right p-4 text-sm font-medium">Applications</th>
+                      <th className="text-right p-4 text-sm font-medium">Active</th>
+                      <th className="text-right p-4 text-sm font-medium">Shortlisted</th>
+                      <th className="text-right p-4 text-sm font-medium">Hired</th>
+                      <th className="text-right p-4 text-sm font-medium">Shortlisting Rate</th>
+                      <th className="text-right p-4 text-sm font-medium">Hiring Rate</th>
                     </tr>
                   </thead>
                   <tbody>
                     {jobAnalytics.map((job) => (
                       <tr key={job._id} className="border-b hover:bg-gray-50">
                         <td className="p-4">
-                          <div className="font-medium">{job.jobName}</div>
+                          <div className="font-medium text-sm">{job.jobName}</div>
                         </td>
-                        <td className="text-right p-4">{formatNumber(job.totalApplications)}</td>
+                        <td className="text-right p-4 text-sm">{formatNumber(job.totalApplications)}</td>
                         <td className="text-right p-4">
-                          <Badge variant="secondary">{formatNumber(job.activeApplications)}</Badge>
-                        </td>
-                        <td className="text-right p-4">
-                          <Badge variant="default">{formatNumber(job.shortlistedApplications)}</Badge>
+                          <Badge variant="secondary" className="text-xs">{formatNumber(job.activeApplications)}</Badge>
                         </td>
                         <td className="text-right p-4">
-                          <Badge className="bg-green-100 text-green-800">
+                          <Badge variant="default" className="text-xs">{formatNumber(job.shortlistedApplications)}</Badge>
+                        </td>
+                        <td className="text-right p-4">
+                          <Badge className="bg-green-100 text-green-800 text-xs">
                             {formatNumber(job.hiredApplications)}
                           </Badge>
                         </td>
-                        <td className="text-right p-4">{formatPercentage(job.shortlistingRate)}</td>
-                        <td className="text-right p-4">{formatPercentage(job.hiringRate)}</td>
+                        <td className="text-right p-4 text-sm">{formatPercentage(job.shortlistingRate)}</td>
+                        <td className="text-right p-4 text-sm">{formatPercentage(job.hiringRate)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -386,72 +442,89 @@ const HRAnalyticsDashboard: React.FC = () => {
           </Card>
 
           {/* Job Performance Chart */}
-          <Card>
+          <Card className="w-full">
             <CardHeader>
-              <CardTitle>Job Applications vs Hiring Rate</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Job Applications vs Hiring Rate</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={jobAnalytics}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="jobName" angle={-45} textAnchor="end" height={100} />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="totalApplications" fill="#8884d8" name="Total Applications" />
-                  <Bar yAxisId="left" dataKey="hiredApplications" fill="#82ca9d" name="Hired" />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent className="p-2 sm:p-6">
+              <div className="w-full h-64 sm:h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={jobAnalytics} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="jobName" 
+                      angle={-45} 
+                      textAnchor="end" 
+                      height={80}
+                      interval={0}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="totalApplications" fill="#8884d8" name="Total Applications" />
+                    <Bar yAxisId="left" dataKey="hiredApplications" fill="#82ca9d" name="Hired" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Stages Tab */}
-        <TabsContent value="stages" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="stages" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {/* Stage Distribution Chart */}
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Current Stage Distribution</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Current Stage Distribution</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stageAnalytics}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="stage" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#8884d8">
-                      {stageAnalytics.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={getStageColor(entry.stage)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stageAnalytics}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="stage" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#8884d8">
+                        {stageAnalytics.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={getStageColor(entry.stage)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
             {/* Stage Performance Metrics */}
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Stage Performance</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Stage Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {stageAnalytics.map((stage) => (
-                    <div key={stage.stage} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium capitalize">{stage.stage.replace('_', ' ')}</div>
-                        <div className="text-sm text-gray-600">
+                    <div key={stage.stage} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg space-y-2 sm:space-y-0">
+                      <div className="min-w-0">
+                        <div className="font-medium capitalize text-sm sm:text-base truncate">{stage.stage.replace('_', ' ')}</div>
+                        <div className="text-xs sm:text-sm text-gray-600">
                           {formatNumber(stage.count)} candidates
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
+                      <div className="text-left sm:text-right">
+                        <div className="text-xs sm:text-sm font-medium">
                           Avg: {stage.avgDaysInStage} days
                         </div>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           {formatNumber(stage.shortlisted)} shortlisted
                         </Badge>
                       </div>
@@ -464,8 +537,8 @@ const HRAnalyticsDashboard: React.FC = () => {
         </TabsContent>
 
         {/* Assessments Tab */}
-        <TabsContent value="assessments" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <TabsContent value="assessments" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {assessmentData && (
               <>
                 {renderMetricCard(
@@ -501,61 +574,63 @@ const HRAnalyticsDashboard: React.FC = () => {
           </div>
 
           {/* Assessment Status Distribution */}
-          <Card>
+          <Card className="w-full">
             <CardHeader>
-              <CardTitle>Assessment Status Distribution</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Assessment Status Distribution</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={assessmentData?.assessmentStats || []}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="count"
-                  >
-                    {assessmentData?.assessmentStats.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+            <CardContent className="p-2 sm:p-6">
+              <div className="w-full h-64 sm:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={assessmentData?.assessmentStats || []}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius="70%"
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {assessmentData?.assessmentStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
           {/* Recent Assessments */}
           {assessmentData?.recentAssessments && assessmentData.recentAssessments.length > 0 && (
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Recent Assessment Activity</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Recent Assessment Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {assessmentData.recentAssessments.slice(0, 5).map((assessment: any) => (
-                    <div key={assessment._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium">
+                    <div key={assessment._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg space-y-2 sm:space-y-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm sm:text-base truncate">
                           {assessment.candidate?.first_name} {assessment.candidate?.last_name}
                         </div>
-                        <div className="text-sm text-gray-600">{assessment.candidate?.email}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 truncate">{assessment.candidate?.email}</div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <Badge 
-                          className={
+                          className={`text-xs ${
                             assessment.status === 'completed' ? 'bg-green-100 text-green-800' :
                             assessment.status === 'started' ? 'bg-blue-100 text-blue-800' :
                             'bg-yellow-100 text-yellow-800'
-                          }
+                          }`}
                         >
                           {assessment.status}
                         </Badge>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-xs sm:text-sm text-gray-600 mt-1">
                           {assessment.exam_duration} min exam
                         </div>
                       </div>
@@ -568,30 +643,30 @@ const HRAnalyticsDashboard: React.FC = () => {
         </TabsContent>
 
         {/* Interviews Tab */}
-        <TabsContent value="interviews" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TabsContent value="interviews" className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             {/* Interview Type Stats */}
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Interview Type Performance</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Interview Type Performance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {interviewData?.interviewTypeStats.map((type) => (
-                    <div key={type.interviewType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium capitalize">
+                    <div key={type.interviewType} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg space-y-2 sm:space-y-0">
+                      <div className="min-w-0">
+                        <div className="font-medium capitalize text-sm sm:text-base truncate">
                           {type.interviewType.replace('_', ' ')}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs sm:text-sm text-gray-600">
                           {formatNumber(type.total)} total interviews
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <div className="text-lg font-bold text-green-600">
                           {formatPercentage(type.completionRate)}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs sm:text-sm text-gray-600">
                           {formatNumber(type.completed)} completed
                         </div>
                       </div>
@@ -602,63 +677,65 @@ const HRAnalyticsDashboard: React.FC = () => {
             </Card>
 
             {/* Interview Format Distribution */}
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Interview Format Distribution</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Interview Format Distribution</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={interviewData?.interviewFormatStats || []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value}`}
-                      outerRadius={60}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {interviewData?.interviewFormatStats.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-48 sm:h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={interviewData?.interviewFormatStats || []}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        outerRadius="65%"
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {interviewData?.interviewFormatStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Upcoming Interviews */}
           {interviewData?.upcomingInterviews && interviewData.upcomingInterviews.length > 0 && (
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Upcoming Interviews (Next 7 Days)</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Upcoming Interviews (Next 7 Days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {interviewData.upcomingInterviews.map((interview) => (
-                    <div key={interview._id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <div className="font-medium">{interview.title}</div>
-                        <div className="text-sm text-gray-600">
+                    <div key={interview._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg space-y-3 sm:space-y-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm sm:text-base truncate">{interview.title}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 truncate">
                           {interview.candidate.first_name} {interview.candidate.last_name}
                         </div>
-                        <div className="text-sm text-gray-500">{interview.candidate.email}</div>
+                        <div className="text-xs sm:text-sm text-gray-500 truncate">{interview.candidate.email}</div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium">
+                      <div className="text-left sm:text-right">
+                        <div className="font-medium text-sm sm:text-base">
                           {new Date(interview.scheduled_at).toLocaleDateString()}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs sm:text-sm text-gray-600">
                           {new Date(interview.scheduled_at).toLocaleTimeString([], { 
                             hour: '2-digit', 
                             minute: '2-digit' 
                           })}
                         </div>
-                        <Badge variant="outline" className="mt-1">
+                        <Badge variant="outline" className="mt-1 text-xs">
                           {interview.type}
                         </Badge>
                       </div>
@@ -671,62 +748,71 @@ const HRAnalyticsDashboard: React.FC = () => {
 
           {/* Interviewer Workload */}
           {interviewData?.interviewerWorkload && interviewData.interviewerWorkload.length > 0 && (
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Top Interviewers by Workload</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Top Interviewers by Workload</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={interviewData.interviewerWorkload}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="interviewerName" angle={-45} textAnchor="end" height={100} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="totalInterviews" fill="#8884d8" name="Total Interviews" />
-                    <Bar dataKey="completedInterviews" fill="#82ca9d" name="Completed" />
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={interviewData.interviewerWorkload} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="interviewerName" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={80}
+                        tick={{ fontSize: 10 }}
+                        interval={0}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="totalInterviews" fill="#8884d8" name="Total Interviews" />
+                      <Bar dataKey="completedInterviews" fill="#82ca9d" name="Completed" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
         {/* Trends Tab */}
-        <TabsContent value="trends" className="space-y-6">
+        <TabsContent value="trends" className="space-y-4 sm:space-y-6">
           {/* Monthly Performance Comparison */}
           {trendsData?.performanceMetrics && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Card className="w-full">
                 <CardHeader>
-                  <CardTitle>This Month Performance</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl">This Month Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {trendsData.performanceMetrics.thisMonth.map((metric, index) => (
-                      <div key={index} className="grid grid-cols-4 gap-4 text-sm">
-                        <div>Total: {formatNumber(metric.total)}</div>
-                        <div className="text-green-600">Hired: {formatNumber(metric.hired)}</div>
-                        <div className="text-blue-600">Shortlisted: {formatNumber(metric.shortlisted)}</div>
-                        <div className="text-red-600">Rejected: {formatNumber(metric.rejected)}</div>
+                      <div key={index} className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
+                        <div className="truncate">Total: {formatNumber(metric.total)}</div>
+                        <div className="text-green-600 truncate">Hired: {formatNumber(metric.hired)}</div>
+                        <div className="text-blue-600 truncate">Shortlisted: {formatNumber(metric.shortlisted)}</div>
+                        <div className="text-red-600 truncate">Rejected: {formatNumber(metric.rejected)}</div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="w-full">
                 <CardHeader>
-                  <CardTitle>Last Month Performance</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl">Last Month Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {trendsData.performanceMetrics.lastMonth.map((metric, index) => (
-                      <div key={index} className="grid grid-cols-4 gap-4 text-sm">
-                        <div>Total: {formatNumber(metric.total)}</div>
-                        <div className="text-green-600">Hired: {formatNumber(metric.hired)}</div>
-                        <div className="text-blue-600">Shortlisted: {formatNumber(metric.shortlisted)}</div>
-                        <div className="text-red-600">Rejected: {formatNumber(metric.rejected)}</div>
+                      <div key={index} className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
+                        <div className="truncate">Total: {formatNumber(metric.total)}</div>
+                        <div className="text-green-600 truncate">Hired: {formatNumber(metric.hired)}</div>
+                        <div className="text-blue-600 truncate">Shortlisted: {formatNumber(metric.shortlisted)}</div>
+                        <div className="text-red-600 truncate">Rejected: {formatNumber(metric.rejected)}</div>
                       </div>
                     ))}
                   </div>
@@ -737,82 +823,89 @@ const HRAnalyticsDashboard: React.FC = () => {
 
           {/* Registration Trends */}
           {trendsData?.registrationTrends && (
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Registration Trends (Last 12 Months)</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Registration Trends (Last 12 Months)</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={trendsData.registrationTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="month"
-                      tickFormatter={(value) => {
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        return months[value - 1];
-                      }}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => {
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        return months[value - 1];
-                      }}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="registrations" 
-                      stroke="#8884d8" 
-                      name="Registrations"
-                      strokeWidth={2}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="shortlisted" 
-                      stroke="#82ca9d" 
-                      name="Shortlisted"
-                      strokeWidth={2}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="hired" 
-                      stroke="#ffc658" 
-                      name="Hired"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-64 sm:h-96">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendsData.registrationTrends} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="month"
+                        tickFormatter={(value) => {
+                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          return months[value - 1];
+                        }}
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip 
+                        labelFormatter={(value) => {
+                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          return months[value - 1];
+                        }}
+                      />
+                      <Legend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="registrations" 
+                        stroke="#8884d8" 
+                        name="Registrations"
+                        strokeWidth={2}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="shortlisted" 
+                        stroke="#82ca9d" 
+                        name="Shortlisted"
+                        strokeWidth={2}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="hired" 
+                        stroke="#ffc658" 
+                        name="Hired"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           )}
 
           {/* Daily Activity (Last 30 Days) */}
           {trendsData?.dailyActivity && (
-            <Card>
+            <Card className="w-full">
               <CardHeader>
-                <CardTitle>Daily Registration Activity (Last 30 Days)</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Daily Registration Activity (Last 30 Days)</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={trendsData.dailyActivity}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date"
-                      tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                    />
-                    <Bar dataKey="registrations" fill="#8884d8" name="Registrations" />
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="p-2 sm:p-6">
+                <div className="w-full h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trendsData.dailyActivity} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date"
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                        tick={{ fontSize: 10 }}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip 
+                        labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                      />
+                      <Bar dataKey="registrations" fill="#8884d8" name="Registrations" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           )}

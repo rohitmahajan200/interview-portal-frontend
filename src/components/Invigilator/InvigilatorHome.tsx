@@ -984,7 +984,8 @@ const InvigilatorHome = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="flex flex-nowrap gap-3 w-full">
+      <div className="flex flex-wrap gap-3 w-full 
+                md:flex-row flex-col">
         <Card className="flex-1 basis-0 min-w-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -1109,10 +1110,8 @@ const InvigilatorHome = () => {
                 <TableRow>
                   <TableHead>Candidate</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Current Stage</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Glory</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1120,7 +1119,11 @@ const InvigilatorHome = () => {
                   const assessmentStatus = getAssessmentStatus(candidate);
 
                   return (
-                    <TableRow key={candidate._id}>
+                    <TableRow
+                        key={candidate._id}
+                        onClick={() => fetchCandidateDetails(candidate._id)}
+                        className="cursor-pointer hover:bg-muted"
+                      >
                       {/* Candidate Information */}
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -1155,17 +1158,6 @@ const InvigilatorHome = () => {
                         </div>
                       </TableCell>
 
-                      {/* Current Stage Badge */}
-                      <TableCell>
-                        <Badge
-                          className={getStageColor(candidate.current_stage)}
-                        >
-                          {candidate.current_stage
-                            .replace("_", " ")
-                            .toUpperCase()}
-                        </Badge>
-                      </TableCell>
-
                       {/* Assessment Status Badge */}
                       <TableCell>
                         <Badge
@@ -1178,21 +1170,6 @@ const InvigilatorHome = () => {
                                             {/* Glory */}
                       <TableCell>
                           {renderGloryGrades(candidate.glory)}
-                      </TableCell>
-
-                      {/* Action Buttons */}
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fetchCandidateDetails(candidate._id)}
-                            disabled={loadingCandidate}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </div>
                       </TableCell>
                     </TableRow>
                   );

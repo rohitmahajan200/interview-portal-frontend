@@ -1,7 +1,7 @@
 {
-  "name": "Change Networks Interview Portal",
-  "short_name": "Change Networks",
-  "description": "Interview Portal for Change Networks",
+  "name": "CHANGE Networks Interview Portal",
+  "short_name": "CHANGE Networks",
+  "description": "Careers Portal for CHANGE Networks",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

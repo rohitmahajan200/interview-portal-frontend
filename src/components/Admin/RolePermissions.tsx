@@ -23,7 +23,7 @@ import {
   X,
   RefreshCw,
   CheckCircle,
-  ArrowRightLeft, // Adding an icon for reassignments
+  ArrowRightLeft,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
@@ -88,15 +88,13 @@ const UnifiedAssignmentDashboard = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState("manager-assignment");
-  const [showReassignments, setShowReassignments] = useState(false); // New state for toggling reassignments
+  const [showReassignments, setShowReassignments] = useState(false);
 
   // Data States
   const [managers, setManagers] = useState<User[]>([]);
   const [invigilators, setInvigilators] = useState<User[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [unassignedCandidates, setUnassignedCandidates] = useState<Candidate[]>(
-    []
-  );
+  const [unassignedCandidates, setUnassignedCandidates] = useState<Candidate[]>([]);
   const [jobCandidates, setJobCandidates] = useState<Candidate[]>([]);
 
   // Manager Assignment States
@@ -110,24 +108,19 @@ const UnifiedAssignmentDashboard = () => {
 
   // Manager Reassignment States
   const [reassignCandidates, setReassignCandidates] = useState<string[]>([]);
-  const [currentManagerForReassign, setCurrentManagerForReassign] =
-    useState("");
+  const [currentManagerForReassign, setCurrentManagerForReassign] = useState("");
   const [newManagerForReassign, setNewManagerForReassign] = useState("");
   const [isReassigningManager, setIsReassigningManager] = useState(false);
 
   // Invigilator Reassignment States
   const [reassignJobs, setReassignJobs] = useState<string[]>([]);
-  const [currentInvigilatorForReassign, setCurrentInvigilatorForReassign] =
-    useState("");
-  const [newInvigilatorForReassign, setNewInvigilatorForReassign] =
-    useState("");
-  const [isReassigningInvigilator, setIsReassigningInvigilator] =
-    useState(false);
+  const [currentInvigilatorForReassign, setCurrentInvigilatorForReassign] = useState("");
+  const [newInvigilatorForReassign, setNewInvigilatorForReassign] = useState("");
+  const [isReassigningInvigilator, setIsReassigningInvigilator] = useState(false);
 
   // Loading States
   const [isAssigningToManager, setIsAssigningToManager] = useState(false);
-  const [isAssigningToInvigilator, setIsAssigningToInvigilator] =
-    useState(false);
+  const [isAssigningToInvigilator, setIsAssigningToInvigilator] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -196,7 +189,6 @@ const UnifiedAssignmentDashboard = () => {
         }
       });
 
-      // Remove duplicates based on candidate ID
       const uniqueCandidates = allCandidates.filter(
         (candidate, index, self) =>
           index === self.findIndex((c) => c._id === candidate._id)
@@ -223,7 +215,6 @@ const UnifiedAssignmentDashboard = () => {
       setError("");
       setSuccess("");
 
-      /* 🔑 one route for everything */
       const response = await api.post("/org/bulk-assign", {
         managerId: selectedManager,
         candidateIds: selectedCandidates,
@@ -264,7 +255,6 @@ const UnifiedAssignmentDashboard = () => {
       setError("");
       setSuccess("");
 
-      // Assign invigilator to each selected job
       const assignmentPromises = selectedJobs.map((jobId) =>
         api.post("/org/assign-to-invigilator", {
           invigilatorId: selectedInvigilator,
@@ -498,9 +488,9 @@ const UnifiedAssignmentDashboard = () => {
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-        <span className="ml-4 text-muted-foreground">
+      <div className="flex items-center justify-center h-64 sm:h-96">
+        <div className="animate-spin rounded-full h-16 w-16 sm:h-32 sm:w-32 border-b-2 border-primary"></div>
+        <span className="ml-4 text-sm sm:text-base text-muted-foreground">
           Loading assignment dashboard...
         </span>
       </div>
@@ -508,16 +498,16 @@ const UnifiedAssignmentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 lg:p-6">
       <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
             Candidate Assignment Dashboard
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Assign unassigned candidates to managers or assign invigilators to
             jobs for automatic candidate assignment
           </p>
@@ -525,32 +515,32 @@ const UnifiedAssignmentDashboard = () => {
 
         {/* Alerts */}
         {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-            <AlertDescription className="text-red-700 dark:text-red-300">
+          <Alert className="mb-4 sm:mb-6 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+            <AlertDescription className="text-xs sm:text-sm text-red-700 dark:text-red-300">
               {error}
             </AlertDescription>
           </Alert>
         )}
 
         {success && (
-          <Alert className="mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
-            <AlertDescription className="text-green-700 dark:text-green-300">
+          <Alert className="mb-4 sm:mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
+            <AlertDescription className="text-xs sm:text-sm text-green-700 dark:text-green-300">
               {success}
             </AlertDescription>
           </Alert>
         )}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Users className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
+                <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Unassigned Candidates
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                     {stats.unassigned}
                   </p>
                 </div>
@@ -559,14 +549,14 @@ const UnifiedAssignmentDashboard = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <UserPlus className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">
+                <UserPlus className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
+                <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Available Managers
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                     {stats.managers}
                   </p>
                 </div>
@@ -575,14 +565,14 @@ const UnifiedAssignmentDashboard = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <ClipboardList className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">
+                <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 flex-shrink-0" />
+                <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Available Invigilators
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                     {stats.invigilators}
                   </p>
                 </div>
@@ -591,14 +581,14 @@ const UnifiedAssignmentDashboard = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Briefcase className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-muted-foreground">
+                <Briefcase className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600 flex-shrink-0" />
+                <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Active Jobs
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                     {jobs.length}
                   </p>
                 </div>
@@ -609,81 +599,89 @@ const UnifiedAssignmentDashboard = () => {
 
         {/* Main Assignment Interface */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <h2 className="text-xl font-semibold">Assignment Operations</h2>
-            <div className="flex items-center space-x-2">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <h2 className="text-lg sm:text-xl font-semibold">Assignment Operations</h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
               {/* Reassignments Toggle Button */}
               <Button
                 onClick={() => setShowReassignments(!showReassignments)}
                 variant={showReassignments ? "default" : "outline"}
                 size="sm"
+                className="w-full sm:w-auto"
               >
-                <ArrowRightLeft className="h-4 w-4 mr-2" />
-                {showReassignments ? "Hide Reassignments" : "Reassignments"}
+                <ArrowRightLeft className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{showReassignments ? "Hide Reassignments" : "Reassignments"}</span>
               </Button>
               <Button
                 onClick={refreshData}
                 variant="outline"
                 size="sm"
                 disabled={loading}
+                className="w-full sm:w-auto"
               >
                 <RefreshCw
-                  className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                  className={`h-4 w-4 mr-2 flex-shrink-0 ${loading ? "animate-spin" : ""}`}
                 />
-                Refresh Data
+                <span className="truncate">Refresh Data</span>
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               {/* Updated TabsList to include reassignment tabs when showReassignments is true */}
-              <TabsList
-                className={`grid w-full ${
-                  showReassignments ? "grid-cols-4" : "grid-cols-2"
-                }`}
-              >
-                <TabsTrigger value="manager-assignment">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Assign to Manager
-                </TabsTrigger>
-                <TabsTrigger value="invigilator-assignment">
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Assign to Invigilator
-                </TabsTrigger>
-                {showReassignments && (
-                  <>
-                    <TabsTrigger value="manager-reassignment">
-                      <ArrowRightLeft className="h-4 w-4 mr-2" />
-                      Manager Reassign
-                    </TabsTrigger>
-                    <TabsTrigger value="invigilator-reassignment">
-                      <ArrowRightLeft className="h-4 w-4 mr-2" />
-                      Invigilator Reassign
-                    </TabsTrigger>
-                  </>
-                )}
-              </TabsList>
+              <div className="w-full overflow-x-auto">
+                <TabsList
+                  className={`inline-flex w-full min-w-max h-auto p-1 ${
+                    showReassignments ? "grid-cols-4" : "grid-cols-2"
+                  }`}
+                >
+                  <TabsTrigger value="manager-assignment" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+                    <UserPlus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                    <span className="hidden sm:inline">Assign to Manager</span>
+                    <span className="sm:hidden">Manager</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="invigilator-assignment" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+                    <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                    <span className="hidden sm:inline">Assign to Invigilator</span>
+                    <span className="sm:hidden">Invigilator</span>
+                  </TabsTrigger>
+                  {showReassignments && (
+                    <>
+                      <TabsTrigger value="manager-reassignment" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+                        <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="hidden sm:inline">Manager Reassign</span>
+                        <span className="sm:hidden">M-Reassign</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="invigilator-reassignment" className="text-xs sm:text-sm whitespace-nowrap px-2 sm:px-4">
+                        <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="hidden sm:inline">Invigilator Reassign</span>
+                        <span className="sm:hidden">I-Reassign</span>
+                      </TabsTrigger>
+                    </>
+                  )}
+                </TabsList>
+              </div>
 
-              {/* Manager Assignment Tab - keeping your existing content */}
-              <TabsContent value="manager-assignment" className="mt-6">
-                <div className="space-y-6">
+              {/* Manager Assignment Tab */}
+              <TabsContent value="manager-assignment" className="mt-4 sm:mt-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Manager Selection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     <div>
-                      <Label htmlFor="manager-select">Select Manager</Label>
+                      <Label htmlFor="manager-select" className="text-sm sm:text-base">Select Manager</Label>
                       <Select
                         value={selectedManager}
                         onValueChange={setSelectedManager}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Choose a manager" />
                         </SelectTrigger>
                         <SelectContent>
                           {(managers || []).map((manager) => (
                             <SelectItem key={manager._id} value={manager._id}>
                               <div className="flex items-center justify-between w-full">
-                                <span>{manager.name || manager.email}</span>
-                                <Badge variant="outline" className="ml-2">
+                                <span className="truncate">{manager.name || manager.email}</span>
+                                <Badge variant="outline" className="ml-2 text-xs">
                                   {(manager.candidates || []).length} assigned
                                 </Badge>
                               </div>
@@ -694,17 +692,18 @@ const UnifiedAssignmentDashboard = () => {
                     </div>
 
                     <div className="flex items-end">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full">
+                        <Badge variant="secondary" className="text-xs">
                           {(selectedCandidates || []).length} selected
                         </Badge>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={clearManagerAssignment}
+                          className="w-full sm:w-auto"
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Clear Selection
+                          <X className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Clear Selection</span>
                         </Button>
                       </div>
                     </div>
@@ -712,8 +711,8 @@ const UnifiedAssignmentDashboard = () => {
 
                   {/* Candidate Selection */}
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <Label>Select Unassigned Candidates</Label>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
+                      <Label className="text-sm sm:text-base">Select Unassigned Candidates</Label>
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           checked={
@@ -723,7 +722,7 @@ const UnifiedAssignmentDashboard = () => {
                           }
                           onCheckedChange={handleSelectAllCandidates}
                         />
-                        <Label className="text-sm">
+                        <Label className="text-xs sm:text-sm">
                           Select All ({filteredCandidates.length})
                         </Label>
                       </div>
@@ -731,21 +730,21 @@ const UnifiedAssignmentDashboard = () => {
 
                     {/* Search */}
                     <div className="relative mb-4">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <Input
                         placeholder="Search candidates by name or email..."
                         value={candidateSearchTerm}
                         onChange={(e) => setCandidateSearchTerm(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 text-sm"
                       />
                     </div>
 
                     {/* Candidates List */}
-                    <div className="max-h-80 overflow-y-auto space-y-2 border rounded-lg p-4">
+                    <div className="max-h-64 sm:max-h-80 overflow-y-auto space-y-2 border rounded-lg p-3 sm:p-4">
                       {filteredCandidates.length === 0 ? (
-                        <div className="text-center py-8">
-                          <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-muted-foreground">
+                        <div className="text-center py-6 sm:py-8">
+                          <Users className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {candidateSearchTerm
                               ? "No candidates match your search."
                               : "No unassigned candidates available."}
@@ -755,7 +754,7 @@ const UnifiedAssignmentDashboard = () => {
                         filteredCandidates.map((candidate) => (
                           <div
                             key={candidate._id}
-                            className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-start space-x-3 p-2 sm:p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                           >
                             <Checkbox
                               checked={(selectedCandidates || []).includes(
@@ -764,25 +763,26 @@ const UnifiedAssignmentDashboard = () => {
                               onCheckedChange={(checked) =>
                                 handleCandidateSelect(candidate._id, !!checked)
                               }
+                              className="mt-1 flex-shrink-0"
                             />
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-1 sm:space-y-0">
+                                <p className="font-medium text-sm sm:text-base truncate">
                                   {candidate.first_name} {candidate.last_name}
                                 </p>
                                 {!candidate.assigned_manager && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs bg-yellow-50 text-yellow-700"
+                                    className="text-xs bg-yellow-50 text-yellow-700 w-fit"
                                   >
                                     Unassigned
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">
                                 {candidate.email}
                               </p>
-                              <div className="flex items-center space-x-2 mt-1">
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
                                 <Badge
                                   className={`${getStageColor(
                                     candidate.current_stage
@@ -819,17 +819,17 @@ const UnifiedAssignmentDashboard = () => {
                         !selectedManager ||
                         (selectedCandidates || []).length === 0
                       }
-                      className="min-w-[220px]"
+                      className="w-full sm:w-auto sm:min-w-[220px]"
                     >
                       {isAssigningToManager ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Assigning...
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                          <span className="truncate">Assigning...</span>
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Assign {(selectedCandidates || []).length} Candidates
+                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Assign {(selectedCandidates || []).length} Candidates</span>
                         </>
                       )}
                     </Button>
@@ -837,20 +837,20 @@ const UnifiedAssignmentDashboard = () => {
                 </div>
               </TabsContent>
 
-              {/* Invigilator Assignment Tab - keeping your existing content */}
-              <TabsContent value="invigilator-assignment" className="mt-6">
-                <div className="space-y-6">
+              {/* Invigilator Assignment Tab */}
+              <TabsContent value="invigilator-assignment" className="mt-4 sm:mt-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Invigilator Selection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     <div>
-                      <Label htmlFor="invigilator-select">
+                      <Label htmlFor="invigilator-select" className="text-sm sm:text-base">
                         Select Invigilator
                       </Label>
                       <Select
                         value={selectedInvigilator}
                         onValueChange={setSelectedInvigilator}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Choose an invigilator" />
                         </SelectTrigger>
                         <SelectContent>
@@ -860,7 +860,7 @@ const UnifiedAssignmentDashboard = () => {
                               value={invigilator._id}
                             >
                               <div className="flex items-center justify-between w-full">
-                                <span>
+                                <span className="truncate">
                                   {invigilator.name || invigilator.email}
                                 </span>
                                 <div className="flex space-x-1">
@@ -880,17 +880,18 @@ const UnifiedAssignmentDashboard = () => {
                     </div>
 
                     <div className="flex items-end">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full">
+                        <Badge variant="secondary" className="text-xs">
                           {(selectedJobs || []).length} jobs selected
                         </Badge>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={clearInvigilatorAssignment}
+                          className="w-full sm:w-auto"
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Clear Selection
+                          <X className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Clear Selection</span>
                         </Button>
                       </div>
                     </div>
@@ -898,8 +899,8 @@ const UnifiedAssignmentDashboard = () => {
 
                   {/* Job Selection */}
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <Label>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
+                      <Label className="text-sm sm:text-base">
                         Select Jobs (Candidates will be auto-assigned)
                       </Label>
                       <div className="flex items-center space-x-2">
@@ -910,18 +911,18 @@ const UnifiedAssignmentDashboard = () => {
                           }
                           onCheckedChange={handleSelectAllJobs}
                         />
-                        <Label className="text-sm">
+                        <Label className="text-xs sm:text-sm">
                           Select All Jobs ({jobs.length})
                         </Label>
                       </div>
                     </div>
 
                     {/* Jobs List */}
-                    <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-4">
+                    <div className="max-h-48 sm:max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 sm:p-4">
                       {jobs.length === 0 ? (
-                        <div className="text-center py-8">
-                          <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-muted-foreground">
+                        <div className="text-center py-6 sm:py-8">
+                          <Briefcase className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             No jobs available.
                           </p>
                         </div>
@@ -929,16 +930,17 @@ const UnifiedAssignmentDashboard = () => {
                         jobs.map((job) => (
                           <div
                             key={job._id}
-                            className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center space-x-3 p-2 sm:p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                           >
                             <Checkbox
                               checked={(selectedJobs || []).includes(job._id)}
                               onCheckedChange={(checked) =>
                                 handleJobSelect(job._id, !!checked)
                               }
+                              className="flex-shrink-0"
                             />
-                            <div className="flex-1">
-                              <p className="font-medium">{job.name}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm sm:text-base truncate">{job.name}</p>
                             </div>
                           </div>
                         ))
@@ -950,27 +952,25 @@ const UnifiedAssignmentDashboard = () => {
                   {(selectedJobs || []).length > 0 &&
                     (jobCandidates || []).length > 0 && (
                       <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <Label>
-                            Candidates from Selected Jobs (
-                            {(jobCandidates || []).length})
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
+                          <Label className="text-sm sm:text-base">
+                            Candidates from Selected Jobs ({(jobCandidates || []).length})
                           </Label>
-                          <Badge variant="secondary">
-                            {(jobCandidates || []).length} candidates will be
-                            assigned
+                          <Badge variant="secondary" className="text-xs w-fit">
+                            {(jobCandidates || []).length} candidates will be assigned
                           </Badge>
                         </div>
-                        <div className="max-h-48 overflow-y-auto space-y-2 border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                        <div className="max-h-36 sm:max-h-48 overflow-y-auto space-y-2 border rounded-lg p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20">
                           {(jobCandidates || []).map((candidate) => (
                             <div
                               key={candidate._id}
-                              className="flex items-center justify-between p-2 border rounded-lg bg-white dark:bg-gray-800"
+                              className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 border rounded-lg bg-white dark:bg-gray-800 space-y-2 sm:space-y-0"
                             >
-                              <div>
-                                <p className="font-medium text-sm">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-xs sm:text-sm truncate">
                                   {candidate.first_name} {candidate.last_name}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-muted-foreground truncate">
                                   {candidate.email}
                                 </p>
                                 {candidate.applied_job && (
@@ -983,9 +983,9 @@ const UnifiedAssignmentDashboard = () => {
                                 )}
                               </div>
                               <Badge
-                                className={getStageColor(
+                                className={`${getStageColor(
                                   candidate.current_stage
-                                )}
+                                )} text-xs flex-shrink-0`}
                               >
                                 {candidate.current_stage}
                               </Badge>
@@ -997,8 +997,8 @@ const UnifiedAssignmentDashboard = () => {
 
                   {(selectedJobs || []).length > 0 &&
                     (jobCandidates || []).length === 0 && (
-                      <div className="text-center py-8 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-                        <p className="text-muted-foreground">
+                      <div className="text-center py-6 sm:py-8 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           No candidates found for the selected job(s).
                         </p>
                       </div>
@@ -1013,17 +1013,17 @@ const UnifiedAssignmentDashboard = () => {
                         !selectedInvigilator ||
                         (selectedJobs || []).length === 0
                       }
-                      className="min-w-[220px]"
+                      className="w-full sm:w-auto sm:min-w-[220px]"
                     >
                       {isAssigningToInvigilator ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Assigning...
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                          <span className="truncate">Assigning...</span>
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Assign to {(selectedJobs || []).length} Job(s)
+                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Assign to {(selectedJobs || []).length} Job(s)</span>
                         </>
                       )}
                     </Button>
@@ -1033,21 +1033,21 @@ const UnifiedAssignmentDashboard = () => {
 
               {/* Manager Reassignment Tab */}
               {showReassignments && (
-                <TabsContent value="manager-reassignment" className="mt-6">
-                  <div className="space-y-6">
-                    <div className="p-6 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                      <Label className="font-semibold text-lg mb-4 block">
+                <TabsContent value="manager-reassignment" className="mt-4 sm:mt-6">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="p-4 sm:p-6 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                      <Label className="font-semibold text-base sm:text-lg mb-4 block">
                         Reassign Candidates to Another Manager
                       </Label>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4">
                         <div>
-                          <Label>Select Current Manager</Label>
+                          <Label className="text-sm sm:text-base">Select Current Manager</Label>
                           <Select
                             value={currentManagerForReassign}
                             onValueChange={setCurrentManagerForReassign}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Choose current manager" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1063,14 +1063,14 @@ const UnifiedAssignmentDashboard = () => {
                           </Select>
                         </div>
                         <div>
-                          <Label>Select Candidates to Reassign</Label>
-                          <div className="max-h-44 overflow-y-auto border rounded-lg p-2">
+                          <Label className="text-sm sm:text-base">Select Candidates to Reassign</Label>
+                          <div className="max-h-32 sm:max-h-44 overflow-y-auto border rounded-lg p-2 mt-1">
                             {(
                               managers.find(
                                 (m) => m._id === currentManagerForReassign
                               )?.candidates || []
                             ).length === 0 ? (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground">
                                 No candidates assigned to this manager.
                               </p>
                             ) : (
@@ -1117,8 +1117,9 @@ const UnifiedAssignmentDashboard = () => {
                                               prev.filter((id) => id !== _id)
                                             );
                                         }}
+                                        className="flex-shrink-0"
                                       />
-                                      <span className="text-sm">{label}</span>
+                                      <span className="text-xs sm:text-sm truncate">{label}</span>
                                     </div>
                                   );
                                 })
@@ -1127,12 +1128,12 @@ const UnifiedAssignmentDashboard = () => {
                         </div>
 
                         <div>
-                          <Label>Select New Manager</Label>
+                          <Label className="text-sm sm:text-base">Select New Manager</Label>
                           <Select
                             value={newManagerForReassign}
                             onValueChange={setNewManagerForReassign}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Choose new manager" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1159,16 +1160,17 @@ const UnifiedAssignmentDashboard = () => {
                             !newManagerForReassign ||
                             reassignCandidates.length === 0
                           }
+                          className="w-full sm:w-auto"
                         >
                           {isReassigningManager ? (
                             <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Reassigning...
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                              <span className="truncate">Reassigning...</span>
                             </>
                           ) : (
                             <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Reassign {reassignCandidates.length} Candidate(s)
+                              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <span className="truncate">Reassign {reassignCandidates.length} Candidate(s)</span>
                             </>
                           )}
                         </Button>
@@ -1180,21 +1182,21 @@ const UnifiedAssignmentDashboard = () => {
 
               {/* Invigilator Reassignment Tab */}
               {showReassignments && (
-                <TabsContent value="invigilator-reassignment" className="mt-6">
-                  <div className="space-y-6">
-                    <div className="p-6 border rounded-lg bg-gray-50 dark:bg-gray-800">
-                      <Label className="font-semibold text-lg mb-4 block">
+                <TabsContent value="invigilator-reassignment" className="mt-4 sm:mt-6">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="p-4 sm:p-6 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                      <Label className="font-semibold text-base sm:text-lg mb-4 block">
                         Reassign Job(s) to Another Invigilator
                       </Label>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4">
                         <div>
-                          <Label>Select Current Invigilator</Label>
+                          <Label className="text-sm sm:text-base">Select Current Invigilator</Label>
                           <Select
                             value={currentInvigilatorForReassign}
                             onValueChange={setCurrentInvigilatorForReassign}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Choose current invigilator" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1210,14 +1212,14 @@ const UnifiedAssignmentDashboard = () => {
                           </Select>
                         </div>
                         <div>
-                          <Label>Select Job(s) to Reassign</Label>
-                          <div className="max-h-44 overflow-y-auto border rounded-lg p-2">
+                          <Label className="text-sm sm:text-base">Select Job(s) to Reassign</Label>
+                          <div className="max-h-32 sm:max-h-44 overflow-y-auto border rounded-lg p-2 mt-1">
                             {(
                               invigilators.find(
                                 (i) => i._id === currentInvigilatorForReassign
                               )?.jobs || []
                             ).length === 0 ? (
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground">
                                 No jobs assigned to this invigilator.
                               </p>
                             ) : (
@@ -1252,8 +1254,9 @@ const UnifiedAssignmentDashboard = () => {
                                               prev.filter((id) => id !== jobId)
                                             );
                                         }}
+                                        className="flex-shrink-0"
                                       />
-                                      <span className="text-sm">{label}</span>
+                                      <span className="text-xs sm:text-sm truncate">{label}</span>
                                     </div>
                                   );
                                 })
@@ -1261,12 +1264,12 @@ const UnifiedAssignmentDashboard = () => {
                           </div>
                         </div>
                         <div>
-                          <Label>Select New Invigilator</Label>
+                          <Label className="text-sm sm:text-base">Select New Invigilator</Label>
                           <Select
                             value={newInvigilatorForReassign}
                             onValueChange={setNewInvigilatorForReassign}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Choose new invigilator" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1294,16 +1297,17 @@ const UnifiedAssignmentDashboard = () => {
                             !newInvigilatorForReassign ||
                             reassignJobs.length === 0
                           }
+                          className="w-full sm:w-auto"
                         >
                           {isReassigningInvigilator ? (
                             <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Reassigning...
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                              <span className="truncate">Reassigning...</span>
                             </>
                           ) : (
                             <>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Reassign {reassignJobs.length} Job(s)
+                              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <span className="truncate">Reassign {reassignJobs.length} Job(s)</span>
                             </>
                           )}
                         </Button>

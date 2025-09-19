@@ -220,7 +220,7 @@ const AdminNotifications = () => {
               </p>
             </div>
           ) : (
-            <ScrollArea className="h-[500px] rounded-md border">
+            <div className="h-[500px] rounded-md border overflow-x-auto overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -306,7 +306,7 @@ const AdminNotifications = () => {
                   ))}
                 </TableBody>
               </Table>
-            </ScrollArea>
+            </div>
           )}
         </TabsContent>
       </Tabs>

@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search, Eye, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash, Search, Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -134,6 +134,19 @@ const HRQuestionnaireBuilder = () => {
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+    function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
+
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isCompact = useIsCompact(1220);
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -564,17 +577,21 @@ const HRQuestionnaireBuilder = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
-                    <TableHead>Questions</TableHead>
+                    {!isCompact && <TableHead>Questions</TableHead>}
                     <TableHead>Status</TableHead>
                     <TableHead>Due Date</TableHead>
-                    <TableHead>Assigned By</TableHead>
-                    <TableHead>Created</TableHead>
+                    {!isCompact && <TableHead>Assigned By</TableHead>}
+                    {!isCompact && <TableHead>Created</TableHead>}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredQuestionnaires.map((questionnaire) => (
-                    <TableRow key={questionnaire._id}>
+                    <TableRow
+                        key={questionnaire._id}
+                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        onClick={() => openViewDialog(questionnaire)}
+                      >
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar>
@@ -593,7 +610,7 @@ const HRQuestionnaireBuilder = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {!isCompact && <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {questionnaire.assigned_questions.slice(0, 2).map((question) => (
                             <Badge key={question._id} variant="outline" className="text-xs">
@@ -606,7 +623,7 @@ const HRQuestionnaireBuilder = () => {
                             </Badge>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell>}
                       <TableCell>
                         <Badge className={getStatusColor(questionnaire.status)}>
                           {questionnaire.status.toUpperCase()}
@@ -615,21 +632,14 @@ const HRQuestionnaireBuilder = () => {
                       <TableCell className="text-sm">
                         {formatDate(questionnaire.due_at)}
                       </TableCell>
-                      <TableCell className="text-sm">
+                      {!isCompact && <TableCell className="text-sm">
                         {questionnaire.assigned_by.name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      </TableCell>}
+                      {!isCompact && <TableCell className="text-sm text-muted-foreground">
                         {formatDate(questionnaire.createdAt)}
-                      </TableCell>
+                      </TableCell>}
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openViewDialog(questionnaire)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
                           <Button
                             size="sm"
                             variant="outline"

@@ -26,7 +26,7 @@ self.addEventListener('push', (event) => {
   }
 
   const {
-    title = 'Change Networks',
+    title = 'CHANGE Networks',
     body = 'You have a new notification',
     icon = '/icons/notification-icon-192.png',
     badge = '/icons/badge-icon-72.png',

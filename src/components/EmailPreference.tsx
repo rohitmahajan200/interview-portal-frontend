@@ -55,35 +55,36 @@ export const EmailPreferenceToggle = ({ className }: EmailPreferenceToggleProps)
   };
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className={`w-full ${className}`}>
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
           {emailPreference ? (
-            <Bell className="h-5 w-5 text-green-600" />
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
           ) : (
-            <BellOff className="h-5 w-5 text-gray-400" />
+            <BellOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
           )}
-          Email Notifications
+          <span className="truncate">Email Notifications</span>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm sm:text-base">
           Control whether you receive email notifications from the system
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2">
+      <CardContent className="p-4 sm:p-6 pt-0">
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-2">
           <Switch
             id="email-preference"
             checked={emailPreference}
             onCheckedChange={togglePreference}
             disabled={loading}
+            className="flex-shrink-0"
           />
-          <Label htmlFor="email-preference" className="cursor-pointer">
+          <Label htmlFor="email-preference" className="cursor-pointer text-sm sm:text-base">
             {emailPreference ? 'Email notifications enabled' : 'Email notifications disabled'}
           </Label>
         </div>
         
         {loading && (
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-2">
             Updating preference...
           </p>
         )}

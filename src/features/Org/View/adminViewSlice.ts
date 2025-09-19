@@ -7,10 +7,7 @@ export type AdminPage =
   | "users"
   | "roles"
   | "config"
-  | "analytics"
-  | "audit"
   | "notifications" // Add this line
-  | "integrations"
   | "jobs";
 
 interface AdminViewState {

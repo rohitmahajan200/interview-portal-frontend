@@ -335,6 +335,29 @@ const HRHome = () => {
   const [newKey, setNewKey] = useState<string>("");
 
   const dispatch = useDispatch();
+  function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
+
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  function getAge(dob: string | Date): number {
+    const birth = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  }
+  const isCompact = useIsCompact(1220);
 
   // HR Questionnaire States
   const [hrQuestions, setHrQuestions] = useState<HRQuestion[]>([]);
@@ -1529,23 +1552,26 @@ const HRHome = () => {
             </Select>
           </div>
 
-          {/* Candidates Table - Updated Glory Column */}
+          {/* Candidates Table - Responsive Version */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Candidate</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Current Stage</TableHead>
+                  <TableHead>{isCompact ? <span className="flex flex-col"><span>{"Current"}</span><span>{"Stage"}</span></span> : "Current Stage"}</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Registration Date</TableHead>
                   <TableHead>Glory</TableHead>
-                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCandidates.map((candidate) => (
-                  <TableRow key={candidate._id}>
+                  <TableRow
+                    key={candidate._id}
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    onClick={() => fetchCandidateDetails(candidate._id)}
+                  >
+                    {/* Candidate Info */}
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar>
@@ -1560,12 +1586,13 @@ const HRHome = () => {
                             {candidate.first_name} {candidate.last_name}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {candidate.gender} •{" "}
-                            {formatDate(candidate.date_of_birth)}
+                            {candidate.gender} • {getAge(candidate.date_of_birth)} yrs
                           </div>
                         </div>
                       </div>
                     </TableCell>
+
+                    {/* Contact */}
                     <TableCell>
                       <div>
                         <div className="text-sm">{candidate.email}</div>
@@ -1574,13 +1601,17 @@ const HRHome = () => {
                         </div>
                       </div>
                     </TableCell>
+
+                    {/* Current Stage */}
                     <TableCell>
                       <Badge className={getStageColor(candidate.current_stage)}>
-                        {candidate.current_stage
-                          .replace("_", " ")
-                          .toUpperCase()}
+                        {isCompact
+                          ? candidate.current_stage[0].toUpperCase() // Initial only
+                          : candidate.current_stage.replace("_", " ").toUpperCase()}
                       </Badge>
                     </TableCell>
+
+                    {/* Status */}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge className={getStatusColor(candidate.status)}>
@@ -1588,28 +1619,16 @@ const HRHome = () => {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {formatDate(candidate.registration_date)}
-                    </TableCell>
+
+                    {/* Glory */}
                     <TableCell>{renderGloryGrades(candidate.glory)}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fetchCandidateDetails(candidate._id)}
-                          disabled={loadingCandidate}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+
+
 
           {filteredCandidates.length === 0 && (
             <div className="text-center py-8">

@@ -157,7 +157,23 @@ const AdminHome = () => {
   const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
   const [candidateToDelete, setCandidateToDelete] = useState<Candidate | null>(null);
   const [isDeletingCandidate, setIsDeletingCandidate] = useState(false);
+  function truncateTag(tag: string, isreq=false, maxLength = 12) {
+    if (tag.length <= maxLength) return tag;
+    return tag.slice(0, maxLength) + (isreq ? "" : "...");
+  }
+    function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
 
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isCompact = useIsCompact(1220);
   // Helper Functions
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -418,7 +434,7 @@ const AdminHome = () => {
                 <TableRow>
                   <TableHead>Candidate</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Current Stage</TableHead>
+                  <TableHead>{isCompact ? <span className="flex flex-col"><span>{"Current"}</span><span>{"Stage"}</span></span> : "Current Stage"}</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Flags</TableHead>
                   <TableHead>Actions</TableHead>
@@ -426,7 +442,11 @@ const AdminHome = () => {
               </TableHeader>
               <TableBody>
                 {filteredCandidates.map((candidate) => (
-                  <TableRow key={candidate._id}>
+                  <TableRow
+                      key={candidate._id}
+                      onClick={() => fetchCandidateDetails(candidate._id)}
+                      className="cursor-pointer hover:bg-muted transition-colors"
+                    >
                     <TableCell>
                       <div className="flex items-center space-x-3">
                         <Avatar>
@@ -455,10 +475,20 @@ const AdminHome = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStageColor(candidate.current_stage)}>
-                        {candidate.current_stage?.replace("_", " ").toUpperCase()}
+                      <Badge
+                        className={getStageColor(candidate.current_stage)}
+                        title={candidate.current_stage} // show full text on hover
+                      >
+                        {isCompact
+                          ? truncateTag(
+                              candidate.current_stage?.replace("_", " ").toUpperCase() || "",
+                              true,
+                              3
+                            )
+                          : candidate.current_stage?.replace("_", " ").toUpperCase()}
                       </Badge>
                     </TableCell>
+
                     <TableCell>
                       <Badge className={getStatusColor(candidate.status)}>
                         {candidate.status?.toUpperCase()}
@@ -468,28 +498,19 @@ const AdminHome = () => {
                       <div className="flex gap-1">
                         {candidate.shortlisted && (
                           <Badge variant="secondary" className="text-xs">
-                            ⭐ Shortlisted
+                            {!isCompact ? "⭐ Shortlisted" : "⭐"}
                           </Badge>
                         )}
                         {candidate.flagged_for_deletion && (
                           <Badge variant="destructive" className="text-xs">
-                            🚨 Flagged
+                            {!isCompact ? "🚨 Flagged" : "🚨"}
                           </Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fetchCandidateDetails(candidate._id)}
-                          disabled={loadingCandidate}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        {candidate.flagged_for_deletion && (
+                        {candidate.flagged_for_deletion ? (
                           <Button
                             variant="destructive"
                             size="sm"
@@ -501,7 +522,7 @@ const AdminHome = () => {
                             <Trash2 className="h-4 w-4 mr-1" />
                             Delete
                           </Button>
-                        )}
+                        ): "None"}
                       </div>
                     </TableCell>
                   </TableRow>

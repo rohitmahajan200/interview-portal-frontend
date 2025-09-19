@@ -116,7 +116,19 @@ const AdminHome = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] = useState(false);
+      function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
 
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isCompact = useIsCompact(1220);
   
 
     // Update the openPasswordUpdateDialog function
@@ -439,7 +451,6 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -492,12 +503,11 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                               : "bg-orange-500"
                           }`}
                         ></div>
-                        <span className="text-sm">
+                        {!isCompact && <span className="text-sm">
                           {user.email_verified ? "Active" : "Pending"}
-                        </span>
+                        </span>}
                       </div>
                     </TableCell>
-                    <TableCell>{formatDate(user.createdAt)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

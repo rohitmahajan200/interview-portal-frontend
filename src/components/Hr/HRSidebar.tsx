@@ -10,7 +10,7 @@ import {
   Bell,
   Settings,
 } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,7 @@ import type { HRPage } from "@/features/Org/View/HrViewSlice";
 import { NavOrgUser } from "../NavOrgUser";
 
 export function HRSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  const { open } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
   const orgState = useAppSelector((s) => s.orgAuth);
   const orgNotifications = useAppSelector((s) => s.orgNotifications);
   const user = useAppSelector((state) => state.orgAuth.user);
@@ -71,14 +71,16 @@ export function HRSidebar(props: React.ComponentProps<typeof Sidebar>) {
       className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-700 h-full"
       {...props}
     >
-      {open && (
-        <SidebarHeader className="border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0">
-          <Logo />
+        <SidebarHeader className="border-b border-gray-200 dark:border-gray-700 h-16 flex-shrink-0 flex flex-row items-center">
+          <Logo open={open}/>
         </SidebarHeader>
-      )}
       <SidebarContent className="bg-white dark:bg-gray-900 flex-1 overflow-y-auto">
         <NavMainHR items={hrNav as any} />
       </SidebarContent>
+            <div className="flex w-full items-center" onClick={() => {toggleSidebar()}}>
+      <SidebarTrigger />
+      {open && <span>Collapse</span>}
+      </div>
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
         {orgState.user && (
           <NavOrgUser

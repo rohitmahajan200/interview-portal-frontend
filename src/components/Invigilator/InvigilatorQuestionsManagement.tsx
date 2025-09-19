@@ -224,7 +224,23 @@ const InvigilatorQuestionsManagement = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  function truncateTag(tag: string, isreq=false, maxLength = 12) {
+    if (tag.length <= maxLength) return tag;
+    return tag.slice(0, maxLength) + (isreq ? "" : "...");
+  }
+  function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
 
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isCompact = useIsCompact(1220);
   // Tag mode states
   const [useSameTagsForAll, setUseSameTagsForAll] = useState(false);
   const [globalTags, setGlobalTags] = useState('');
@@ -443,15 +459,23 @@ const InvigilatorQuestionsManagement = () => {
       <Toaster position="bottom-right" toastOptions={{ style: { zIndex: 9999 } }} />
       
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Technical Questions Management</h1>
-          <p className="text-muted-foreground">Create and manage technical assessment questions</p>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div className="text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl font-bold">Technical Questions Management</h1>
+          <p className="text-muted-foreground">
+            Create and manage technical assessment questions
+          </p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 w-4 h-4" /> Add Questions
-        </Button>
+        <div className="w-full md:w-auto">
+          <Button
+            onClick={openCreateDialog}
+            className="w-full md:w-auto"
+          >
+            <Plus className="mr-2 w-4 h-4" /> Add Questions
+          </Button>
+        </div>
       </div>
+
 
       {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -547,14 +571,15 @@ const InvigilatorQuestionsManagement = () => {
                     <TableHead>Score</TableHead>
                     <TableHead>Must Ask</TableHead>
                     <TableHead>Tags</TableHead>
-                    <TableHead>Created By</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredQuestions.map(question => (
                     <TableRow key={question._id}>
-                      <TableCell className="max-w-[300px] min-w-0">
+                      <TableCell className={`min-w-0 ${
+                          isCompact ? "max-w-[100px]" : "max-w-[300px]"
+                        }`}>
                         {question.text.length > 50 ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -590,37 +615,38 @@ const InvigilatorQuestionsManagement = () => {
                       </TableCell>
                       <TableCell>{question.max_score}</TableCell>
                       <TableCell>
-                        {question.is_must_ask ? (
-                          <Badge variant="destructive">Required</Badge>
-                        ) : (
-                          <Badge variant="secondary">Optional</Badge>
-                        )}
+                        <div className="flex flex-wrap gap-1">
+                          <Badge
+                            variant={question.is_must_ask ? "destructive" : "secondary"}
+                            className="text-xs"
+                            title={question.is_must_ask ? "Required" : "Optional"} // full text on hover
+                          >
+                            {isCompact
+                              ? truncateTag(question.is_must_ask ? "Required" : "Optional", true, 3)
+                              : question.is_must_ask ? "Required" : "Optional"}
+                          </Badge>
+                        </div>
                       </TableCell>
+
+
                       <TableCell>
-                        {question.tags && question.tags.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {question.tags.slice(0, 2).map((tag, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {question.tags.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{question.tags.length - 2} more
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">No tags</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {question.createdBy ? 
-                        <span className='flex gap-2'>
-                        {question.createdBy.name && <Badge>{question.createdBy.name}</Badge>}
-                        {question.createdBy.role && <Badge>{question.createdBy.role}</Badge>}
-                        </span> : "-" }
-                      </TableCell>
+                      {question.tags && question.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {question.tags.map((tag, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs"
+                              title={tag} // full text on hover
+                            >
+                              {isCompact ? truncateTag(tag, false, 12) : tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No tags</span>
+                      )}
+                    </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button

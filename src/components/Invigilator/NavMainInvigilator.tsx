@@ -51,10 +51,9 @@ export default function NavMainINVIGILATOR({ items }: { items: NavItem[] }) {
                       : "text-muted-foreground hover:text-primary"
                   )}
                 >
-                  <span className="flex items-center gap-2">
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.title}</span>
-                  </span>
+                  <item.icon className="w-4 h-4" />
+                  <span className="capitalize flex-1">{item.title}</span>
+                 
 
                   {typeof item.badge === "number" && item.badge > 0 && (
                     <Badge

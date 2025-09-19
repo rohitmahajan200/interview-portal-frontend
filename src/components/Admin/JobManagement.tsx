@@ -414,7 +414,7 @@ const JobManagement = () => {
       
       // Handle specific case where job already exists
       if (error?.response?.status === 409) {
-        toast.error("This job has already been imported from Change Networks");
+        toast.error("This job has already been imported from CHANGE Networks");
         // Remove from missing jobs list since it already exists
         if (currentJobPortalId) {
           setMissingJobs(prev => prev.filter(job => job._id !== currentJobPortalId));
@@ -824,7 +824,7 @@ const JobManagement = () => {
     return {
       formData: {
         name: cnJob.title || '',
-        description: descriptionText || cnJob.title || 'Job imported from Change Networks'
+        description: descriptionText || cnJob.title || 'Job imported from CHANGE Networks'
       },
       longDescriptionPairs: pairs,
       bulletSections: sections,
@@ -852,9 +852,9 @@ const JobManagement = () => {
       // Open create dialog
       setShowCreateDialog(true);
       
-      toast.success('Job details loaded from Change Networks portal');
+      toast.success('Job details loaded from CHANGE Networks portal');
     } catch (error: any) {
-      console.error('Failed to add job from Change Networks:', error);
+      console.error('Failed to add job from CHANGE Networks:', error);
       toast.error('Failed to load job details');
     }
   };
@@ -865,7 +865,7 @@ const JobManagement = () => {
     try {
       const missingJobsList = await fetchMissingJobs();
       if (missingJobsList.length === 0) {
-        toast.success('All Change Networks jobs are already synced!');
+        toast.success('All CHANGE Networks jobs are already synced!');
         setShowMissingJobsSection(false);
       } else {
         toast.success(`Found ${missingJobsList.length} jobs that need to be synced`);
@@ -873,7 +873,7 @@ const JobManagement = () => {
       }
     } catch (error) {
       console.error('Sync failed:', error);
-      toast.error('Failed to sync with Change Networks');
+      toast.error('Failed to sync with CHANGE Networks');
     }
   };
 
@@ -966,10 +966,10 @@ const JobManagement = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-blue-600 dark:text-blue-400">
-                    🔗 Change Networks Jobs Integration
+                    🔗 CHANGE Networks Jobs Integration
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Jobs from Change Networks portal that are not yet in your database
+                    Jobs from CHANGE Networks portal that are not yet in your database
                   </p>
                 </div>
                 <Button
@@ -1074,7 +1074,7 @@ const JobManagement = () => {
                 ) : (
                   <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 )}
-                <span className="hidden sm:inline">Sync with Change Networks</span>
+                <span className="hidden sm:inline">Sync with CHANGE Networks</span>
                 <span className="sm:hidden">Sync</span>
               </Button>
 
@@ -1441,7 +1441,7 @@ const JobManagement = () => {
             <DialogTitle>Create New Job</DialogTitle>
             <DialogDescription>
               {currentJobPortalId 
-                ? "Importing job from Change Networks portal with auto-filled details" 
+                ? "Importing job from CHANGE Networks portal with auto-filled details" 
                 : "Add a new job posting to your organization with glory parameters"
               }
             </DialogDescription>
