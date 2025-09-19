@@ -70,7 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {...props}
     >
       <SidebarHeader className="border-b border-gray-200 dark:border-gray-700">
-        {open && <Logo />}
+        <Logo open={open}/>
       </SidebarHeader>
 
       <SidebarContent className="bg-white dark:bg-gray-900">
