@@ -713,21 +713,19 @@ const AssessmentReview = () => {
 
       {/* Mobile-Responsive Assessments Table */}
       <Card className="flex-1 bg-card dark:bg-card border-border dark:border-border">
-        <CardHeader className="p-4 sm:p-6">
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-foreground dark:text-foreground">
             <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
             Assessment Responses
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           {loadingList ? (
             <div className="flex justify-center items-center h-24 sm:h-32">
               <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary dark:border-primary"></div>
             </div>
           ) : (
             <div className="overflow-x-auto">
-            <div className="h-[400px] overflow-x-auto">
-            </div>
               <Table>
                 <TableHeader>
                   <TableRow className="border-border dark:border-border">
