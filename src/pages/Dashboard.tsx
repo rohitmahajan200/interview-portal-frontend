@@ -21,15 +21,12 @@ import Interviews from "./Interviews";
 import Feedback from "./Feedback";
 import Profile from "./Profile";
 import Settings from "./Settings";
-import ThemeToggle from "@/components/themeToggle";
 import Spinner from "@/components/ui/spinner";
 import DocumentUploadForm from "./DocumentUploadForm";
 import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle, FileText, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import NotificationsPage from "./NotificationsPage";
-import { div } from "@tensorflow/tfjs";
-
 interface CandidateData {
   _id: string;
   status: string;
@@ -209,7 +206,6 @@ export default function Page() {
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
-            <ThemeToggle />
           </div>
         </header>
 

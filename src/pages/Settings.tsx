@@ -14,6 +14,7 @@ import api from "@/lib/api";
 import { useState } from "react";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import ResetOrgPasswordDialog from "@/components/ui/ResetOrgPasswordDialog";
+import ThemeToggleCard from "@/components/themeToggle";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -95,6 +96,7 @@ const Settings = () => {
       <h1 className="text-2xl font-semibold text-center mb-8">User Settings</h1>
       <div className="space-y-6 max-w-2xl mx-auto">
         <PushNotificationToggle />
+        <ThemeToggleCard />
         {settingsOptions.map((option, index) => (
           <div
             key={index}

@@ -54,6 +54,7 @@ import GloryButton from "../GloryButton";
 import { useGlory } from "@/hooks/useGlory";
 import GloryDialog from "../GloryDialog";
 
+// ... interfaces remain the same ...
 
 interface GloryData {
   [parameter: string]: string;
@@ -63,10 +64,9 @@ interface GloryRoleData {
   graderId?: string;
   graderName?: string;
   graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
-  grades: GloryData; // ✅ Use plain object instead of Map
+  grades: GloryData;
   gradedAt: string;
 }
-
 
 interface ManagerCandidate {
   _id: string;
@@ -285,7 +285,6 @@ interface DetailedCandidate {
     overallScore: number;
     summary: string;
   }>;
-
   assessmentResponses?: Array<{
     _id: string;
     total_score: number;
@@ -388,7 +387,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   const [stageUpdateReason, setStageUpdateReason] = useState("");
   const [stageFeedback, setStageFeedback] = useState("");
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
-
 
   // Action handlers
   const updateCandidateStage = async (
@@ -587,7 +585,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
     return (
       <Card
         key={candidate._id}
-        className="overflow-hidden hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500"
+        className="overflow-hidden hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500 dark:border-l-blue-400"
       >
         <CardHeader className="pb-2 px-3 sm:px-4 py-3">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -619,7 +617,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
       <div className="flex-1 min-w-0 space-y-1.5">
         {/* Name and Badges Row - Mobile Stacked */}
         <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-          <h3 className="text-sm sm:text-base md:text-lg font-bold truncate text-gray-900">
+          <h3 className="text-sm sm:text-base md:text-lg font-bold truncate text-gray-900 dark:text-gray-100">
             {candidate.first_name} {candidate.last_name}
           </h3>
           <div className="flex gap-1.5 flex-wrap">
@@ -633,7 +631,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
         </div>
 
         {/* Compact Contact Info Grid - Mobile Single Column */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-600">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-600 dark:text-gray-400">
           <div className="flex items-center gap-1.5 min-w-0">
             <Mail className="h-3 w-3 text-blue-500 shrink-0" />
             <span className="truncate break-all">{candidate.email}</span>
@@ -660,11 +658,11 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
         {/* Job Info - Compact Mobile */}
         <div className="space-y-1">
-          <div className="text-xs sm:text-sm font-semibold text-blue-700 truncate">
+          <div className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 truncate">
             {candidate.applied_job?.name}
           </div>
           {candidate.applied_job?.description && (
-            <div className="flex gap-2 text-xs text-gray-500 flex-wrap">
+            <div className="flex gap-2 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
               {candidate.applied_job.description.location && (
                 <div className="flex items-center gap-1">
                   <MapPinIcon className="h-3 w-3" />
@@ -713,7 +711,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
         {/* Upcoming Interview Badge */}
         {upcomingInterview && !activeInterview && (
-          <Badge variant="outline" className="text-xs px-2 py-1 text-blue-600 border-blue-300 whitespace-nowrap hidden sm:flex">
+          <Badge variant="outline" className="text-xs px-2 py-1 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 whitespace-nowrap hidden sm:flex">
             <Calendar className="h-3 w-3 mr-1" />
             <span className="truncate max-w-16">
               {formatDateTime(upcomingInterview.scheduled_at || "")}
@@ -727,7 +725,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           variant="outline"
           onClick={() => toggleCardExpansion(candidate._id)}
           disabled={isLoadingDetail}
-          className="px-2 py-1.5 h-8 border-gray-300"
+          className="px-2 py-1.5 h-8 border-gray-300 dark:border-gray-600"
         >
           {isLoadingDetail ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -750,7 +748,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               setHiringNote("");
               setHireDialogOpen(true);
             }}
-            className="text-green-600 hover:text-green-700 px-2 py-1.5 h-8 border-green-200 text-xs"
+            className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 px-2 py-1.5 h-8 border-green-200 dark:border-green-700 text-xs"
           >
             <ThumbsUp className="h-3 w-3 sm:mr-1" />
             <span className="hidden sm:inline">Hire</span>
@@ -766,7 +764,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               setRejectionReason("");
               setRejectDialogOpen(true);
             }}
-            className="text-red-600 hover:text-red-700 px-2 py-1.5 h-8 border-red-200 text-xs"
+            className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-2 py-1.5 h-8 border-red-200 dark:border-red-700 text-xs"
           >
             <ThumbsDown className="h-3 w-3 sm:mr-1" />
             <span className="hidden sm:inline">Reject</span>
@@ -782,7 +780,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               setHoldReason("");
               setHoldDialogOpen(true);
             }}
-            className="text-yellow-600 hover:text-yellow-700 px-2 py-1.5 h-8 border-yellow-200 text-xs"
+            className="text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300 px-2 py-1.5 h-8 border-yellow-200 dark:border-yellow-700 text-xs"
           >
             <CirclePause className="h-3 w-3 sm:mr-1" />
             <span className="hidden sm:inline">Hold</span>
@@ -798,7 +796,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
             setFeedbackType("general");
             setFeedbackDialogOpen(true);
           }}
-          className="text-blue-600 hover:text-blue-700 px-2 py-1.5 h-8 border-blue-200 text-xs"
+          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1.5 h-8 border-blue-200 dark:border-blue-700 text-xs"
         >
           <MessageSquare className="h-3 w-3 sm:mr-1" />
           <span className="hidden sm:inline">Feedback</span>
@@ -815,7 +813,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
             }}
             variant="outline"
             size="sm"
-            className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8 border-purple-200 text-xs"
+            className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 px-2 py-1.5 h-8 border-purple-200 dark:border-purple-700 text-xs"
           >
             🔄 <span className="hidden sm:inline ml-1">Stage</span>
           </Button>
@@ -826,33 +824,33 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           onOpenGlory={openGloryDialog}
           variant="outline"
           size="sm"
-          className="text-purple-600 hover:text-purple-700 px-2 py-1.5 h-8 text-xs col-span-2 sm:col-span-1"
+          className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 px-2 py-1.5 h-8 text-xs col-span-2 sm:col-span-1"
         />
       </div>
     </div>
   </div>
 
   {/* Compact Info Row - Mobile Optimized */}
-  <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-100 sm:flex-row sm:items-center sm:justify-between">
+  <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
     <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
-      <div className="flex items-center gap-1 text-blue-600">
+      <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
         <BarChart3 className="h-3 w-3" />
         <span>{candidateData.assessments?.length || 0} Tests</span>
       </div>
-      <div className="flex items-center gap-1 text-green-600">
+      <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
         <FileText className="h-3 w-3" />
         <span>
           {Array.isArray(candidateData.documents) ? candidateData.documents.length : 0} Docs
         </span>
       </div>
       {candidate.last_login && (
-        <div className="flex items-center gap-1 text-orange-600">
+        <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
           <ClockIcon className="h-3 w-3" />
           <span>Login: {formatDate(candidate.last_login)}</span>
         </div>
       )}
       {candidate.glory && (
-        <div className="flex items-center gap-1 text-blue-600">
+        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
           <Trophy className="h-3 w-3"/>
           <span className="break-words">Glory:
             HR-{(candidateData.glory?.hr?.grades?.Overall)||"Not Present"}{" "},
@@ -866,12 +864,12 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
     {/* Quick Status Indicators - Mobile Flex Wrap */}
     <div className="flex flex-wrap items-center gap-1 sm:gap-2">
       {candidate.email_verified && (
-        <Badge variant="outline" className="text-xs px-2 py-0.5 text-green-600 border-green-200">
+        <Badge variant="outline" className="text-xs px-2 py-0.5 text-green-600 dark:text-green-400 border-green-200 dark:border-green-700">
           Verified
         </Badge>
       )}
       {candidate.shortlisted && (
-        <Badge variant="outline" className="text-xs px-2 py-0.5 text-orange-600 border-orange-200">
+        <Badge variant="outline" className="text-xs px-2 py-0.5 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-700">
           Shortlisted
         </Badge>
       )}
@@ -879,31 +877,30 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   </div>
 </CardHeader>
 
-
         {/* Expanded Content with Collapsible Sections */}
         {isExpanded && (
-          <CardContent className="pt-0 px-4 pb-4 border-t bg-gray-50/50">
+          <CardContent className="pt-0 px-4 pb-4 border-t bg-gray-50/50 dark:bg-gray-800/50">
             {isLoadingDetail ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-500" />
-                <span className="text-sm text-gray-600">Loading candidate details...</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Loading candidate details...</span>
               </div>
             ) : (
               <div className="space-y-3">
                 {/* Personal Details Section - Collapsible */}
-                <div className="bg-white rounded-lg border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => toggleSection(candidate._id, 'personal')}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <h4 className="font-semibold flex items-center gap-2 text-sm">
-                      <UserIcon className="h-4 w-4 text-gray-600" />
+                      <UserIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       Personal Details
                     </h4>
                     {isSectionCollapsed(candidate._id, 'personal') ? (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                      <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     )}
                   </button>
                   
@@ -911,31 +908,31 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                     <div className="px-3 pb-3">
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Full Name</span>
-                          <p className="text-gray-900">{candidateData.first_name} {candidateData.last_name}</p>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Full Name</span>
+                          <p className="text-gray-900 dark:text-gray-100">{candidateData.first_name} {candidateData.last_name}</p>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Email</span>
-                          <p className="text-gray-900 truncate">{candidateData.email}</p>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Email</span>
+                          <p className="text-gray-900 dark:text-gray-100 truncate">{candidateData.email}</p>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Phone</span>
-                          <p className="text-gray-900">{candidateData.phone || "Not provided"}</p>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Phone</span>
+                          <p className="text-gray-900 dark:text-gray-100">{candidateData.phone || "Not provided"}</p>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Age</span>
-                          <p className="text-gray-900">{formatAge(candidateData.date_of_birth)} years ({candidateData.gender})</p>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Age</span>
+                          <p className="text-gray-900 dark:text-gray-100">{formatAge(candidateData.date_of_birth)} years ({candidateData.gender})</p>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Address</span>
-                          <p className="text-gray-900 truncate">{candidateData.address}</p>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Address</span>
+                          <p className="text-gray-900 dark:text-gray-100 truncate">{candidateData.address}</p>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Registered</span>
-                          <p className="text-gray-900">{formatDate(candidateData.registration_date)}</p>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Registered</span>
+                          <p className="text-gray-900 dark:text-gray-100">{formatDate(candidateData.registration_date)}</p>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Verification</span>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Verification</span>
                           <Badge
                             variant={candidateData.email_verified ? "default" : "destructive"}
                             className="text-xs"
@@ -944,7 +941,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                           </Badge>
                         </div>
                         <div className="space-y-0.5">
-                          <span className="text-gray-500 font-medium">Status</span>
+                          <span className="text-gray-500 dark:text-gray-400 font-medium">Status</span>
                           <Badge
                             variant={candidateData.shortlisted ? "default" : "secondary"}
                             className="text-xs"
@@ -958,18 +955,18 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                 </div>
 
                 {/* Glory Section - Collapsible */}
-                <div className="bg-white rounded-lg border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => toggleSection(candidate._id, 'glory')}
-                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <h4 className="font-semibold flex items-center gap-2 text-sm">
                       Glory           
                     </h4>
                     {isSectionCollapsed(candidate._id, 'glory') ? (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                      <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                     )}
                   </button>
                   
@@ -982,19 +979,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* HR Responses Section - Collapsible */}
                 {candidateData.default_hr_responses && candidateData.default_hr_responses.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'hr-responses')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <ClockIcon className="h-4 w-4 text-purple-600" />
+                        <ClockIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         HR Responses ({candidateData.default_hr_responses.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'hr-responses') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1002,9 +999,9 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="space-y-2">
                           {candidateData.default_hr_responses.map((response) => (
-                            <div key={response._id} className="p-2 bg-purple-50 rounded border border-purple-100">
-                              <div className="text-xs font-medium text-purple-800 mb-1">{response.question_text}</div>
-                              <div className="text-xs text-gray-700">
+                            <div key={response._id} className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-100 dark:border-purple-800">
+                              <div className="text-xs font-medium text-purple-800 dark:text-purple-200 mb-1">{response.question_text}</div>
+                              <div className="text-xs text-gray-700 dark:text-gray-300">
                                 <strong>Response:</strong> {response.response}
                               </div>
                               <Badge variant="outline" className="text-xs mt-1">{response.input_type}</Badge>
@@ -1018,19 +1015,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* Documents Section - Collapsible */}
                 {detailedCandidate?.documents && detailedCandidate.documents.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'documents')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <FileText className="h-4 w-4 text-emerald-600" />
+                        <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                         Documents ({detailedCandidate.documents.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'documents') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1038,19 +1035,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                           {detailedCandidate.documents.map((document) => (
-                            <div key={document._id} className="flex items-center justify-between p-2 bg-emerald-50 rounded border border-emerald-100">
+                            <div key={document._id} className="flex items-center justify-between p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded border border-emerald-100 dark:border-emerald-800">
                               <div className="flex-1 min-w-0 mr-2">
-                                <div className="text-xs font-medium text-emerald-800 truncate">
+                                <div className="text-xs font-medium text-emerald-800 dark:text-emerald-200 truncate">
                                   {document.document_type || "Document/Resume"}
                                 </div>
-                                <div className="text-xs text-gray-500 truncate">ID: {document._id}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">ID: {document._id}</div>
                               </div>
                               {document.document_url && (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => window.open(document.document_url, "_blank")}
-                                  className="h-6 w-6 p-0 text-emerald-600 hover:text-emerald-700"
+                                  className="h-6 w-6 p-0 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
                                 >
                                   <ExternalLink className="h-3 w-3" />
                                 </Button>
@@ -1065,19 +1062,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* HR Questionnaire Responses - Collapsible */}
                 {detailedCandidate?.hrQuestionnaireResponses && detailedCandidate.hrQuestionnaireResponses.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'hr-questionnaire')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <ClipboardList className="h-4 w-4 text-purple-600" />
+                        <ClipboardList className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         HR Questionnaire ({detailedCandidate.hrQuestionnaireResponses.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'hr-questionnaire') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1085,9 +1082,9 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="space-y-2">
                           {detailedCandidate.hrQuestionnaireResponses.map((response) => (
-                            <div key={response._id} className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                            <div key={response._id} className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                               <div className="flex items-center justify-between mb-2">
-                                <div className="font-medium text-purple-800 text-sm">HR Assessment</div>
+                                <div className="font-medium text-purple-800 dark:text-purple-200 text-sm">HR Assessment</div>
                                 <Badge
                                   variant={response.overallScore >= 8 ? "default" : response.overallScore >= 6 ? "secondary" : "destructive"}
                                   className="text-xs font-bold"
@@ -1097,7 +1094,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                               </div>
                               
                               <div className="flex items-center gap-2 mb-2">
-                                <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                                   <div
                                     className={`h-1.5 rounded-full ${
                                       response.overallScore >= 8 ? "bg-green-500" : response.overallScore >= 6 ? "bg-yellow-500" : "bg-red-500"
@@ -1105,11 +1102,11 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                                     style={{ width: `${(response.overallScore / 10) * 100}%` }}
                                   />
                                 </div>
-                                <span className="text-xs text-purple-600 font-medium">{Math.round((response.overallScore / 10) * 100)}%</span>
+                                <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">{Math.round((response.overallScore / 10) * 100)}%</span>
                               </div>
 
                               {response.summary && (
-                                <div className="text-xs text-gray-700 bg-white p-2 rounded border border-purple-100 italic">
+                                <div className="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 p-2 rounded border border-purple-100 dark:border-purple-700 italic">
                                   "{response.summary}"
                                 </div>
                               )}
@@ -1123,19 +1120,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* Technical Assessments - Collapsible */}
                 {detailedCandidate?.assessmentResponses && detailedCandidate.assessmentResponses.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'assessments')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <BarChart3 className="h-4 w-4 text-indigo-600" />
+                        <BarChart3 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                         Technical Assessments ({detailedCandidate.assessmentResponses.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'assessments') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1143,9 +1140,9 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="space-y-2">
                           {detailedCandidate.assessmentResponses.map((response) => (
-                            <div key={response._id} className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                            <div key={response._id} className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
                               <div className="flex items-center justify-between mb-2">
-                                <div className="font-medium text-indigo-800 text-sm">Technical Test</div>
+                                <div className="font-medium text-indigo-800 dark:text-indigo-200 text-sm">Technical Test</div>
                                 <div className="flex items-center gap-2">
                                   {response.total_score > 0 && (
                                     <Badge
@@ -1166,7 +1163,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                               {response.total_score > 0 && (
                                 <div className="flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                                     <div
                                       className={`h-1.5 rounded-full ${
                                         response.ai_score / response.total_score >= 0.8 ? "bg-green-500" :
@@ -1175,14 +1172,14 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                                       style={{ width: `${(response.ai_score / response.total_score) * 100}%` }}
                                     />
                                   </div>
-                                  <span className="text-xs text-indigo-600 font-medium">
+                                  <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
                                     {Math.round((response.ai_score / response.total_score) * 100)}%
                                   </span>
                                 </div>
                               )}
 
                               {response.evaluated_by && (
-                                <div className="text-xs text-indigo-600 mt-1">
+                                <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
                                   Evaluated by: {response.evaluated_by.name}
                                 </div>
                               )}
@@ -1196,19 +1193,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* Interviews Section - Collapsible */}
                 {detailedCandidate?.interviews && detailedCandidate.interviews.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'interviews')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <Video className="h-4 w-4 text-blue-600" />
+                        <Video className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         Interviews ({detailedCandidate.interviews.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'interviews') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1216,18 +1213,18 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="space-y-2">
                           {detailedCandidate.interviews.map((interview) => (
-                            <div key={interview._id} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                            <div key={interview._id} className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <h5 className="font-medium text-sm truncate">{interview.title || "Interview"}</h5>
+                                    <h5 className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{interview.title || "Interview"}</h5>
                                     <Badge variant={interview.status === "scheduled" ? "default" : "secondary"} className="text-xs">
                                       {interview.status}
                                     </Badge>
                                   </div>
 
                                   {interview.scheduled_at && (
-                                    <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                                    <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
                                       <div className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
                                         <span>{formatDate(interview.scheduled_at)}</span>
@@ -1254,8 +1251,8 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                                   {interview.interviewers && interview.interviewers.length > 0 && (
                                     <div className="text-xs mt-1">
-                                      <span className="font-medium">Interviewers: </span>
-                                      <span className="text-gray-600">{interview.interviewers.map((i) => i.name).join(", ")}</span>
+                                      <span className="font-medium text-gray-900 dark:text-gray-100">Interviewers: </span>
+                                      <span className="text-gray-600 dark:text-gray-400">{interview.interviewers.map((i) => i.name).join(", ")}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1278,7 +1275,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                                         size="sm"
                                         variant="outline"
                                         onClick={() => copyMeetingLink(interview.meeting_link!)}
-                                        className="text-blue-600 hover:text-blue-700 h-7 px-2"
+                                        className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 h-7 px-2"
                                       >
                                         <Copy className="h-3 w-3" />
                                       </Button>
@@ -1286,7 +1283,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                                         size="sm"
                                         variant="outline"
                                         onClick={() => window.open(interview.meeting_link, "_blank")}
-                                        className="text-gray-600 hover:text-gray-700 h-7 px-2"
+                                        className="text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 h-7 px-2"
                                       >
                                         <ExternalLink className="h-3 w-3" />
                                       </Button>
@@ -1296,15 +1293,15 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                               </div>
 
                               {interview.remarks && interview.remarks.length > 0 && (
-                                <div className="mt-2 pt-2 border-t border-blue-200">
-                                  <h6 className="text-xs font-medium mb-1">Recent Remarks:</h6>
+                                <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                                  <h6 className="text-xs font-medium mb-1 text-gray-900 dark:text-gray-100">Recent Remarks:</h6>
                                   <div className="space-y-1 max-h-16 overflow-y-auto">
                                     {interview.remarks.slice(-2).map((remark, idx) => (
-                                      <div key={idx} className="text-xs p-1.5 bg-white rounded border border-blue-200">
-                                        <div className="font-medium text-blue-700 truncate">
+                                      <div key={idx} className="text-xs p-1.5 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+                                        <div className="font-medium text-blue-700 dark:text-blue-300 truncate">
                                           {remark.provider.name}: {remark.remark}
                                         </div>
-                                        <div className="text-gray-500 text-xs">{formatDateTime(remark.created_at)}</div>
+                                        <div className="text-gray-500 dark:text-gray-400 text-xs">{formatDateTime(remark.created_at)}</div>
                                       </div>
                                     ))}
                                   </div>
@@ -1320,19 +1317,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* Internal Feedback - Collapsible */}
                 {candidateData.internal_feedback && candidateData.internal_feedback.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'feedback')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <MessageCircle className="h-4 w-4 text-orange-600" />
+                        <MessageCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                         Internal Feedback ({candidateData.internal_feedback.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'feedback') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1340,22 +1337,22 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="space-y-2">
                           {candidateData.internal_feedback.map((feedback) => (
-                            <div key={feedback._id} className="p-2 bg-orange-50 rounded border border-orange-100">
+                            <div key={feedback._id} className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-100 dark:border-orange-800">
                               <div className="flex justify-between items-start mb-1">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="w-6 h-6">
-                                    <AvatarFallback className="text-xs">
+                                    <AvatarFallback className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300">
                                       {feedback.feedback_by.name.split(" ").map((n) => n[0]).join("")}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="font-medium text-orange-800 text-xs">{feedback.feedback_by.name}</div>
-                                    <div className="text-xs text-gray-500">{feedback.feedback_by.role}</div>
+                                    <div className="font-medium text-orange-800 dark:text-orange-200 text-xs">{feedback.feedback_by.name}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">{feedback.feedback_by.role}</div>
                                   </div>
                                 </div>
                                 <Badge variant="outline" className="text-xs">{feedback.feedback_at?.toUpperCase()} Stage</Badge>
                               </div>
-                              <div className="text-xs text-gray-700 bg-white p-2 rounded border italic">"{feedback.feedback}"</div>
+                              <div className="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 p-2 rounded border italic">"{feedback.feedback}"</div>
                             </div>
                           ))}
                         </div>
@@ -1366,19 +1363,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
 
                 {/* Stage History - Collapsible */}
                 {detailedCandidate?.stage_history && detailedCandidate.stage_history.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'history')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <ArrowRight className="h-4 w-4 text-gray-600" />
+                        <ArrowRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         Stage History ({detailedCandidate.stage_history.length})
                       </h4>
                       {isSectionCollapsed(candidate._id, 'history') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1386,21 +1383,21 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
                           {detailedCandidate.stage_history.slice(-6).reverse().map((stage, idx) => (
-                            <div key={stage._id || idx} className="p-2 bg-gray-50 rounded border border-gray-200">
+                            <div key={stage._id || idx} className="p-2 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
                               <div className="flex items-center gap-1 mb-1">
-                                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">
                                   {stage.from_stage || "Start"}
                                 </span>
-                                <ArrowRight className="h-3 w-3 text-gray-400" />
-                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                                <ArrowRight className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                                <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded text-xs font-medium">
                                   {stage.to_stage}
                                 </span>
                               </div>
-                              <div className="text-xs text-gray-500 mb-1">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                                 {stage.action} • {formatDateTime(stage.changed_at)}
                               </div>
                               {stage.remarks && (
-                                <div className="text-xs text-gray-600 italic p-1.5 bg-white rounded border border-gray-100">
+                                <div className="text-xs text-gray-600 dark:text-gray-300 italic p-1.5 bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-600">
                                   "{stage.remarks}"
                                 </div>
                               )}
@@ -1415,19 +1412,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                 {/* Portfolio & System Info - Side by Side - Collapsible */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   {candidateData.portfolio_url && (
-                    <div className="bg-white rounded-lg border border-gray-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                       <button
                         onClick={() => toggleSection(candidate._id, 'portfolio')}
-                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <h4 className="font-semibold flex items-center gap-2 text-sm">
-                          <ExternalLink className="h-4 w-4 text-blue-600" />
+                          <ExternalLink className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                           Portfolio
                         </h4>
                         {isSectionCollapsed(candidate._id, 'portfolio') ? (
-                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                          <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                         ) : (
-                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                          <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                         )}
                       </button>
                       
@@ -1447,19 +1444,19 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                     </div>
                   )}
 
-                  <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
                       onClick={() => toggleSection(candidate._id, 'system')}
-                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       <h4 className="font-semibold flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-gray-600" />
+                        <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                         System Info
                       </h4>
                       {isSectionCollapsed(candidate._id, 'system') ? (
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       )}
                     </button>
                     
@@ -1467,31 +1464,31 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                       <div className="px-3 pb-3">
                         <div className="grid grid-cols-1 gap-2 text-xs">
                           <div className="flex justify-between">
-                            <span className="text-gray-500">Created:</span>
-                            <span>{formatDateTime(candidateData.createdAt)}</span>
+                            <span className="text-gray-500 dark:text-gray-400">Created:</span>
+                            <span className="text-gray-900 dark:text-gray-100">{formatDateTime(candidateData.createdAt)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-500">Updated:</span>
-                            <span>{formatDateTime(candidateData.updatedAt)}</span>
+                            <span className="text-gray-500 dark:text-gray-400">Updated:</span>
+                            <span className="text-gray-900 dark:text-gray-100">{formatDateTime(candidateData.updatedAt)}</span>
                           </div>
                           {candidateData.last_login && (
                             <div className="flex justify-between">
-                              <span className="text-gray-500">Last Login:</span>
-                              <span>{formatDateTime(candidateData.last_login)}</span>
+                              <span className="text-gray-500 dark:text-gray-400">Last Login:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{formatDateTime(candidateData.last_login)}</span>
                             </div>
                           )}
                           <div className="flex justify-between">
-                            <span className="text-gray-500">Version:</span>
-                            <span>v{candidateData.__v}</span>
+                            <span className="text-gray-500 dark:text-gray-400">Version:</span>
+                            <span className="text-gray-900 dark:text-gray-100">v{candidateData.__v}</span>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-500">Manager:</span>
+                            <span className="text-gray-500 dark:text-gray-400">Manager:</span>
                             <Badge variant={candidateData.assigned_manager ? "default" : "secondary"} className="text-xs">
                               {candidateData.assigned_manager ? "Assigned" : "Unassigned"}
                             </Badge>
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-500">Status:</span>
+                            <span className="text-gray-500 dark:text-gray-400">Status:</span>
                             <Badge variant={candidateData.flagged_for_deletion ? "destructive" : "default"} className="text-xs">
                               {candidateData.flagged_for_deletion ? "Flagged" : "Active"}
                             </Badge>
@@ -1510,9 +1507,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
   })}
 </div>
 
-
-
-            {/* Glory Dialog */}
+      {/* Glory Dialog */}
       <GloryDialog
               isOpen={gloryDialogOpen}
               candidate={candidateForGlory}
@@ -1533,7 +1528,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
       <Dialog open={stageUpdateModal} onOpenChange={setStageUpdateModal}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-indigo-600">
+            <DialogTitle className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
               🔄 Update Candidate Stage
             </DialogTitle>
             <DialogDescription>
@@ -1545,7 +1540,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
             <div className="space-y-4">
               {/* Candidate Info */}
               <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 sm:p-4 rounded-xl w-full lg:w-auto">
                   <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
                     <AvatarImage 
                       src={candidateToUpdateStage.profile_photo_url?.url}
@@ -1556,7 +1551,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
                       {candidateToUpdateStage.first_name}{" "}
                       {candidateToUpdateStage.last_name}
                     </p>
@@ -1589,7 +1584,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   id="new-stage"
                   value={selectedNewStage}
                   onChange={(e) => setSelectedNewStage(e.target.value)}
-                  className="w-full p-2 border rounded-md bg-white dark:bg-gray-800"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   disabled={isUpdatingStage}
                 >
                   <option value="">Select new stage</option>
@@ -1689,7 +1684,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               disabled={
                 isUpdatingStage || !selectedNewStage || !stageFeedback.trim()
               }
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800"
             >
               {isUpdatingStage ? (
                 <>
@@ -1708,7 +1703,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
               ⚠️ Confirm Candidate Rejection
             </DialogTitle>
             <DialogDescription>
@@ -1719,8 +1714,8 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           {candidateToReject && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {candidateToReject.first_name} {candidateToReject.last_name}
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -1774,7 +1769,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
       <Dialog open={hireDialogOpen} onOpenChange={setHireDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
+            <DialogTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
               ✅ Confirm Candidate Hiring
             </DialogTitle>
             <DialogDescription>
@@ -1785,8 +1780,8 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           {candidateToHire && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {candidateToHire.first_name} {candidateToHire.last_name}
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -1819,7 +1814,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               Cancel
             </Button>
             <Button
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
               onClick={() => {
                 if (candidateToHire) {
                   hireCandidate(candidateToHire._id, hiringNote.trim());
@@ -1837,7 +1832,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
       <Dialog open={holdDialogOpen} onOpenChange={setHoldDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-yellow-600">
+            <DialogTitle className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
               ⏸️ Hold Candidate
             </DialogTitle>
             <DialogDescription>
@@ -1848,8 +1843,8 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           {candidateToHold && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {candidateToHold.first_name} {candidateToHold.last_name}
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -1882,7 +1877,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               Cancel
             </Button>
             <Button
-              className="bg-yellow-600 hover:bg-yellow-700"
+              className="bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-800"
               onClick={() => {
                 if (candidateToHold) {
                   holdCandidate(candidateToHold._id, holdReason.trim());
@@ -1900,7 +1895,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-blue-600">
+            <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
               💬 Add Feedback
             </DialogTitle>
             <DialogDescription>
@@ -1910,8 +1905,8 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
           {candidateToGiveFeedback && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="font-medium">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <p className="font-medium text-gray-900 dark:text-gray-100">
                   {candidateToGiveFeedback.first_name}{" "}
                   {candidateToGiveFeedback.last_name}
                 </p>
@@ -1927,7 +1922,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   id="feedback-type"
                   value={feedbackType}
                   onChange={(e) => setFeedbackType(e.target.value)}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   disabled={isSubmittingFeedback}
                 >
                   <option value="general">General</option>
@@ -1965,7 +1960,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
               onClick={() => {
                 if (candidateToGiveFeedback && feedbackContent.trim()) {
                   submitFeedback(

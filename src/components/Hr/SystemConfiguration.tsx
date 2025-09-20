@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Settings, Shield, Key } from 'lucide-react';
+import { Settings, Shield, Key, Palette } from 'lucide-react';
 import OrgProfileUpdate from '../OrgProfileUpdate';
 import { OrgPushNotificationToggle } from '../OrgPushNotificationToggle';
 import { EmailPreferenceToggle } from '../EmailPreference';
 import ResetOrgPasswordDialog from '../ui/ResetOrgPasswordDialog';
+import ThemeToggleCard from '../themeToggle';
 
 export const SystemConfiguration = () => {
   const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] = useState(false);
@@ -31,6 +32,26 @@ export const SystemConfiguration = () => {
 
       {/* Profile Settings */}
       <OrgProfileUpdate />
+
+      <Separator className="my-4 sm:my-6" />
+
+      {/* Appearance Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Palette className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="truncate">Appearance Settings</span>
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base">
+            Customize the visual appearance of your application
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <ThemeToggleCard />
+          </div>
+        </CardContent>
+      </Card>
 
       <Separator className="my-4 sm:my-6" />
 

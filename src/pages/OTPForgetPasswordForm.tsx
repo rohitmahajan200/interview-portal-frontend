@@ -22,14 +22,14 @@ const OTPForgetPasswordForm: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const state=useAppSelector((state)=>state.auth?.user);
+  const state = useAppSelector((state) => state.auth?.user);
 
-  useEffect(()=>{
-    if(state==null){
+  useEffect(() => {
+    if (state == null) {
       return;
     }
     setStep('resetPassword');
-  },[]);
+  }, []);
 
   // Send OTP
   const sendOtp = async () => {
@@ -76,7 +76,6 @@ const OTPForgetPasswordForm: React.FC = () => {
     }
   };
 
-
   // Set new password
   const handleNewPassword = async () => {
     setLoading(true);
@@ -107,14 +106,14 @@ const OTPForgetPasswordForm: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
       <div className="w-full max-w-sm">
-        <Card className="shadow-lg rounded-2xl border border-gray-200">
+        <Card className="shadow-lg rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-center">
+            <CardTitle className="text-2xl font-semibold text-center text-gray-900 dark:text-gray-100">
               Reset Your Password
             </CardTitle>
-            <CardDescription className="text-center text-gray-500 text-sm">
+            <CardDescription className="text-center text-gray-500 dark:text-gray-400 text-sm">
               {step === "enteremail" && "Enter your email to receive an OTP."}
               {step === "verifyOtp" && `Enter the OTP sent to ${email}.`}
               {step === "resetPassword" && "Set your new password."}
@@ -130,7 +129,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="font-medium">
+                  <Label htmlFor="email" className="font-medium text-gray-900 dark:text-gray-100">
                     Email
                   </Label>
                   <Input
@@ -140,17 +139,18 @@ const OTPForgetPasswordForm: React.FC = () => {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary dark:focus:border-primary"
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
                 {loading && <Spinner />}
-                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                <Button type="submit" className="w-full text-sm py-2 bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                   <span
                     onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
                   </span>
@@ -167,8 +167,8 @@ const OTPForgetPasswordForm: React.FC = () => {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="otp" className="font-medium">
-                    Enter OTP sent to <span className="font-semibold">{email}</span>
+                  <Label htmlFor="otp" className="font-medium text-gray-900 dark:text-gray-100">
+                    Enter OTP sent to <span className="font-semibold text-blue-600 dark:text-blue-400">{email}</span>
                   </Label>
                   <Input
                     id="otp"
@@ -179,17 +179,18 @@ const OTPForgetPasswordForm: React.FC = () => {
                     required
                     maxLength={6}
                     inputMode="numeric"
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary dark:focus:border-primary text-center font-mono text-lg tracking-widest"
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
                 {loading && <Spinner />}
-                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                <Button type="submit" className="w-full text-sm py-2 bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full text-sm py-2"
+                  className="w-full text-sm py-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                   disabled={loading}
                   onClick={() => {
                     setStep("enteremail");
@@ -201,16 +202,16 @@ const OTPForgetPasswordForm: React.FC = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full text-sm py-2"
+                  className="w-full text-sm py-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                   disabled={loading}
                   onClick={sendOtp}
                 >
                   Resend OTP
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                   <span
                     onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
                   </span>
@@ -227,7 +228,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="new-password" className="font-medium">
+                  <Label htmlFor="new-password" className="font-medium text-gray-900 dark:text-gray-100">
                     New Password
                   </Label>
                   <Input
@@ -237,10 +238,11 @@ const OTPForgetPasswordForm: React.FC = () => {
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     required
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary dark:focus:border-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-password" className="font-medium">
+                  <Label htmlFor="confirm-password" className="font-medium text-gray-900 dark:text-gray-100">
                     Confirm Password
                   </Label>
                   <Input
@@ -250,29 +252,32 @@ const OTPForgetPasswordForm: React.FC = () => {
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     required
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary dark:focus:border-primary"
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
                 {loading && <Spinner />}
-                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                <Button type="submit" className="w-full text-sm py-2 bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading}>
                   {loading ? "Setting password..." : "Set New Password"}
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                   <span
                     onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
                   >
                     Back to login
                   </span>
                 </div>
-                {state!==null?<div className="text-center text-sm text-gray-600">
-                  <span
-                    onClick={() => navigate("/")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
-                  >
-                    Back to Settings
-                  </span>
-                </div>:null}
+                {state !== null ? (
+                  <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                    <span
+                      onClick={() => navigate("/")}
+                      className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+                    >
+                      Back to Settings
+                    </span>
+                  </div>
+                ) : null}
               </form>
             )}
           </CardContent>
