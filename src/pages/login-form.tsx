@@ -63,16 +63,17 @@ export function LoginForm({
       setLoading(false);
     }
   };
+
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 sm:px-6 md:px-10 py-12">
+    <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 sm:px-6 md:px-10 py-12">
       <div className="w-full max-w-sm">
         <div className={cn("flex flex-col gap-6", className)} {...props}>
-          <Card className="shadow-lg rounded-2xl border border-gray-200">
+          <Card className="shadow-lg rounded-2xl border">
             <CardHeader className="space-y-2">
               <CardTitle className="text-2xl font-semibold text-center">
                 Login to your account
               </CardTitle>
-              <CardDescription className="text-center text-gray-500 text-sm">
+              <CardDescription className="text-center text-muted-foreground text-sm">
                 Enter your email below to log in
               </CardDescription>
             </CardHeader>
@@ -90,7 +91,7 @@ export function LoginForm({
                     {...register("email", { required: "Email is required" })}
                   />
                   {errors.email && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-destructive">
                       {errors.email.message}
                     </p>
                   )}
@@ -107,7 +108,7 @@ export function LoginForm({
                     </Label>
                     <span
                       onClick={()=>navigate("/forget-password")}
-                      className="text-xs text-blue-600 hover:underline cursor-pointer"
+                      className="text-xs text-primary hover:underline cursor-pointer"
                     >
                       Forgot password?
                     </span>
@@ -125,7 +126,7 @@ export function LoginForm({
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowPassword((prev) => !prev)}
                       tabIndex={-1}
                     >
@@ -139,7 +140,7 @@ export function LoginForm({
 
                   {/* Display password error or backend message */}
                   {errors.password && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-destructive">
                       {errors.password.message}
                     </p>
                   )}
@@ -152,7 +153,7 @@ export function LoginForm({
                   </Button>
                   {/* <Button
                     variant="outline"
-                    className="w-full text-sm py-2 hover:bg-gray-100"
+                    className="w-full text-sm py-2"
                     type="button"
                   >
                     Login with Google
@@ -160,21 +161,21 @@ export function LoginForm({
                 </div>
 
                 {/* Login with OTP link */}
-                <div className="text-center text-sm mt-4 text-gray-600">
+                <div className="text-center text-sm mt-4 text-muted-foreground">
                   <span
                     onClick={() => navigate("/login-otp")}
-                    className="text-blue-600 hover:underline font-medium hover:cursor-pointer"
+                    className="text-primary hover:underline font-medium hover:cursor-pointer"
                   >
                     Login with OTP
                   </span>
                 </div>
 
                 {/* Signup link */}
-                <div className="text-center text-sm mt-4 text-gray-600">
+                <div className="text-center text-sm mt-4 text-muted-foreground">
                   Don&apos;t have an account?{" "}
                   <span
                     onClick={() => navigate("/register-candidate")}
-                    className="text-blue-600 hover:underline font-medium hover:cursor-pointer"
+                    className="text-primary hover:underline font-medium hover:cursor-pointer"
                   >
                     Sign up
                   </span>

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import Spinner from "@/components/ui/spinner"; // Use your spinner
+import Spinner from "@/components/ui/spinner";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useDispatch } from "react-redux";
@@ -19,7 +19,7 @@ const OTPLoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const dispatch=useDispatch();
+  const dispatch = useDispatch();
 
   // Simulate API call for sending OTP
   const sendOtp = async () => {
@@ -45,18 +45,18 @@ const OTPLoginForm: React.FC = () => {
     try {
       const res = await api.post("/candidates/verify-otp", { email, otp });                          
       // If backend logs in the user and returns user info:
-            if (res.data && res.data.success && res.data.user) {
-              dispatch(setUser(res.data.user)); // <--- Set user in redux
-              toast.success("User Login Successfully!")
-              setTimeout(()=>{
-                navigate("/")
-              },1000)
-            } else if (res.data && res.data.success) {
-              // If backend just returns success, move to reset password
-              setStep("enteremail");
-            } else {
-              setError("Verification failed.");
-            }
+      if (res.data && res.data.success && res.data.user) {
+        dispatch(setUser(res.data.user)); // <--- Set user in redux
+        toast.success("User Login Successfully!")
+        setTimeout(() => {
+          navigate("/")
+        }, 1000)
+      } else if (res.data && res.data.success) {
+        // If backend just returns success, move to reset password
+        setStep("enteremail");
+      } else {
+        setError("Verification failed.");
+      }
     } catch (e: unknown) {
       setError("Invalid OTP. Please try again.");
       console.error(e);
@@ -66,15 +66,15 @@ const OTPLoginForm: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-12">
       <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-sm">
-        <Card className="shadow-lg rounded-2xl border border-gray-200">
+        <Card className="shadow-lg rounded-2xl border">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-center">
               Login with OTP
             </CardTitle>
-            <CardDescription className="text-center text-gray-500 text-sm">
+            <CardDescription className="text-center text-muted-foreground text-sm">
               {step === "enteremail"
                 ? "Enter your email to receive an OTP."
                 : `Enter the OTP sent to ${email}.`}
@@ -91,26 +91,26 @@ const OTPLoginForm: React.FC = () => {
               >
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-medium">
-                    email
+                    Email
                   </Label>
                   <Input
                     id="email"
-                    type="text"
+                    type="email"
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setemail(e.target.value)}
                     required
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
                 <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-muted-foreground">
                   <span
                     onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    className="text-primary hover:underline font-medium cursor-pointer"
                   >
                     Back to login
                   </span>
@@ -128,7 +128,7 @@ const OTPLoginForm: React.FC = () => {
               >
                 <div className="space-y-2">
                   <Label htmlFor="otp" className="font-medium">
-                    Enter OTP sent to <span className="font-semibold">{email}</span>
+                    Enter OTP sent to <span className="font-semibold text-foreground">{email}</span>
                   </Label>
                   <Input
                     id="otp"
@@ -139,9 +139,10 @@ const OTPLoginForm: React.FC = () => {
                     required
                     maxLength={6}
                     inputMode="numeric"
+                    className="text-center tracking-wider text-lg"
                   />
                 </div>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
                 <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP"}
@@ -167,10 +168,10 @@ const OTPLoginForm: React.FC = () => {
                 >
                   Resend OTP
                 </Button>
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-muted-foreground">
                   <span
                     onClick={() => navigate("/login")}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    className="text-primary hover:underline font-medium cursor-pointer"
                   >
                     Back to login
                   </span>

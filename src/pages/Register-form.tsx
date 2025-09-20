@@ -116,7 +116,6 @@ export default function RegisterForm({
     return urlParams.get(name);
   };
 
-
   // Audio states for Basic Details
   const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
   const [mediaRecorders, setMediaRecorders] = useState<{ [key: number]: MediaRecorder | null }>({});
@@ -415,7 +414,7 @@ export default function RegisterForm({
                     id={`hr-question-${index}-option-${optionIndex}`}
                     checked={currentResponse === optionText}
                     onChange={(e) => updateHRResponse(index, e.target.value)}
-                    className="w-4 h-4 text-blue-600"
+                    className="w-4 h-4 text-primary"
                   />
                   <Label
                     htmlFor={`hr-question-${index}-option-${optionIndex}`}
@@ -461,7 +460,7 @@ case "checkbox": {
 
                   updateHRResponse(index, newSelections.length > 0 ? newSelections : []);
                 }}
-                className="w-4 h-4 text-blue-600"
+                className="w-4 h-4 text-primary"
               />
               <Label
                 htmlFor={`hr-question-${index}-checkbox-${optionIndex}`}
@@ -486,10 +485,10 @@ case "checkbox": {
             </div>
 
             {/* File Upload Section */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+            <div className="border-2 border-dashed border-border rounded-lg p-4">
               <div className="text-center">
-                <FileAudio className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm text-gray-600 mb-2">Upload an audio file or record below</p>
+                <FileAudio className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">Upload an audio file or record below</p>
                 <Input
                   type="file"
                   accept="audio/*"
@@ -502,7 +501,7 @@ case "checkbox": {
                 />
                 <Label
                   htmlFor={`hr-file-upload-${index}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-md cursor-pointer hover:bg-blue-100"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-md cursor-pointer hover:bg-primary/20"
                 >
                   <Upload className="w-4 h-4" />
                   Choose Audio File
@@ -538,7 +537,7 @@ case "checkbox": {
 
             {/* Audio Playback Controls */}
             {(audioBlobs[index] || uploadedFiles[index]) && (
-              <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="border rounded-lg p-4 bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="text-sm font-medium">
@@ -710,15 +709,15 @@ case "checkbox": {
   };
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-5xl">
         <div className={cn("flex flex-col gap-6", className)} {...props}>
-          <Card className="shadow-xl rounded-2xl border border-gray-200">
+          <Card className="shadow-xl rounded-2xl border">
             <CardHeader className="space-y-2">
               <CardTitle className="text-3xl font-semibold text-center">
                 Create Your Account
               </CardTitle>
-              <CardDescription className="text-center text-gray-500 text-base">
+              <CardDescription className="text-center text-muted-foreground text-base">
                 Please fill in the details below to register
               </CardDescription>
             </CardHeader>
@@ -727,13 +726,13 @@ case "checkbox": {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* All your existing form fields remain the same */}
                   <div>
-                    <Label htmlFor="first_name">First Name<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="first_name">First Name<span className="text-destructive">*</span></Label>
                     <Input
                       {...register("first_name", { required: true })}
                       id="first_name"
                     />
                     {errors.first_name && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.first_name.message}
                       </p>
                     )}
@@ -746,14 +745,14 @@ case "checkbox": {
                       id="last_name"
                     />
                     {errors.last_name && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.last_name.message}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="email">Email<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="email">Email<span className="text-destructive">*</span></Label>
                     <Input
                       {...register("email", { required: true })}
                       id="email"
@@ -761,14 +760,14 @@ case "checkbox": {
                       placeholder="you@example.com"
                     />
                     {errors.email && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.email.message}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="phone">Phone<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="phone">Phone<span className="text-destructive">*</span></Label>
                     <Controller
                       name="phone"
                       control={control}
@@ -784,37 +783,37 @@ case "checkbox": {
                       )}
                     />
                     {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                      <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="date_of_birth">Date Of Birth<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="date_of_birth">Date Of Birth<span className="text-destructive">*</span></Label>
                     <Input
                       {...register("date_of_birth")}
                       id="date_of_birth"
                       type="date"
                     />
                     {errors.date_of_birth && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.date_of_birth.message}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="gender">Gender<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="gender">Gender<span className="text-destructive">*</span></Label>
                     <select
                       {...register("gender", { required: true })}
                       id="gender"
-                      className="w-full border rounded-md px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border rounded-md px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
                     >
                       <option value="">Select Gender</option>
                       <option value="male">Male</option>
                       <option value="female">Female</option>
                     </select>
                     {errors.gender && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         Selection is required
                       </p>
                     )}
@@ -827,7 +826,7 @@ case "checkbox": {
                       id="address"
                     />
                     {errors.address && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.address.message}
                       </p>
                     )}
@@ -840,14 +839,14 @@ case "checkbox": {
                       id="portfolio_url"
                     />
                     {errors.portfolio_url && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.portfolio_url.message}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="profile_photo_url">Profile Photo<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="profile_photo_url">Profile Photo<span className="text-destructive">*</span></Label>
                     <Input
                       {...register("profile_photo_url", { required: true })}
                       id="profile_photo_url"
@@ -855,14 +854,14 @@ case "checkbox": {
                       accept="image/*"
                     />
                     {errors.profile_photo_url && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         Profile Photo is required
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="resume">Resume (PDF)<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="resume">Resume (PDF)<span className="text-destructive">*</span></Label>
                     <Input
                       id="resume"
                       type="file"
@@ -871,14 +870,14 @@ case "checkbox": {
                       multiple={false}
                     />
                     {errors.resume && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         Resume is required
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="applied_job">Applied Job<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="applied_job">Applied Job<span className="text-destructive">*</span></Label>
                     <Popover open={open} onOpenChange={setOpen}>
                       <PopoverTrigger asChild>
                         <Button
@@ -888,7 +887,7 @@ case "checkbox": {
                           className={`w-[300px] justify-between ${
                             jobIdFromUrl && selectedJobId && 
                             jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job.jobPortalId === jobIdFromUrl))
-                              ? 'border-green-500 bg-green-50' : ''
+                              ? 'border-green-500 bg-green-500/10' : ''
                           }`}
                           type="button"
                         >
@@ -935,12 +934,12 @@ case "checkbox": {
                       </PopoverContent>
                     </Popover>
                     {errors.applied_job && (
-                      <p className="text-red-500 text-sm mt-1">{errors.applied_job.message}</p>
+                      <p className="text-destructive text-sm mt-1">{errors.applied_job.message}</p>
                     )}
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="password">Password<span className="text-red-500">*</span></Label>
+                    <Label htmlFor="password">Password<span className="text-destructive">*</span></Label>
                     <div className="relative">
                       <Input
                         id="password"
@@ -951,7 +950,7 @@ case "checkbox": {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                        className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword((prev) => !prev)}
                         tabIndex={-1}
                       >
@@ -963,7 +962,7 @@ case "checkbox": {
                       </button>
                     </div>
                     {errors.password && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-destructive text-sm mt-1">
                         {errors.password.message}
                       </p>
                     )}
@@ -974,8 +973,8 @@ case "checkbox": {
                 <div className="pt-6 border-t">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-medium">Basic Details <span className="text-red-500">*</span></h3>
-                      <p className="text-sm text-gray-600">Please answer all questions to complete your registration</p>
+                      <h3 className="text-lg font-medium">Basic Details <span className="text-destructive">*</span></h3>
+                      <p className="text-sm text-muted-foreground">Please answer all questions to complete your registration</p>
                     </div>
                     <Button
                       type="button"
@@ -987,8 +986,8 @@ case "checkbox": {
                   </div>
 
                   {hrResponses && hrResponses.length > 0 && (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-600">
+                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <p className="text-sm text-green-600 dark:text-green-400">
                         ✓ You have answered {hrResponses.filter(r => r.response).length} out of {hrResponses.length} questions
                       </p>
                     </div>
@@ -1007,11 +1006,11 @@ case "checkbox": {
                     )}
                   </Button>
 
-                  <div className="text-center text-sm text-gray-600">
+                  <div className="text-center text-sm text-muted-foreground">
                     Already have an account?{" "}
                     <span
                       onClick={() => navigate("/login")}
-                      className="text-blue-600 hover:underline font-medium cursor-pointer"
+                      className="text-primary hover:underline font-medium cursor-pointer"
                     >
                       Login
                     </span>
@@ -1042,7 +1041,7 @@ case "checkbox": {
           ) : (
             <div className="space-y-6">
               {hrQuestions.map((question, index) => (
-                <Card key={question._id} className="border-l-4 border-l-blue-500">
+                <Card key={question._id} className="border-l-4 border-l-primary">
                   <CardContent className="pt-6">
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium">
