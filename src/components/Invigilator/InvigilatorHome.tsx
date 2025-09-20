@@ -891,7 +891,7 @@ const InvigilatorHome = () => {
   /**
    * Fetch detailed candidate information for the modal
    */
-  const fetchCandidateDetails = async (candidateId: string,e) => {
+  const fetchCandidateDetails = async (candidateId: string) => {
     try {
       setLoadingCandidate(true);
       const response = await api.get(`/org/candidates/${candidateId}`);
@@ -903,7 +903,6 @@ const InvigilatorHome = () => {
     } finally {
       setLoadingCandidate(false);
     }
-    e.stopPropagation();
   };
 
   /**
@@ -1123,7 +1122,7 @@ const InvigilatorHome = () => {
                   return (
                     <TableRow
                         key={candidate._id}
-                        onClick={(e) => fetchCandidateDetails(candidate._id,e)}
+                        onClick={() => fetchCandidateDetails(candidate._id)}
                         className="cursor-pointer hover:bg-muted"
                       >
                       {/* Candidate Information */}
