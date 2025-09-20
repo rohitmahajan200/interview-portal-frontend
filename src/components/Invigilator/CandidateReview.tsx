@@ -1179,7 +1179,7 @@ const AssessmentReview = () => {
                 Close
               </Button>
               
-              {selectedAssessment?.candidate.status !== "rejected" && selectedAssessment?.ai_score !== undefined && (
+              {selectedAssessment?.candidate.status !== "rejected" && (
                 <Button
                   variant="destructive"
                   onClick={() => {
@@ -1214,7 +1214,7 @@ const AssessmentReview = () => {
                 className="text-purple-600 h-8 text-xs"
               />
               
-              {selectedAssessment?.ai_score !== undefined && (
+              
                 <Button
                   onClick={() => setStageUpdateModal(true)}
                   className="h-8 text-xs"
@@ -1222,7 +1222,7 @@ const AssessmentReview = () => {
                   <ArrowRight className="h-3 w-3 mr-1" />
                   Stage
                 </Button>
-              )}
+              
             </div>
           </div>
         </div>

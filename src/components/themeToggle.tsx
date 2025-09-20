@@ -1,12 +1,13 @@
-import type { RootState } from "@/app/store";
-import { setCurrentTheme } from "@/features/Candidate/theme/themeSlice";
-import { useAppSelector } from "@/hooks/useAuth";
-import { MoonIcon, SunIcon } from "lucide-react";
-import  { useEffect } from "react";
-import { useDispatch } from "react-redux";
+// src/components/ui/ThemeToggleCard.tsx
+import React from 'react';
+import { MoonIcon, SunIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAppSelector } from '@/hooks/useAuth';
+import { setCurrentTheme } from '@/features/Candidate/theme/themeSlice';
+import { useDispatch } from 'react-redux';
+import type { RootState } from '@/app/store';
 
-
-const ThemeToggle = () => {
+const ThemeToggleCard = () => {
   const currentStage = useAppSelector(
     (state: RootState) => state.theme.currentStage
   );
@@ -16,30 +17,42 @@ const ThemeToggle = () => {
     dispatch(setCurrentTheme(currentStage === "light" ? "dark" : "light"));
   };
 
-  useEffect(()=>{
-    const root=document.documentElement;
-    if(currentStage=="dark"){
-      root.classList.add('dark');
-    }else{
-      root.classList.remove('dark');
-    }
-    localStorage.setItem("theme", currentStage);
-  },[currentStage])
+  // Remove useEffect - it's now handled in the slice
 
   return (
-    <button onClick={toggleTheme} 
-    className="fixed top-4 right-4 z-50 p-2 
-    rounded-full bg-white dark:bg-gray-800 
-    shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl 
-    transition-all duration-200 hover:scale-105"
->
-      {currentStage === "light" ? (
-        <MoonIcon className="h-5 w-5" />
-      ) : (
-        <SunIcon className="h-5 w-5" />
-      )}
-    </button>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg space-y-3 sm:space-y-0">
+      <div className="space-y-1 min-w-0 flex-1">
+        <h3 className="font-medium text-sm sm:text-base flex items-center gap-2">
+          {currentStage === "light" ? (
+            <SunIcon className="h-4 w-4 text-yellow-500" />
+          ) : (
+            <MoonIcon className="h-4 w-4 text-blue-500" />
+          )}
+          Theme Preference
+        </h3>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Switch between light and dark modes for better viewing experience
+        </p>
+      </div>
+      <Button 
+        onClick={toggleTheme}
+        variant="outline"
+        className="w-full sm:w-auto justify-center sm:justify-start"
+      >
+        {currentStage === "light" ? (
+          <>
+            <MoonIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+            <span className="truncate">Switch to Dark</span>
+          </>
+        ) : (
+          <>
+            <SunIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+            <span className="truncate">Switch to Light</span>
+          </>
+        )}
+      </Button>
+    </div>
   );
 };
 
-export default ThemeToggle;
+export default ThemeToggleCard;

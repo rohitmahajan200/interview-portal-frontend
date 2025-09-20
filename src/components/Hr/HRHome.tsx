@@ -1658,123 +1658,133 @@ const HRHome = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
               <DialogTitle>Candidate Details</DialogTitle>
+              
               {selectedCandidate && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {(selectedCandidate.current_stage === "registered" ||
-                    selectedCandidate.current_stage === "hr") && (
-                    <Button
-                      onClick={() =>
-                        openHRQuestionnaireDialog(selectedCandidate)
-                      }
-                      variant="default"
-                      size="sm"
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 sm:flex-none"
-                    >
-                      📋{" "}
-                      <span className="hidden md:inline">
-                        Assign HR Questionnaire
-                      </span>
-                      <span className="md:hidden">HR</span>
-                    </Button>
-                  )}
-
-                  {selectedCandidate.current_stage === "assessment" && (
-                    <Button
-                      onClick={() => openAssessmentDialog(selectedCandidate)}
-                      variant="default"
-                      size="sm"
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 sm:flex-none"
-                    >
-                      🔬{" "}
-                      <span className="hidden md:inline">
-                        Assign Assessment
-                      </span>
-                      <span className="md:hidden">Tech</span>
-                    </Button>
-                  )}
-
-                  {!selectedCandidate.shortlisted &&
-                    selectedCandidate.status !== "rejected" &&
-                    selectedCandidate.current_stage === "registered" && (
+                <div className="flex flex-col gap-2">
+                  {/* Primary Actions Row */}
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedCandidate.current_stage === "registered" ||
+                      selectedCandidate.current_stage === "hr") && (
                       <Button
                         onClick={() =>
-                          shortlistCandidate(
-                            selectedCandidate._id,
-                            "Shortlisted from candidate review"
-                          )
+                          openHRQuestionnaireDialog(selectedCandidate)
                         }
                         variant="default"
                         size="sm"
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 sm:flex-none"
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg flex-1 min-w-[120px]"
                       >
-                        ⭐ <span className="hidden md:inline">Shortlist</span>
+                        📋
+                        <span className="hidden sm:inline ml-1">
+                          Assign HR Questionnaire
+                        </span>
+                        <span className="sm:hidden ml-1">HR</span>
                       </Button>
                     )}
 
-                  {selectedCandidate.status !== "rejected" && (
+                    {selectedCandidate.current_stage === "assessment" && (
+                      <Button
+                        onClick={() => openAssessmentDialog(selectedCandidate)}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 min-w-[120px]"
+                      >
+                        🔬
+                        <span className="hidden sm:inline ml-1">
+                          Assign Assessment
+                        </span>
+                        <span className="sm:hidden ml-1">Tech</span>
+                      </Button>
+                    )}
+
+                    {!selectedCandidate.shortlisted &&
+                      selectedCandidate.status !== "rejected" &&
+                      selectedCandidate.current_stage === "registered" && (
+                        <Button
+                          onClick={() =>
+                            shortlistCandidate(
+                              selectedCandidate._id,
+                              "Shortlisted from candidate review"
+                            )
+                          }
+                          variant="default"
+                          size="sm"
+                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 min-w-[100px]"
+                        >
+                          ⭐ <span className="hidden sm:inline ml-1">Shortlist</span>
+                        </Button>
+                      )}
+
+                    {selectedCandidate.status !== "rejected" && (
+                      <Button
+                        onClick={() => {
+                          setCandidateToReject(selectedCandidate);
+                          setRejectionReason("");
+                          setRejectDialogOpen(true);
+                        }}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 min-w-[100px]"
+                      >
+                        ❌ <span className="hidden sm:inline ml-1">Reject</span>
+                      </Button>
+                    )}
+
                     <Button
                       onClick={() => {
-                        setCandidateToReject(selectedCandidate);
-                        setRejectionReason("");
-                        setRejectDialogOpen(true);
+                        setSelectedNewStage("");
+                        setStageUpdateReason("");
+                        setStageUpdateModal(true);
                       }}
                       variant="default"
                       size="sm"
-                      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 sm:flex-none"
+                      className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 min-w-[120px]"
                     >
-                      ❌ <span className="hidden md:inline">Reject</span>
+                      🔄 <span className="hidden sm:inline ml-1">Update Stage</span>
                     </Button>
-                  )}
+                  </div>
 
-                  <Button
-                    onClick={() => {
-                      setSelectedNewStage("");
-                      setStageUpdateReason("");
-                      setStageUpdateModal(true);
-                    }}
-                    variant="default"
-                    size="sm"
-                    className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 sm:flex-none"
-                  >
-                    🔄 <span className="hidden md:inline">Update Stage</span>
-                  </Button>
+                  {/* Secondary Actions Row */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => handleAssignInterview(selectedCandidate)}
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 flex-1 min-w-[140px]"
+                    >
+                      <Calendar className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Schedule Interview</span>
+                      <span className="sm:hidden">Interview</span>
+                    </Button>
 
-                  <Button
-                    onClick={() => handleAssignInterview(selectedCandidate)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Schedule Interview
-                  </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setCandidateForFeedback(selectedCandidate);
+                        setFeedbackContent("");
+                        setFeedbackType("general");
+                        setFeedbackDialogOpen(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 flex-1 min-w-[100px]"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Feedback
+                    </Button>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setCandidateForFeedback(selectedCandidate);
-                      setFeedbackContent("");
-                      setFeedbackType("general");
-                      setFeedbackDialogOpen(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-1" />
-                    Feedback
-                  </Button>
-
-                  <GloryButton
-                    candidate={selectedCandidate}
-                    onOpenGlory={openGloryDialog} // Pass the function as prop
-                    variant="outline"
-                    size="sm"
-                    className="text-purple-600 hover:text-purple-700"
-                  />
+                    <GloryButton
+                      candidate={selectedCandidate}
+                      onOpenGlory={openGloryDialog}
+                      variant="outline"
+                      size="sm"
+                      className="text-purple-600 hover:text-purple-700 border-purple-200 hover:border-purple-300 flex-1 min-w-[90px]"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </DialogHeader>
+
           {selectedCandidate && (
             <div className="space-y-6">
               {/* Personal Information Card */}
@@ -2507,19 +2517,19 @@ const HRHome = () => {
                           (questionnaire) => (
                             <div
                               key={questionnaire._id}
-                              className="border rounded-lg p-4 bg-gray-50"
+                              className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
                             >
                               <div className="flex items-center justify-between mb-3">
-                                <span className="font-medium">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">
                                   Questionnaire
                                 </span>
                                 <Badge
                                   className={
                                     questionnaire.status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800"
+                                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                                       : questionnaire.status === "submitted"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-red-100 text-red-800"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                                   }
                                 >
                                   {questionnaire.status.toUpperCase()}
@@ -2528,21 +2538,21 @@ const HRHome = () => {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-gray-400">
                                     Assigned by:
                                   </span>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
                                     {questionnaire.assigned_by.name}
                                   </div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
                                     {questionnaire.assigned_by.role}
                                   </div>
                                 </div>
                                 <div>
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-gray-400">
                                     Due date:
                                   </span>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
                                     {formatDate(questionnaire.due_at)}
                                   </div>
                                 </div>
@@ -2567,21 +2577,21 @@ const HRHome = () => {
                       {selectedCandidate.assessments.map((assessment) => (
                         <div
                           key={assessment._id}
-                          className="border rounded-lg p-4 bg-gray-50"
+                          className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
                         >
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-medium">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
                               Technical Assessment
                             </span>
                             <Badge
                               className={
                                 assessment.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                                   : assessment.status === "started"
-                                  ? "bg-blue-100 text-blue-800"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                                   : assessment.status === "completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                               }
                             >
                               {assessment.status.toUpperCase()}
@@ -2590,19 +2600,19 @@ const HRHome = () => {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-gray-600">
+                              <span className="text-gray-600 dark:text-gray-400">
                                 Assigned by:
                               </span>
-                              <div className="font-medium">
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {assessment.assigned_by.name}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {assessment.assigned_by.role}
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Due date:</span>
-                              <div className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Due date:</span>
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {formatDate(assessment.due_at)}
                               </div>
                             </div>
@@ -2626,6 +2636,7 @@ const HRHome = () => {
                   )}
                 </CardContent>
               </Card>
+
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

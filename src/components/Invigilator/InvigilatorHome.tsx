@@ -1223,8 +1223,8 @@ const InvigilatorHome = () => {
               >
                 {/* Pre-selected Candidate Display */}
                 {targetCandidate && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Label className="text-sm font-medium mb-2 block text-blue-800">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <Label className="text-sm font-medium mb-2 block text-blue-800 dark:text-blue-200">
                       Assigning assessment to:
                     </Label>
                     <div className="flex items-center space-x-3">
@@ -1238,11 +1238,11 @@ const InvigilatorHome = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium text-blue-900">
+                        <div className="font-medium text-blue-900 dark:text-blue-100">
                           {targetCandidate.first_name}{" "}
                           {targetCandidate.last_name}
                         </div>
-                        <div className="text-sm text-blue-700">
+                        <div className="text-sm text-blue-700 dark:text-blue-300">
                           {targetCandidate.email}
                         </div>
                         <Badge
@@ -1269,8 +1269,8 @@ const InvigilatorHome = () => {
 
                   {/* Tag Selection */}
                   {getUniqueTags().length > 0 && (
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <Label className="text-sm font-medium mb-2 block">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">
                         Quick Select by Tags:
                       </Label>
                       <div className="flex flex-wrap gap-2">
@@ -1320,9 +1320,9 @@ const InvigilatorHome = () => {
                       const filteredQuestions = getFilteredQuestions();
 
                       return (
-                        <div className="border rounded-lg">
-                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                            <span className="text-sm font-medium">
+                        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               Select Questions (Filtered for allowed types):
                             </span>
                             <div className="flex gap-2">
@@ -1394,7 +1394,7 @@ const InvigilatorHome = () => {
                                         }}
                                       />
                                       <div className="flex-1">
-                                        <p className="text-sm font-medium">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                           {question.text}
                                         </p>
                                         <div className="flex flex-wrap gap-1 mt-1">
@@ -1426,10 +1426,10 @@ const InvigilatorHome = () => {
                             </div>
                           </div>
 
-                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
+                          <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground">
                             Selected: {field.value?.length || 0} of{" "}
                             {filteredQuestions.length} questions
-                            <span className="ml-2 text-blue-600">
+                            <span className="ml-2 text-blue-600 dark:text-blue-400">
                               (Filtered: MCQ, Coding, Essay only)
                             </span>
                           </div>
@@ -1448,7 +1448,7 @@ const InvigilatorHome = () => {
                       name="assessments.0.is_seb"
                       control={assignmentForm.control}
                       render={({ field }) => (
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
+                        <div className="flex items-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
@@ -1456,7 +1456,7 @@ const InvigilatorHome = () => {
                           />
                           <Label
                             htmlFor="is_seb"
-                            className="text-sm font-normal"
+                            className="text-sm font-normal text-gray-900 dark:text-gray-100"
                           >
                             Required
                           </Label>
@@ -1499,7 +1499,7 @@ const InvigilatorHome = () => {
                     </p>
                     {assignmentForm.formState.errors.assessments?.[0]
                       ?.exam_duration && (
-                      <p className="text-red-600 text-sm">
+                      <p className="text-red-600 dark:text-red-400 text-sm">
                         {
                           assignmentForm.formState.errors.assessments[0]
                             .exam_duration.message
@@ -1516,7 +1516,7 @@ const InvigilatorHome = () => {
                       type="number"
                       value={totalMarks}
                       readOnly
-                      className="w-full bg-gray-50"
+                      className="w-full bg-gray-50 dark:bg-gray-800"
                     />
                     <p className="text-xs text-muted-foreground">
                       Sum of selected questions
@@ -1561,7 +1561,7 @@ const InvigilatorHome = () => {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button
               type="button"
               variant="outline"
@@ -1622,7 +1622,7 @@ const InvigilatorHome = () => {
                   {/* Profile Info */}
                   {!personalCollapsed && (
                     <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2  sm:p-4 rounded-xl w-full lg:w-auto">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 sm:p-4 rounded-xl w-full lg:w-auto">
                         <Avatar className="w-40 h-33 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
                           <AvatarImage
                             src={selectedCandidate.profile_photo_url?.url}
@@ -1659,16 +1659,16 @@ const InvigilatorHome = () => {
                             </Badge>
                           </div>
                           <div className="inline-flex items-center gap-2">
-                            <div className="text-xs text-gray-600">
-                              <strong className="text-purple-600">
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              <strong className="text-purple-600 dark:text-purple-400">
                                 Status:
                               </strong>{" "}
                               <span
                                 className={`inline-flex items-center gap-1 px-1 ${
                                   selectedCandidate.status.toLowerCase() ===
                                   "hired"
-                                    ? "text-green-700"
-                                    : "text-gray-700"
+                                    ? "text-green-700 dark:text-green-400"
+                                    : "text-gray-700 dark:text-gray-300"
                                 }`}
                               >
                                 {selectedCandidate.status}
@@ -1713,7 +1713,7 @@ const InvigilatorHome = () => {
 
                         {/* Address */}
                         {selectedCandidate.address && (
-                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 mt-4">
                             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
                               Address
                             </p>
@@ -1722,7 +1722,7 @@ const InvigilatorHome = () => {
                             </p>
                           </div>
                         )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
                           {selectedCandidate.applied_job?.description
                             ?.location && (
                             <div>
@@ -1774,66 +1774,65 @@ const InvigilatorHome = () => {
               </Card>
 
               {/* Documents - Compact One Line Version */}
-{selectedCandidate.documents &&
-  selectedCandidate.documents.length > 0 && (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Documents ({selectedCandidate.documents.length})</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 overflow-x-auto">
-          {selectedCandidate.documents.map((doc) => (
-            <div
-              key={doc._id}
-              className="inline-flex items-center gap-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 whitespace-nowrap transition-colors"
-            >
-              {/* Document Name - Clickable */}
-              <span
-                className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer underline decoration-dotted hover:decoration-solid transition-all"
-                title={`View ${doc.document_type}`}
-                onClick={() => window.open(doc.document_url, "_blank")}
-              >
-                {doc.document_type}
-              </span>
+              {selectedCandidate.documents &&
+                selectedCandidate.documents.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Documents ({selectedCandidate.documents.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2 overflow-x-auto">
+                        {selectedCandidate.documents.map((doc) => (
+                          <div
+                            key={doc._id}
+                            className="inline-flex items-center gap-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 whitespace-nowrap transition-colors"
+                          >
+                            {/* Document Name - Clickable */}
+                            <span
+                              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer underline decoration-dotted hover:decoration-solid transition-all"
+                              title={`View ${doc.document_type}`}
+                              onClick={() => window.open(doc.document_url, "_blank")}
+                            >
+                              {doc.document_type}
+                            </span>
 
-              {/* Copy Button */}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0 hover:bg-blue-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToClipboard(doc.document_url, doc._id, e);
-                }}
-                title="Copy document link"
-              >
-                {copiedDocId === doc._id ? (
-                  <Check className="w-3 h-3 text-green-600" />
-                ) : (
-                  <Copy className="w-3 h-3 text-gray-500 hover:text-blue-600" />
+                            {/* Copy Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(doc.document_url, doc._id, e);
+                              }}
+                              title="Copy document link"
+                            >
+                              {copiedDocId === doc._id ? (
+                                <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <Copy className="w-3 h-3 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400" />
+                              )}
+                            </Button>
+
+                            {/* View Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 hover:bg-green-100 dark:hover:bg-green-900/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(doc.document_url, "_blank");
+                              }}
+                              title="View document"
+                            >
+                              <Eye className="w-3 h-3 text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
-              </Button>
-
-              {/* View Button */}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0 hover:bg-green-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(doc.document_url, "_blank");
-                }}
-                title="View document"
-              >
-                <Eye className="w-3 h-3 text-gray-500 hover:text-green-600" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )}
-
 
               {/* HR Questionnaire */}
               {selectedCandidate.hrQuestionnaire &&
@@ -1848,19 +1847,19 @@ const InvigilatorHome = () => {
                           (questionnaire) => (
                             <div
                               key={questionnaire._id}
-                              className="border rounded-lg p-4 bg-gray-50"
+                              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
                             >
                               <div className="flex items-center justify-between mb-3">
-                                <span className="font-medium">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">
                                   Questionnaire
                                 </span>
                                 <Badge
                                   className={
                                     questionnaire.status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800"
+                                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                                       : questionnaire.status === "submitted"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-red-100 text-red-800"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                                   }
                                 >
                                   {questionnaire.status.toUpperCase()}
@@ -1869,21 +1868,21 @@ const InvigilatorHome = () => {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-gray-400">
                                     Assigned by:
                                   </span>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
                                     {questionnaire.assigned_by.name}
                                   </div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
                                     {questionnaire.assigned_by.role}
                                   </div>
                                 </div>
                                 <div>
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-gray-400">
                                     Due date:
                                   </span>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
                                     {formatDate(questionnaire.due_at)}
                                   </div>
                                 </div>
@@ -1908,21 +1907,21 @@ const InvigilatorHome = () => {
                       {selectedCandidate.assessments.map((assessment) => (
                         <div
                           key={assessment._id}
-                          className="border rounded-lg p-4 bg-gray-50"
+                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
                         >
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-medium">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
                               Technical Assessment
                             </span>
                             <Badge
                               className={
                                 assessment.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                                   : assessment.status === "started"
-                                  ? "bg-blue-100 text-blue-800"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                                   : assessment.status === "completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                               }
                             >
                               {assessment.status.toUpperCase()}
@@ -1931,19 +1930,19 @@ const InvigilatorHome = () => {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-gray-600">
+                              <span className="text-gray-600 dark:text-gray-400">
                                 Assigned by:
                               </span>
-                              <div className="font-medium">
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {assessment.assigned_by.name}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {assessment.assigned_by.role}
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Due date:</span>
-                              <div className="font-medium">
+                              <span className="text-gray-600 dark:text-gray-400">Due date:</span>
+                              <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {formatDate(assessment.due_at)}
                               </div>
                             </div>
@@ -1975,224 +1974,220 @@ const InvigilatorHome = () => {
               {selectedCandidate.glory &&
                 renderFullGloryDisplay(selectedCandidate.glory)}
 
- {/* Interviews Status - MERGED VERSION */}
-{selectedCandidate.interviews &&
-  selectedCandidate.interviews.length > 0 && (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <span>Interviews Overview</span>
-            <Badge variant="secondary" className="text-xs">
-              {selectedCandidate.interviews?.length || 0} Scheduled
-            </Badge>
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setInterviewsCollapsed(!interviewsCollapsed)
-            }
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <span className="text-sm font-medium">
-              {interviewsCollapsed ? "Show" : "Hide"}
-            </span>
-            {interviewsCollapsed ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronUp className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent>
-        {!interviewsCollapsed ? (
-          <div className="space-y-6">
-            {selectedCandidate.interviews.map((interview) => (
-              <div
-                key={interview._id}
-                className="border rounded-lg p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-sm"
-              >
-                {/* Top Header */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
-                  <div>
-                    <h4 className="font-semibold">{interview.title}</h4>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        {interview.type.toUpperCase()}
-                      </Badge>
-                      {interview.platform && (
-                        <Badge variant="secondary" className="text-xs">
-                          {interview.platform}
-                        </Badge>
-                      )}
-                      <Badge
-                        className={
-                          interview.status === "scheduled"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
-                        }
-                      >
-                        {interview.status.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Scheduled by <span className="font-medium">{interview.scheduled_by.name}</span>
-                  </div>
-                </div>
-
-                {/* Description */}
-                {interview.description && (
-                  <p className="text-sm text-gray-600 mb-3">
-                    {interview.description}
-                  </p>
-                )}
-
-                {/* Interviewers Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
-                  <div>
-                    <span className="text-gray-600">Interviewers:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {interview.interviewers.map((interviewer) => (
-                        <Badge
-                          key={interviewer._id}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {interviewer.name} ({interviewer.role})
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Meeting link */}
-                {interview.meeting_link && (
-                  <div className="mb-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(interview.meeting_link, "_blank")}
-                      className="text-xs"
-                    >
-                      Join Meeting
-                    </Button>
-                  </div>
-                )}
-
-                {/* Remarks Section - FROM FIRST VERSION */}
-                {interview.remarks && interview.remarks.length > 0 && (
-                  <div className="mt-3 border-t pt-3">
-                    <h5 className="text-sm font-medium mb-2">Remarks & Grades</h5>
-                    <div className="space-y-3">
-                      {interview.remarks.map((remark) => {
-                        const interviewer =
-                          interview.interviewers.find((int) => int._id === remark.provider) ||
-                          interview.scheduled_by;
-
-                        const getGradeColor = (grade: string) => {
-                          switch (grade.toUpperCase()) {
-                            case "A+":
-                            case "A":
-                              return "bg-green-100 text-green-800";
-                            case "B":
-                              return "bg-blue-100 text-blue-800";
-                            case "C":
-                              return "bg-yellow-100 text-yellow-800";
-                            case "D":
-                              return "bg-orange-100 text-orange-800";
-                            case "E":
-                              return "bg-red-100 text-red-800";
-                            default:
-                              return "bg-gray-100 text-gray-800";
+              {/* Interviews Status - MERGED VERSION */}
+              {selectedCandidate.interviews &&
+                selectedCandidate.interviews.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <CardTitle className="flex items-center gap-2">
+                          <span>Interviews Overview</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {selectedCandidate.interviews?.length || 0} Scheduled
+                          </Badge>
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setInterviewsCollapsed(!interviewsCollapsed)
                           }
-                        };
+                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <span className="text-sm font-medium">
+                            {interviewsCollapsed ? "Show" : "Hide"}
+                          </span>
+                          {interviewsCollapsed ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </CardHeader>
 
-                        return (
-                          <div
-                            key={remark._id}
-                            className="p-3 rounded-lg bg-white dark:bg-gray-800 border shadow-sm"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className="text-sm font-medium">{interviewer?.name || "Unknown"}</p>
-                                <p className="text-xs text-gray-500">{interviewer?.role || "Interviewer"}</p>
-                                <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                  "{remark.remark}"
-                                </p>
+                    <CardContent>
+                      {!interviewsCollapsed ? (
+                        <div className="space-y-6">
+                          {selectedCandidate.interviews.map((interview) => (
+                            <div
+                              key={interview._id}
+                              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-sm"
+                            >
+                              {/* Top Header */}
+                              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">{interview.title}</h4>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {interview.type.toUpperCase()}
+                                    </Badge>
+                                    {interview.platform && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {interview.platform}
+                                      </Badge>
+                                    )}
+                                    <Badge
+                                      className={
+                                        interview.status === "scheduled"
+                                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                          : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                      }
+                                    >
+                                      {interview.status.toUpperCase()}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                  Scheduled by <span className="font-medium">{interview.scheduled_by.name}</span>
+                                </div>
                               </div>
-                              <Badge className={`text-xs font-bold ${getGradeColor(remark.grade)}`}>
-                                {remark.grade}
-                              </Badge>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-muted-foreground text-sm">
-              {selectedCandidate.interviews.length} interview{selectedCandidate.interviews.length !== 1 ? 's' : ''} scheduled
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-)}
 
+                              {/* Description */}
+                              {interview.description && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                  {interview.description}
+                                </p>
+                              )}
+
+                              {/* Interviewers Grid */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-3">
+                                <div>
+                                  <span className="text-gray-600 dark:text-gray-400">Interviewers:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {interview.interviewers.map((interviewer) => (
+                                      <Badge
+                                        key={interviewer._id}
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        {interviewer.name} ({interviewer.role})
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Meeting link */}
+                              {interview.meeting_link && (
+                                <div className="mb-3">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(interview.meeting_link, "_blank")}
+                                    className="text-xs"
+                                  >
+                                    Join Meeting
+                                  </Button>
+                                </div>
+                              )}
+
+                              {/* Remarks Section - FROM FIRST VERSION */}
+                              {interview.remarks && interview.remarks.length > 0 && (
+                                <div className="mt-3 border-t border-gray-200 dark:border-gray-700 pt-3">
+                                  <h5 className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">Remarks & Grades</h5>
+                                  <div className="space-y-3">
+                                    {interview.remarks.map((remark) => {
+                                      const interviewer =
+                                        interview.interviewers.find((int) => int._id === remark.provider) ||
+                                        interview.scheduled_by;
+
+                                      const getGradeColor = (grade: string) => {
+                                        switch (grade.toUpperCase()) {
+                                          case "A+":
+                                          case "A":
+                                            return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+                                          case "B":
+                                            return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+                                          case "C":
+                                            return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
+                                          case "D":
+                                            return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
+                                          case "E":
+                                            return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+                                          default:
+                                            return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+                                        }
+                                      };
+
+                                      return (
+                                        <div
+                                          key={remark._id}
+                                          className="p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm"
+                                        >
+                                          <div className="flex items-start justify-between">
+                                            <div>
+                                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{interviewer?.name || "Unknown"}</p>
+                                              <p className="text-xs text-gray-500 dark:text-gray-400">{interviewer?.role || "Interviewer"}</p>
+                                              <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                                "{remark.remark}"
+                                              </p>
+                                            </div>
+                                            <Badge className={`text-xs font-bold ${getGradeColor(remark.grade)}`}>
+                                              {remark.grade}
+                                            </Badge>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <p className="text-muted-foreground text-sm">
+                            {selectedCandidate.interviews.length} interview{selectedCandidate.interviews.length !== 1 ? 's' : ''} scheduled
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
               {/* Internal Feedback Section - Enhanced with Stage Information */}
               {selectedCandidate.internal_feedback &&
                 selectedCandidate.internal_feedback.length > 0 && (
                   <Card>
                     <CardHeader>
-                     
-                        
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <CardTitle>💬 Internal Feedback
-                      <Badge variant="secondary" className="text-xs">
-                          {selectedCandidate.internal_feedback.length}
-                        </Badge></CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setFeedBackCollapsed(!feedBackCollapsed)
-                      }
-                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                      <span className="text-sm font-medium">
-                        {feedBackCollapsed ? "Show" : "Hide"}
-                      </span>
-                      {feedBackCollapsed ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                        
-                      
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <CardTitle>💬 Internal Feedback
+                          <Badge variant="secondary" className="text-xs ml-2">
+                            {selectedCandidate.internal_feedback.length}
+                          </Badge>
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setFeedBackCollapsed(!feedBackCollapsed)
+                          }
+                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <span className="text-sm font-medium">
+                            {feedBackCollapsed ? "Show" : "Hide"}
+                          </span>
+                          {feedBackCollapsed ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         {!feedBackCollapsed && selectedCandidate.internal_feedback.map((feedback) => (
                           <div
                             key={feedback._id}
-                            className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800"
+                            className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20"
                           >
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-3">
                                 <Avatar className="w-10 h-10">
-                                  <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
+                                  <AvatarFallback className="text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                                     {feedback.feedback_by.name
                                       .split(" ")
                                       .map((n) => n[0])
@@ -2206,7 +2201,7 @@ const InvigilatorHome = () => {
                                   <div className="flex items-center gap-2 mt-1">
                                     <Badge
                                       variant="outline"
-                                      className="text-xs bg-blue-100 text-blue-700 border-blue-300"
+                                      className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700"
                                     >
                                       {feedback.feedback_by.role}
                                     </Badge>
@@ -2218,7 +2213,7 @@ const InvigilatorHome = () => {
                                   💬 Feedback
                                 </div>
                                 <div className="flex items-center justify-end gap-1">
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
                                     At
                                   </span>
                                   <Badge
@@ -2231,7 +2226,7 @@ const InvigilatorHome = () => {
                                         .replace("_", " ")
                                         .toUpperCase()}
                                   </Badge>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
                                     stage
                                   </span>
                                 </div>
@@ -2256,32 +2251,32 @@ const InvigilatorHome = () => {
                   <Card>
                     <CardHeader>
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <CardTitle>Application Time-Line</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setTimeLineCollapsed(!timeLineCollapsed)
-                      }
-                      className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                      <span className="text-sm font-medium">
-                        {timeLineCollapsed ? "Show" : "Hide"}
-                      </span>
-                      {timeLineCollapsed ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                        <CardTitle>Application Time-Line</CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setTimeLineCollapsed(!timeLineCollapsed)
+                          }
+                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          <span className="text-sm font-medium">
+                            {timeLineCollapsed ? "Show" : "Hide"}
+                          </span>
+                          {timeLineCollapsed ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         {!timeLineCollapsed && selectedCandidate.stage_history.map((stage) => (
                           <div
                             key={stage._id}
-                            className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
+                            className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
                           >
                             <div className="flex justify-between items-start mb-2">
                               <div className="flex-1">
@@ -2290,7 +2285,7 @@ const InvigilatorHome = () => {
                                     {stage.action?.toUpperCase() ||
                                       "STAGE_CHANGE"}
                                   </Badge>
-                                  <p className="text-sm font-semibold capitalize">
+                                  <p className="text-sm font-semibold capitalize text-gray-900 dark:text-gray-100">
                                     {stage.from_stage
                                       ? `${stage.from_stage} → ${stage.to_stage}`
                                       : stage.to_stage}
@@ -2298,30 +2293,30 @@ const InvigilatorHome = () => {
                                 </div>
 
                                 {stage.changed_by ? (
-                                  <p className="text-xs text-gray-600">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
                                     Changed by:{" "}
                                     <span className="font-medium">
                                       {stage.changed_by.name}
                                     </span>
-                                    <span className="ml-1 text-gray-500">
+                                    <span className="ml-1 text-gray-500 dark:text-gray-500">
                                       • {stage.changed_by.role}
                                     </span>
                                   </p>
                                 ) : (
-                                  <p className="text-xs text-gray-600">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400">
                                     System generated
                                   </p>
                                 )}
                               </div>
 
-                              <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
                                 {formatDate(stage.changed_at)}
                               </span>
                             </div>
 
                             {stage.remarks && (
-                              <div className="mt-2 pt-2 border-t border-gray-200">
-                                <p className="text-xs text-gray-600 italic">
+                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 italic">
                                   "{stage.remarks}"
                                 </p>
                               </div>
@@ -2336,6 +2331,7 @@ const InvigilatorHome = () => {
           )}
         </DialogContent>
       </Dialog>
+
 
       {/* Glory Dialog */}
       <GloryDialog

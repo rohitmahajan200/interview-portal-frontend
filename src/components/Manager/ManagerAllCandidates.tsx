@@ -66,9 +66,17 @@ const ManagerAllCandidates = ({
   // State for managing collapsed sections
   const [collapsedSections, setCollapsedSections] = useState({});
   const [copiedDocId, setCopiedDocId] = useState(null);
-  const [roles, setRoles] = useState([
-    ...new Set(allCandidates.map((item) => item.applied_job.name)),
-  ]);
+  
+  // Fixed TypeScript typing for roles
+  const [roles, setRoles] = useState<string[]>(() => {
+    const uniqueRoles = new Set<string>();
+    allCandidates.forEach((candidate) => {
+      if (candidate.applied_job?.name && typeof candidate.applied_job.name === 'string') {
+        uniqueRoles.add(candidate.applied_job.name);
+      }
+    });
+    return Array.from(uniqueRoles);
+  });
 
   // Filter functions
   const clearFilters = () => {
@@ -104,8 +112,8 @@ const ManagerAllCandidates = ({
   const hasActiveFilters =
     statusFilter !== "all" ||
     stageFilter !== "all" ||
-    setRoleFilter !== "all" ||
-    setGloryFilter !== "all" ||
+    roleFilter !== "all" ||
+    gloryFilter !== "all" ||
     searchTerm.length > 0;
 
   // Toggle collapse for sections
@@ -151,10 +159,10 @@ const ManagerAllCandidates = ({
 
     const matchGlory =
       gloryFilter === "all" ||
-      candidate.glory.manager.grades.Overall == gloryFilter;
+      candidate.glory?.manager?.grades?.Overall == gloryFilter;
 
     const matchRole =
-      roleFilter === "all" || candidate.applied_job.name == roleFilter;
+      roleFilter === "all" || candidate.applied_job?.name == roleFilter;
 
     return (
       matchesSearch && matchesStatus && matchesStage && matchGlory && matchRole
@@ -171,7 +179,7 @@ const ManagerAllCandidates = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <UserIcon className="h-4 w-4 text-gray-600" />
+              <UserIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
               Personal Details & Assessments
               {assessments.length > 0 && (
                 <Badge variant="secondary" className="text-xs ml-2">
@@ -198,54 +206,54 @@ const ManagerAllCandidates = ({
           <CardContent className="pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Personal Details */}
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h5 className="font-medium text-sm mb-2 text-gray-700">
+              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                <h5 className="font-medium text-sm mb-2 text-gray-700 dark:text-gray-300">
                   Personal Information
                 </h5>
                 <div className="space-y-1 text-sm">
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium">Age:</span>{" "}
-                    {formatAge(candidate.date_of_birth)} years
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Age:</span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">{formatAge(candidate.date_of_birth)} years</span>
                   </div>
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium">Gender:</span>{" "}
-                    {candidate.gender}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Gender:</span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">{candidate.gender}</span>
                   </div>
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium">Address:</span>{" "}
-                    {candidate.address}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Address:</span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">{candidate.address}</span>
                   </div>
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium">Registered:</span>{" "}
-                    {formatDate(candidate.registration_date)}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">Registered:</span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">{formatDate(candidate.registration_date)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Assessments */}
               {assessments.length > 0 && (
-                <div className="bg-indigo-50 p-3 rounded-lg">
-                  <h5 className="font-medium text-sm mb-2 text-indigo-700">
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg">
+                  <h5 className="font-medium text-sm mb-2 text-indigo-700 dark:text-indigo-300">
                     Assessment Tests
                   </h5>
                   <div className="space-y-2">
                     {assessments.map((assessment) => (
                       <div
                         key={assessment._id}
-                        className="bg-white p-2 rounded border border-indigo-200"
+                        className="bg-white dark:bg-gray-800 p-2 rounded border border-indigo-200 dark:border-indigo-700"
                       >
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium whitespace-normal break-words">
+                          <span className="text-sm font-medium whitespace-normal break-words text-gray-900 dark:text-gray-100">
                             Assessment
                           </span>
                           <Badge
                             variant="outline"
-                            className="text-xs text-indigo-700"
+                            className="text-xs text-indigo-700 dark:text-indigo-300"
                           >
                             {assessment.status}
                           </Badge>
                         </div>
-                        <div className="text-xs text-indigo-600 mt-1 whitespace-normal break-words">
+                        <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 whitespace-normal break-words">
                           Assigned by: {assessment.assigned_by?.name}
                         </div>
                       </div>
@@ -272,7 +280,7 @@ const ManagerAllCandidates = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <MessageSquare className="h-4 w-4 text-purple-600" />
+              <MessageSquare className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               HR Responses & Calling Details
               <Badge variant="secondary" className="text-xs ml-2">
                 {hrResponses.length} Responses
@@ -297,20 +305,20 @@ const ManagerAllCandidates = ({
           <CardContent className="pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* HR Responses */}
-              <div className="bg-purple-50 p-3 rounded-lg">
-                <h5 className="font-medium text-sm mb-2 text-purple-700">
+              <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                <h5 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300">
                   HR Responses
                 </h5>
                 <div className="space-y-2">
                   {hrResponses.map((response) => (
                     <div
                       key={response._id}
-                      className="bg-white p-2 rounded border border-purple-200"
+                      className="bg-white dark:bg-gray-800 p-2 rounded border border-purple-200 dark:border-purple-700"
                     >
-                      <div className="text-xs font-medium text-purple-800 mb-1 whitespace-normal break-words">
+                      <div className="text-xs font-medium text-purple-800 dark:text-purple-200 mb-1 whitespace-normal break-words">
                         {response.question_text}
                       </div>
-                      <div className="text-xs text-gray-700 whitespace-normal break-words">
+                      <div className="text-xs text-gray-700 dark:text-gray-300 whitespace-normal break-words">
                         {response.response}
                       </div>
                     </div>
@@ -319,7 +327,7 @@ const ManagerAllCandidates = ({
               </div>
 
               {/* Calling Details */}
-              <div className="bg-green-50 p-3 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                 <HRCallingDetailsDisplay
                   candidateId={candidate._id}
                   candidateName={`${candidate.first_name} ${candidate.last_name}`}
@@ -333,7 +341,7 @@ const ManagerAllCandidates = ({
     );
   };
 
-  // NEW: Component for HR Assessment & Technical Assessment Results
+  // Component for HR Assessment & Technical Assessment Results
   const AssessmentResultsSection = ({ detailedCandidate }) => {
     if (!detailedCandidate) return null;
 
@@ -352,7 +360,7 @@ const ManagerAllCandidates = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Award className="h-4 w-4 text-indigo-600" />
+              <Award className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               Assessment Results & Scores
               <div className="flex gap-2 ml-2">
                 {hrQuestionnaire.length > 0 && (
@@ -389,18 +397,18 @@ const ManagerAllCandidates = ({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* HR Questionnaire Results */}
               {hrQuestionnaire.length > 0 && (
-                <div className="bg-purple-50 p-3 rounded-lg">
-                  <h5 className="font-medium text-sm mb-2 text-purple-700">
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                  <h5 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300">
                     HR Questionnaire Results
                   </h5>
                   <div className="space-y-3">
                     {hrQuestionnaire.map((response) => (
                       <div
                         key={response._id}
-                        className="bg-white p-3 rounded border border-purple-200"
+                        className="bg-white dark:bg-gray-800 p-3 rounded border border-purple-200 dark:border-purple-700"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-purple-800">
+                          <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
                             HR Assessment
                           </span>
                           <Badge
@@ -417,7 +425,7 @@ const ManagerAllCandidates = ({
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                             <div
                               className={`h-1.5 rounded-full ${
                                 (response.overallScore || 0) >= 8
@@ -433,7 +441,7 @@ const ManagerAllCandidates = ({
                               }}
                             />
                           </div>
-                          <span className="text-xs text-purple-600 font-medium">
+                          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
                             {Math.round(
                               ((response.overallScore || 0) / 10) * 100
                             )}
@@ -441,7 +449,7 @@ const ManagerAllCandidates = ({
                           </span>
                         </div>
                         {response.summary && (
-                          <div className="text-xs text-gray-700 italic bg-gray-50 p-2 rounded whitespace-normal break-words">
+                          <div className="text-xs text-gray-700 dark:text-gray-300 italic bg-gray-50 dark:bg-gray-700 p-2 rounded whitespace-normal break-words">
                             "{response.summary}"
                           </div>
                         )}
@@ -453,18 +461,18 @@ const ManagerAllCandidates = ({
 
               {/* Technical Assessment Results */}
               {techAssessments.length > 0 && (
-                <div className="bg-indigo-50 p-3 rounded-lg">
-                  <h5 className="font-medium text-sm mb-2 text-indigo-700">
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg">
+                  <h5 className="font-medium text-sm mb-2 text-indigo-700 dark:text-indigo-300">
                     Technical Assessment Results
                   </h5>
                   <div className="space-y-3">
                     {techAssessments.map((response) => (
                       <div
                         key={response._id}
-                        className="bg-white p-3 rounded border border-indigo-200"
+                        className="bg-white dark:bg-gray-800 p-3 rounded border border-indigo-200 dark:border-indigo-700"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-indigo-800">
+                          <span className="text-sm font-medium text-indigo-800 dark:text-indigo-200">
                             Technical Test
                           </span>
                           <div className="flex items-center gap-2">
@@ -500,7 +508,7 @@ const ManagerAllCandidates = ({
                         </div>
                         {response.total_score > 0 && (
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                               <div
                                 className={`h-1.5 rounded-full ${
                                   (response.ai_score || 0) /
@@ -522,7 +530,7 @@ const ManagerAllCandidates = ({
                                 }}
                               />
                             </div>
-                            <span className="text-xs text-indigo-600 font-medium">
+                            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
                               {Math.round(
                                 ((response.ai_score || 0) /
                                   response.total_score) *
@@ -533,7 +541,7 @@ const ManagerAllCandidates = ({
                           </div>
                         )}
                         {response.evaluated_by && (
-                          <div className="text-xs text-indigo-600 mt-1 whitespace-normal break-words">
+                          <div className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 whitespace-normal break-words">
                             Evaluated by: {response.evaluated_by.name}
                           </div>
                         )}
@@ -564,7 +572,7 @@ const ManagerAllCandidates = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4 text-emerald-600" />
+              <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               Documents
               <Badge variant="secondary" className="text-xs ml-2">
                 {allDocuments.length} Files
@@ -606,7 +614,7 @@ const ManagerAllCandidates = ({
                 return (
                   <div
                     key={doc._id}
-                    className="group relative border-2 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-white cursor-pointer"
+                    className="group relative border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800 cursor-pointer"
                     onClick={() => window.open(doc.document_url, "_blank")}
                   >
                     {/* Document Type Badge */}
@@ -628,8 +636,8 @@ const ManagerAllCandidates = ({
                           variant="outline"
                           className={`text-xs font-medium shadow-sm ${
                             doc.isVerified
-                              ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                              : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                              ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/50"
+                              : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
                           }`}
                         >
                           <div className="flex items-center gap-1">
@@ -652,35 +660,35 @@ const ManagerAllCandidates = ({
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-7 w-7 p-0 bg-white/90 hover:bg-white shadow-sm"
+                          className="h-7 w-7 p-0 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-sm"
                           onClick={(e) =>
                             copyToClipboard(doc.document_url, doc._id, e)
                           }
                           title="Copy document link"
                         >
                           {copiedDocId === doc._id ? (
-                            <Check className="w-3 h-3 text-green-600" />
+                            <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
                           ) : (
-                            <Copy className="w-3 h-3 text-gray-600" />
+                            <Copy className="w-3 h-3 text-gray-600 dark:text-gray-400" />
                           )}
                         </Button>
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="h-7 w-7 p-0 bg-white/90 hover:bg-white shadow-sm"
+                          className="h-7 w-7 p-0 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(doc.document_url, "_blank");
                           }}
                           title="View document"
                         >
-                          <Eye className="w-3 h-3 text-gray-600" />
+                          <Eye className="w-3 h-3 text-gray-600 dark:text-gray-400" />
                         </Button>
                       </div>
                     </div>
 
                     {/* Document Preview */}
-                    <div className="h-32 bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <div className="h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                       {isImage ? (
                         <img
                           src={doc.document_url}
@@ -698,7 +706,7 @@ const ManagerAllCandidates = ({
                           }}
                         />
                       ) : (
-                        <div className="flex flex-col items-center text-gray-500">
+                        <div className="flex flex-col items-center text-gray-500 dark:text-gray-400">
                           <FileText className="w-8 h-8 mb-1" />
                           <span className="text-xs text-center px-2 whitespace-normal break-words">
                             {doc.document_type}
@@ -709,10 +717,10 @@ const ManagerAllCandidates = ({
 
                     {/* Document Info */}
                     <div className="p-2">
-                      <p className="text-xs font-medium capitalize truncate text-center whitespace-normal break-words">
+                      <p className="text-xs font-medium capitalize truncate text-center whitespace-normal break-words text-gray-900 dark:text-gray-100">
                         {doc.document_type}
                       </p>
-                      <div className="flex items-center justify-center text-xs text-gray-500 mt-1">
+                      <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 mt-1">
                         <span className="whitespace-normal break-words text-center">
                           {doc.uploaded_at
                             ? formatDate(doc.uploaded_at)
@@ -744,10 +752,10 @@ const ManagerAllCandidates = ({
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 min-w-[40px]">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[40px]">
                 Status:
               </span>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -778,7 +786,7 @@ const ManagerAllCandidates = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 min-w-[35px]">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[35px]">
                 Stage:
               </span>
               <Select
@@ -813,7 +821,7 @@ const ManagerAllCandidates = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 min-w-[35px]">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[35px]">
                 Role:
               </span>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -824,12 +832,13 @@ const ManagerAllCandidates = ({
                   <SelectItem value="all" className="text-xs">
                     All
                   </SelectItem>
-                  {roles.map((item) => (
+                  {roles.map((role) => (
                     <SelectItem
-                      value={JSON.parse(JSON.stringify(item))}
+                      key={role}
+                      value={role}
                       className="text-xs"
                     >
-                      {JSON.parse(JSON.stringify(item))}
+                      {role}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -837,7 +846,7 @@ const ManagerAllCandidates = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-600 min-w-[35px]">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 min-w-[35px]">
                 Glory:
               </span>
               <Select value={gloryFilter} onValueChange={setGloryFilter}>
@@ -872,7 +881,7 @@ const ManagerAllCandidates = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
               {filteredCandidates.length} of {allCandidates.length}
             </span>
             {hasActiveFilters && (
@@ -1026,10 +1035,10 @@ const ManagerAllCandidates = ({
                         <h3
                           className={`text-sm sm:text-base md:text-lg font-semibold break-words ${
                             candidate.status === "rejected"
-                              ? "line-through text-red-600 opacity-75"
+                              ? "line-through text-red-600 dark:text-red-400 opacity-75"
                               : candidate.status === "hired"
-                              ? "text-green-700 font-bold animate-pulse"
-                              : ""
+                              ? "text-green-700 dark:text-green-400 font-bold animate-pulse"
+                              : "text-gray-900 dark:text-gray-100"
                           }`}
                         >
                           {candidate.status === "hired" && "🎉 "}
@@ -1084,7 +1093,7 @@ const ManagerAllCandidates = ({
                       </div>
 
                       {/* Job Info */}
-                      <div className="text-xs sm:text-sm font-medium text-blue-600 break-words">
+                      <div className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 break-words">
                         {candidate.applied_job?.name || "No job specified"}
                       </div>
                     </div>
@@ -1112,7 +1121,7 @@ const ManagerAllCandidates = ({
 
                       <div className="text-right text-xs sm:text-sm">
                         <div className="text-muted-foreground">Pending for</div>
-                        <div className="font-medium">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
                           {metrics.current_stage_duration} days
                         </div>
                       </div>
@@ -1139,7 +1148,7 @@ const ManagerAllCandidates = ({
 
               {/* Expanded Content - Mobile Optimized */}
               {isExpanded && (
-                <CardContent className="pt-0 px-3 sm:px-6 pb-4 border-t">
+                <CardContent className="pt-0 px-3 sm:px-6 pb-4 border-t border-gray-200 dark:border-gray-700">
                   {isLoadingDetail ? (
                     <div className="flex items-center justify-center py-6 sm:py-8">
                       <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mr-2" />
@@ -1178,7 +1187,7 @@ const ManagerAllCandidates = ({
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm sm:text-base">
                                 <div className="flex items-center gap-2">
-                                  <ArrowRight className="h-4 w-4 text-gray-600" />
+                                  <ArrowRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                   <span>Stage History & Feedback</span>
                                 </div>
                                 {/* Badge counts - Mobile Stack */}
@@ -1248,7 +1257,7 @@ const ManagerAllCandidates = ({
                                     detailedCandidate.stage_history.length >
                                       0 && (
                                       <div>
-                                        <h6 className="text-sm font-medium text-gray-700 mb-2">
+                                        <h6 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                           Recent Stage Changes
                                         </h6>
                                         <div className="space-y-2">
@@ -1256,16 +1265,16 @@ const ManagerAllCandidates = ({
                                             (stage) => (
                                               <div
                                                 key={stage._id}
-                                                className="p-2 sm:p-3 bg-gray-50 rounded border border-gray-200"
+                                                className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700"
                                               >
                                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-1">
                                                   <div className="flex items-center gap-2">
-                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs break-words">
+                                                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs break-words">
                                                       {stage.from_stage ||
                                                         "Start"}
                                                     </span>
-                                                    <ArrowRight className="h-3 w-3 text-gray-400 shrink-0" />
-                                                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs break-words">
+                                                    <ArrowRight className="h-3 w-3 text-gray-400 dark:text-gray-500 shrink-0" />
+                                                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs break-words">
                                                       {stage.to_stage}
                                                     </span>
                                                   </div>
@@ -1276,7 +1285,7 @@ const ManagerAllCandidates = ({
                                                   </span>
                                                 </div>
                                                 {stage.remarks && (
-                                                  <div className="text-xs text-gray-600 italic break-words">
+                                                  <div className="text-xs text-gray-600 dark:text-gray-400 italic break-words">
                                                     "{stage.remarks}"
                                                   </div>
                                                 )}
@@ -1294,7 +1303,7 @@ const ManagerAllCandidates = ({
                                     candidateData.internal_feedback.length >
                                       0 && (
                                       <div>
-                                        <h6 className="text-sm font-medium text-orange-700 mb-2">
+                                        <h6 className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
                                           Internal Feedback
                                         </h6>
                                         <div className="space-y-2">
@@ -1302,10 +1311,10 @@ const ManagerAllCandidates = ({
                                             (feedback) => (
                                               <div
                                                 key={feedback._id}
-                                                className="p-2 sm:p-3 bg-orange-50 rounded border border-orange-100"
+                                                className="p-2 sm:p-3 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-100 dark:border-orange-800"
                                               >
                                                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-2">
-                                                  <span className="text-sm font-medium text-orange-800 break-words">
+                                                  <span className="text-sm font-medium text-orange-800 dark:text-orange-200 break-words">
                                                     {feedback.feedback_by.name}
                                                   </span>
                                                   <Badge
@@ -1317,7 +1326,7 @@ const ManagerAllCandidates = ({
                                                     )}
                                                   </Badge>
                                                 </div>
-                                                <div className="text-xs sm:text-sm text-gray-700 break-words">
+                                                <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 break-words">
                                                   {feedback.feedback}
                                                 </div>
                                               </div>
