@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
-import { useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -22,7 +22,7 @@ import { useAppSelector } from "@/hooks/useAuth";
 import Logo from "./logo";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { open } = useSidebar();
+  const { open, toggleSidebar } = useSidebar();
   const state = useAppSelector((state) => state.auth);
   const notifications = useAppSelector(
     (state) => state.notifications?.items || []
@@ -76,7 +76,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent className="bg-white dark:bg-gray-900">
         <NavMain items={data.navMain} />
       </SidebarContent>
-
+      <div className="flex w-full items-center" onClick={() => {toggleSidebar()}}>
+      <SidebarTrigger />
+      {open && <span>Collapse</span>}
+      </div>
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
         {state.user &&
           state.user.first_name &&

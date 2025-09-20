@@ -95,8 +95,8 @@ const Settings = () => {
     <div className="relative min-h-screen p-6 bg-background text-foreground">
       <h1 className="text-2xl font-semibold text-center mb-8">User Settings</h1>
       <div className="space-y-6 max-w-2xl mx-auto">
-        <PushNotificationToggle />
         <ThemeToggleCard />
+        <PushNotificationToggle />
         {settingsOptions.map((option, index) => (
           <div
             key={index}
