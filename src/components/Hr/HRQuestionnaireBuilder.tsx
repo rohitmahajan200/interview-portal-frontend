@@ -364,10 +364,11 @@ const HRQuestionnaireBuilder = () => {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (questionnaire: HrQuestionnaire) => {
+  const openEditDialog = (questionnaire: HrQuestionnaire,e) => {
+    
     setEditingQuestionnaire(questionnaire);
     setSelectedTags(new Set());
-
+    
     // Format the due date for the input
     const dueDate = new Date(questionnaire.due_at);
     const formattedDate = dueDate.toISOString().split("T")[0];
@@ -377,11 +378,13 @@ const HRQuestionnaireBuilder = () => {
       due_at: formattedDate,
     });
     setDialogOpen(true);
+    e.stopPropagation();
   };
 
-  const openViewDialog = (questionnaire: HrQuestionnaire) => {
+  const openViewDialog = (questionnaire: HrQuestionnaire,e) => {
     setSelectedQuestionnaire(questionnaire);
     setViewDialogOpen(true);
+    e.stopPropagation();
   };
 
   const closeDialog = () => {
@@ -397,10 +400,11 @@ const HRQuestionnaireBuilder = () => {
     setSelectedQuestionnaire(null);
   };
   // Function to open delete confirmation dialog
-  const openDeleteDialog = (id: string, candidateName: string) => {
+  const openDeleteDialog = (id: string, candidateName: string,e) => {
     setDeleteTargetId(id);
     setDeleteTargetName(candidateName);
     setDeleteDialogOpen(true);
+    e.stopPropagation();
   };
 
   // Function to handle confirmed deletion
@@ -685,7 +689,7 @@ const HRQuestionnaireBuilder = () => {
                     <TableRow
                         key={questionnaire._id}
                         className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                        onClick={() => openViewDialog(questionnaire)}
+                        onClick={(e) => openViewDialog(questionnaire,e)}
                       >
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -751,17 +755,18 @@ const HRQuestionnaireBuilder = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openEditDialog(questionnaire)}
+                            onClick={(e) => openEditDialog(questionnaire,e)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() =>
+                            onClick={(e) =>
                               openDeleteDialog(
                                 questionnaire._id,
-                                `${questionnaire.candidate.first_name} ${questionnaire.candidate.last_name}`
+                                `${questionnaire.candidate.first_name} ${questionnaire.candidate.last_name}`,
+                                e
                               )
                             }
                             disabled={deleteLoadingId === questionnaire._id}

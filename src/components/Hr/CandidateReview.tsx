@@ -624,9 +624,6 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                 <TableHead className="text-xs sm:text-sm text-foreground dark:text-foreground py-2 sm:py-3 hidden md:table-cell">
                   Submitted
                 </TableHead>
-                <TableHead className="text-xs sm:text-sm text-foreground dark:text-foreground py-2 sm:py-3">
-                  Actions
-                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -690,20 +687,6 @@ const transformCandidateForGlory = (candidate: CandidateDetail): any => {
                       <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground dark:text-muted-foreground" />
                       {formatDate(item.submitted_at)}
                     </div>
-                  </TableCell>
-                  <TableCell className="py-2 sm:py-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openCandidateDialog(item._id);
-                      }}
-                      className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3 border-border dark:border-border hover:bg-accent dark:hover:bg-accent"
-                    >
-                      <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="hidden sm:inline">Review</span>
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

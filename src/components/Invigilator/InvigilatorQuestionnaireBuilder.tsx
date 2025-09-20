@@ -308,7 +308,7 @@ const AssessmentManagement = () => {
   };
 
   // Replace the openEditDialog function
-  const openEditDialog = (assessment: Assessment) => {
+  const openEditDialog = (assessment: Assessment,e) => {
     setEditingAssessment(assessment);
     setSelectedTags(new Set());
     
@@ -323,11 +323,13 @@ const AssessmentManagement = () => {
       exam_duration: assessment.exam_duration || 60,
     });
     setDialogOpen(true);
+    e.stopPropagation();
   };
 
-  const openViewDialog = (assessment: Assessment) => {
+  const openViewDialog = (assessment: Assessment,e) => {
     setSelectedAssessment(assessment);
     setViewDialogOpen(true);
+    e.stopPropagation();
   };
 
   // Make sure closeDialog is also updated:
@@ -352,10 +354,11 @@ const AssessmentManagement = () => {
   };
 
   // Delete handlers
-  const openDeleteDialog = (id: string, candidateName: string) => {
+  const openDeleteDialog = (id: string, candidateName: string,e) => {
     setDeleteTargetId(id);
     setDeleteTargetName(candidateName);
     setDeleteDialogOpen(true);
+    e.stopPropagation();
   };
 
   const handleDeleteConfirmed = async () => {
@@ -627,7 +630,7 @@ const AssessmentManagement = () => {
                   {filteredAssessments.map((assessment) => (
                      <TableRow
                         key={assessment._id}
-                        onClick={() => openViewDialog(assessment)}
+                        onClick={(e) => openViewDialog(assessment,e)}
                         className="cursor-pointer hover:bg-muted"
                       >
                       <TableCell>
@@ -671,16 +674,16 @@ const AssessmentManagement = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openEditDialog(assessment)}
+                            onClick={(e) => openEditDialog(assessment,e)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => openDeleteDialog(
+                            onClick={(e) => openDeleteDialog(
                               assessment._id, 
-                              `${assessment.candidate.first_name} ${assessment.candidate.last_name}`
+                              `${assessment.candidate.first_name} ${assessment.candidate.last_name}`,e
                             )}
                             disabled={deleteLoadingId === assessment._id}
                           >

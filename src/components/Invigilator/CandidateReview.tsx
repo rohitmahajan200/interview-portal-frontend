@@ -744,9 +744,6 @@ const AssessmentReview = () => {
                     <TableHead className="text-xs sm:text-sm text-foreground dark:text-foreground py-2 sm:py-3 hidden md:table-cell">
                       Completed
                     </TableHead>
-                    <TableHead className="text-xs sm:text-sm text-foreground dark:text-foreground py-2 sm:py-3">
-                      Actions
-                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -837,40 +834,6 @@ const AssessmentReview = () => {
                           <span className="text-foreground dark:text-foreground">
                             {formatDate(item.updatedAt)}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2 sm:py-3">
-                        <div className="flex items-center gap-1 sm:gap-2">
-                          {item.ai_score === undefined && (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={(e) => triggerAIEvaluation(item._id, e)}
-                              disabled={!!loadingActions[`ai_${item._id}`]}
-                              className="flex items-center gap-1 sm:gap-2 h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                            >
-                              {loadingActions[`ai_${item._id}`] ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
-                              ) : (
-                                <Brain className="h-3 w-3" />
-                              )}
-                              <span className="hidden sm:inline">
-                                {loadingActions[`ai_${item._id}`] ? "Eval..." : "Evaluate"}
-                              </span>
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openAssessmentDialog(item._id);
-                            }}
-                            className="flex items-center gap-1 sm:gap-2 h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm border-border dark:border-border hover:bg-accent dark:hover:bg-accent"
-                          >
-                            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className="hidden sm:inline">Review</span>
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

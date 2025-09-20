@@ -573,9 +573,10 @@ const AdminHome = () => {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => {
+                            onClick={(e) => {
                               setCandidateToDelete(candidate);
                               setDeletionDialogOpen(true);
+                              e.stopPropagation();
                             }}
                           >
                             <Trash2 className="h-4 w-4 mr-1" />
@@ -961,10 +962,11 @@ const AdminHome = () => {
             {selectedCandidate?.flagged_for_deletion && (
               <Button
                 variant="destructive"
-                onClick={() => {
+                onClick={(e) => {
                   setDialogOpen(false);
                   setCandidateToDelete(selectedCandidate);
                   setDeletionDialogOpen(true);
+                  e.stopPropagation();
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -1006,9 +1008,10 @@ const AdminHome = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
-              onClick={() => {
+              onClick={(e) => {
                 setDeletionDialogOpen(false);
                 setCandidateToDelete(null);
+                e.stopPropagation();
               }}
               disabled={isDeletingCandidate}
             >

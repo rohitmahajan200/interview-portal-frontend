@@ -5,7 +5,6 @@ export type InvigilatorPage =
   | "invigilator-questions"
   | "invigilator-questionnaire"
   | "candidate-review"
-  | "invigilator-analytics"
   | "interview-scheduling"
   | "notifications" // Added notifications page
   | "config";

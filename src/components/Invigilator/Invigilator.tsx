@@ -27,7 +27,6 @@ import InvigilatorQuestionsManagement from "./InvigilatorQuestionsManagement";
 import InvigilatorQuestionnaireBuilder from "./InvigilatorQuestionnaireBuilder";
 import CandidateReview from "./CandidateReview";
 import InterviewScheduling from "./InterviewScheduling";
-import InvigilatorAnalytics from "./InvigilatorAnalytics";
 import InvigilatorNotifications from "./InvigilatorNotifications";
 import SystemConfiguration from "./SystemConfiguration";
 
@@ -129,14 +128,10 @@ export default function Invigilator() {
         return <CandidateReview />;
       case "interview-scheduling":
         return <InterviewScheduling />;
-      case "invigilator-analytics":
-        return <InvigilatorAnalytics />;
       case "notifications":
         return <InvigilatorNotifications />;
       case "config":
         return <SystemConfiguration />;
-      default:
-        return <InvigilatorHome />;
     }
   };
 

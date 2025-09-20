@@ -330,7 +330,7 @@ const InvigilatorQuestionsManagement = () => {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (question: Question) => {
+  const openEditDialog = (question: Question,e) => {
     setEditingQuestion(question);
     form.reset({
       questions: [{
@@ -346,6 +346,7 @@ const InvigilatorQuestionsManagement = () => {
       }]
     });
     setDialogOpen(true);
+    e.stopPropagation();
   };
 
   const handleTypeChangeForQuestion = (questionIndex: number, value: string) => {
@@ -420,7 +421,7 @@ const InvigilatorQuestionsManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string,e) => {
     if (!window.confirm('Are you sure you want to delete this question?')) return;
     
     try {
@@ -434,6 +435,7 @@ const InvigilatorQuestionsManagement = () => {
     } finally {
       setDeleteLoadingId(null);
     }
+    e.stopPropagation();
   };
 
   const getTypeColor = (type: string) => {
@@ -652,14 +654,14 @@ const InvigilatorQuestionsManagement = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openEditDialog(question)}
+                            onClick={(e) => openEditDialog(question,e)}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(question._id)}
+                            onClick={(e) => handleDelete(question._id,e)}
                             disabled={deleteLoadingId === question._id}
                           >
                             <Trash className="w-4 h-4" />
