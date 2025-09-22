@@ -28,6 +28,7 @@ import {
   RotateCcw,
   CheckCircle2,
   Ban,
+  Copy,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
@@ -111,9 +112,10 @@ export default function Assessments() {
   const [error, setError] = useState<string | null>(null);
   const [showSebDialog, setShowSebDialog] = useState<null | TechnicalAssessment>(null);
   const [query, setQuery] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
   const [filter, setFilter] =
     useState<"all" | "pending" | "started" | "completed" | "expired">("all");
-  const[isDownloaded,setIsDownloaded]=useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
 
   /* ------------------------------ Action logic ----------------------------- */
 
@@ -123,19 +125,11 @@ export default function Assessments() {
       return navigate("/start-hrqna");
     }
 
-    /* Technical assessment -------------------------------------------------- */
+    /* Technical assessment - always show dialog ----------------------------- */
     const token = row.access_token;
     if (!token) return;
-    if (row.is_seb) {
-      setShowSebDialog(row);
-      return;
-    }
-
-
-    /* Standard web flow (include token) ------------------------------------- */
-    const feBase =
-      ((import.meta as any).env?.VITE_FRONTEND_URL || "").replace(/\/$/, "");
-    window.location.href = `${feBase}/start-assessment?token=${token}`;
+    
+    setShowSebDialog(row); // Always show dialog for technical assessments
   };
 
   /* ------------------------------ Data fetch ----------------------------- */
@@ -555,83 +549,157 @@ export default function Assessments() {
           </Table>
         </div>
       )}
-<Dialog
-  open={Boolean(showSebDialog)}
-  onOpenChange={(open) => {
-    if (!open) {
-      setShowSebDialog(null);
-      setIsDownloaded(false); // ✅ reset when closing
-    } else {
-      setIsDownloaded(false); // ✅ reset when opening fresh
-    }
-  }}
->
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle>Safe Exam Browser Required</DialogTitle>
-      <DialogDescription>
-        To begin this assessment, Safe Exam Browser (SEB) will be launched.
-        <br />
-        <strong>Warning:</strong> SEB will close some apps automatically for
-        security reasons, and your computer may become locked down during
-        the exam.
-      </DialogDescription>
-    </DialogHeader>
 
-    {/* ✅ controlled checkbox */}
-    <p>
-      <input
-        type="checkbox"
-        checked={isDownloaded}
-        onChange={(e) => setIsDownloaded(e.target.checked)}
-      />{" "}
-      I have already downloaded Safe Exam Browser (SEB)
-    </p>
+      {/* Updated Dialog with conditional content */}
+        <Dialog
+          open={Boolean(showSebDialog)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowSebDialog(null);
+              setIsDownloaded(false);
+              setCopySuccess(false); // ✅ Add this line
+            } else {
+              setIsDownloaded(false);
+              setCopySuccess(false); // ✅ Add this line
+            }
+          }}
+        >
 
-    <p className="mb-2 text-sm">
-      If you do not have SEB installed, download it from
-      <a
-        href="https://safeexambrowser.org/download_en.html"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ml-1 text-blue-600 underline"
-      >
-        the official SEB download page
-      </a>
-      .
-    </p>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {showSebDialog?.is_seb ? "Safe Exam Browser Required" : "Assessment Access Token"}
+            </DialogTitle>
+            <DialogDescription>
+              {showSebDialog?.is_seb ? (
+                <>
+                  To begin this assessment, Safe Exam Browser (SEB) will be launched.
+                  <br />
+                  <strong>Warning:</strong> SEB will close some apps automatically for
+                  security reasons, and your computer may become locked down during
+                  the exam.
+                  <br /><br />
+                  <strong>Important:</strong> Please note down your access token below before proceeding.
+                </>
+              ) : (
+                "Your access token for this assessment:"
+              )}
+            </DialogDescription>
+          </DialogHeader>
 
-    <div className="flex justify-end gap-2">
-      <Button variant="outline" onClick={() => setShowSebDialog(null)}>
-        Cancel
-      </Button>
+          {/* Access Token Display */}
+          <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <div className="text-sm text-muted-foreground mb-1">Access Token:</div>
+            <div className="font-mono text-sm break-all select-all bg-white dark:bg-gray-900 p-2 rounded border">
+              {showSebDialog?.access_token}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`mt-2 w-full transition-all duration-200 ${
+                copySuccess 
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                  : ''
+              }`}
+              onClick={async () => {
+                if (showSebDialog?.access_token) {
+                  try {
+                    await navigator.clipboard.writeText(showSebDialog.access_token);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  } catch (err) {
+                    console.error('Failed to copy token:', err);
+                  }
+                }
+              }}
+            >
+              {copySuccess ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2 animate-pulse" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Token
+                </>
+              )}
+            </Button>
+          </div>
 
-      <Button
-        disabled={!isDownloaded}
-        onClick={() => {
-          if (!showSebDialog) return;
-          const row = showSebDialog;
 
-          // Resolve API base and host safely
-          const apiBase =
-            (import.meta as any).env?.VITE_API_URL || window.location.origin;
-          const host = new URL(apiBase, window.location.origin).host;
+          {/* SEB-specific content */}
+          {showSebDialog?.is_seb && (
+            <>
+              <p>
+                <input
+                  type="checkbox"
+                  checked={isDownloaded}
+                  onChange={(e) => setIsDownloaded(e.target.checked)}
+                />{" "}
+                I have already downloaded Safe Exam Browser (SEB)
+              </p>
 
-          // Include token in SEB link (URL-encoded)
-          const sebUrl = `seb://${host}/api/candidates/seb/config?token=${row.access_token}`;
-          console.log(sebUrl);
+              <p className="mb-2 text-sm">
+                If you do not have SEB installed, download it from
+                <a
+                  href="https://safeexambrowser.org/download_en.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 text-blue-600 underline"
+                >
+                  the official SEB download page
+                </a>
+                .
+              </p>
+            </>
+          )}
 
-          window.location.href = sebUrl;
-          setShowSebDialog(null);
-        }}
-      >
-        Open Safe Exam Browser
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSebDialog(null)}>
+              Cancel
+            </Button>
 
+            {showSebDialog?.is_seb ? (
+              <Button
+                disabled={!isDownloaded}
+                onClick={() => {
+                  if (!showSebDialog) return;
+                  const row = showSebDialog;
 
+                  // Resolve API base and host safely
+                  const apiBase =
+                    (import.meta as any).env?.VITE_API_URL || window.location.origin;
+                  const host = new URL(apiBase, window.location.origin).host;
+
+                  // Include token in SEB link (URL-encoded)
+                  const sebUrl = `seb://${host}/api/candidates/seb/config?token=${row.access_token}`;
+                  console.log(sebUrl);
+
+                  window.location.href = sebUrl;
+                  setShowSebDialog(null);
+                }}
+              >
+                Open Safe Exam Browser
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  if (!showSebDialog) return;
+                  
+                  // For non-SEB assessments, redirect without token in query
+                  const feBase =
+                    ((import.meta as any).env?.VITE_FRONTEND_URL || "").replace(/\/$/, "");
+                  window.location.href = `${feBase}/start-assessment`;
+                  setShowSebDialog(null);
+                }}
+              >
+                Continue to Assessment
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

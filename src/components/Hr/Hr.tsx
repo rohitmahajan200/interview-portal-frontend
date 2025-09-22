@@ -32,7 +32,7 @@ import { HRSidebar } from "./HRSidebar";
 import SystemConfiguration from "./SystemConfiguration";
 
 // toasts
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { Header } from "../Header";
 
 export default function Hr() {
