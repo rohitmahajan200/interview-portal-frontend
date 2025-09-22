@@ -685,7 +685,7 @@ case "checkbox": {
 
       toast.success("Account created successfully. Please verify your email.");
       setTimeout(() => {
-        navigate("/email-verification");
+        navigate(`/email-verification?email=${data.email}`);
       }, 1000);
     } catch (err: any) {
       if (err?.response?.data?.errors) {
