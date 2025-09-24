@@ -2,7 +2,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { candidateUpdateSchema } from "@/lib/zod";
 import { z } from "zod";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { setUser } from "@/features/Candidate/auth/authSlice";
@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useEffect, useState } from "react";
-import { uploadToCloudinary } from "@/lib/clodinary";
+import { uploadProfilePhoto } from "@/lib/fileUpload"; // ✅ Updated import
 import api from "@/lib/api";
 import type { User } from "@/types/types";
 import { useDispatch } from "react-redux";
@@ -25,15 +25,18 @@ export interface CandidateUpdateInput {
   first_name: string;
   last_name: string;
   phone?: string;
-  date_of_birth?: string; // format: YYYY-MM-DD
-  gender?: "male" | "female" ;
+  date_of_birth?: string;
+  gender?: "male" | "female";
   address?: string;
   profile_photo_url?: {
     url: string;
-    publicId: string;
+    filename?: string;
+    filepath?: string;
+    publicId?: string; // Keep for backward compatibility
   };
   portfolio_url?: string;
 }
+
 const genders = ["male", "female"];
 
 const pickSchemaFields = (data: Partial<User>): CandidateUpdateInput => {
@@ -44,24 +47,13 @@ const pickSchemaFields = (data: Partial<User>): CandidateUpdateInput => {
   };
   for (const key of schemaFields) {
     if (key in data) {
-      filtered[key] = data[key] as any; // Temporary cast, safe due to schemaFields check
+      filtered[key] = data[key] as any;
     }
   }
   return filtered;
 };
 
-const deleteTempImages = async () => {
-  const raw = localStorage.getItem("imagesToDelete");
-  const toDelete = raw ? JSON.parse(raw) : [];
-
-  if (toDelete.length > 0) {
-    await api.delete("/candidates/delete-image", {
-      data: { publicIds: toDelete },
-    });
-    localStorage.removeItem("imagesToDelete");
-  }
-};
-
+// ✅ REMOVED: All Cloudinary-related cleanup functions
 
 export default function UpdateProfile({
   defaultValues,
@@ -73,15 +65,17 @@ export default function UpdateProfile({
   const [uploading, setUploading] = useState(false);
   const dispatch = useDispatch();
   const filteredDefaultValues = pickSchemaFields(defaultValues);
+  
   const form = useForm<z.infer<typeof candidateUpdateSchema>>({
     resolver: zodResolver(candidateUpdateSchema),
     defaultValues: {
-    ...filteredDefaultValues,
-    date_of_birth: filteredDefaultValues.date_of_birth
-      ? filteredDefaultValues.date_of_birth.slice(0, 10)
-      : "",
-  }
+      ...filteredDefaultValues,
+      date_of_birth: filteredDefaultValues.date_of_birth
+        ? filteredDefaultValues.date_of_birth.slice(0, 10)
+        : "",
+    }
   }); 
+
   useEffect(() => {
     const cached = localStorage.getItem("tempProfilePhoto");
     if (cached) {
@@ -90,272 +84,305 @@ export default function UpdateProfile({
     }
   }, [form]);
 
-  const cleanupTempImage = async () => {
-    const cached = localStorage.getItem("tempProfilePhoto");
-    if (!cached) return;
-    const { publicId } = JSON.parse(cached);
-    console.log(publicId)
-    await api.delete("/candidates/delete-image", {
-      data: { publicIds: [publicId] },
-    });
-    localStorage.removeItem("tempProfilePhoto");
-  };
-
-
+  // ✅ UPDATED: New backend file upload function
   const onImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
 
-    
-  if (file.size > 2 * 1024 * 1024) { // 2 MB
-    toast.error("File size should not exceed 2 MB");
-    return;
-  }
-
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-    toast.error("Only JPG, PNG or WEBP allowed");
-    return;
+    // File size validation
+    if (file.size > 5 * 1024 * 1024) { // 5 MB
+      toast.error("File size should not exceed 5 MB");
+      setUploading(false);
+      return;
     }
 
-    const result = await uploadToCloudinary(file, "/profiles");
-    if (result?.url && result?.publicId) {
-      const imageData = {
-        url: result.url,
-        publicId: result.publicId,
-      };
+    // File type validation
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Only JPG, PNG, or WEBP files are allowed");
+      setUploading(false);
+      return;
+    }
 
-      // 👇 handle storing old temp image to delete list
-      const oldTempRaw = localStorage.getItem("tempProfilePhoto");
-      const deleteListRaw = localStorage.getItem("imagesToDelete");
+    try {
+      console.log(`[UPLOAD] Starting profile photo upload: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+      
+      // ✅ Use new backend upload system
+      const result = await uploadProfilePhoto(file);
+      
+      console.log(`[UPLOAD] Profile photo upload successful:`, result);
 
-      const toDelete = deleteListRaw ? JSON.parse(deleteListRaw) : [];
+      if (result?.url) {
+        const imageData = {
+          url: result.url,
+          filename: result.filename,
+          filepath: result.filepath,
+          publicId: result.filename, // Use filename as publicId for compatibility
+        };
 
-      if (oldTempRaw) {
-        const oldTemp = JSON.parse(oldTempRaw);
-        if (oldTemp?.publicId && !toDelete.includes(oldTemp.publicId)) {
-          toDelete.push(oldTemp.publicId);
-          localStorage.setItem("imagesToDelete", JSON.stringify(toDelete));
-        }
+        // ✅ SIMPLIFIED: Just store the new temp image (no Cloudinary cleanup needed)
+        localStorage.setItem("tempProfilePhoto", JSON.stringify(imageData));
+        form.setValue("profile_photo_url", imageData, { shouldDirty: true });
+        
+        toast.success("Profile photo uploaded successfully!");
+      } else {
+        throw new Error("Upload failed - no URL returned");
       }
-
-      // 👇 update new temp image
-      localStorage.setItem("tempProfilePhoto", JSON.stringify(imageData));
-      form.setValue("profile_photo_url", imageData, { shouldDirty: true });
+    } catch (error: any) {
+      console.error("[UPLOAD] Profile photo upload failed:", error);
+      toast.error(error.message || "Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
     }
-
-    setUploading(false);
   };
 
-
+  // ✅ SIMPLIFIED: No more Cloudinary cleanup needed
   const handleReset = async () => {
-    await deleteTempImages();
-    await cleanupTempImage();
+    localStorage.removeItem("tempProfilePhoto");
     form.reset({
-    ...filteredDefaultValues,
-    date_of_birth: filteredDefaultValues.date_of_birth
-      ? filteredDefaultValues.date_of_birth.slice(0, 10)
-      : "",
-  });
+      ...filteredDefaultValues,
+      date_of_birth: filteredDefaultValues.date_of_birth
+        ? filteredDefaultValues.date_of_birth.slice(0, 10)
+        : "",
+    });
+    toast.success("Form reset to original values");
   };
 
   const handleCancel = async () => {
-    await deleteTempImages();
-    await cleanupTempImage();
+    localStorage.removeItem("tempProfilePhoto");
     setIsEditing(false);
+    toast.success("Changes cancelled");
   };
 
-
   const onSubmit = async (data: z.infer<typeof candidateUpdateSchema>) => {
-    await deleteTempImages();
-    console.log("Submitting data:", data);
-    console.log("Form errors:", form.formState.errors);
+    console.log("[SUBMIT] Submitting profile update:", data);
+    
     try {
       const res = await api.put("/candidates/me", data);
-      console.log("PUT response:", res.data);
+      console.log("[SUBMIT] PUT response:", res.data);
+      
+      // Get updated user data
       const userRes = await api.get("/candidates/me");
-      console.log("GET response:", userRes.data);
-      dispatch(setUser(userRes.data.user)); // Use GET response: { user: User }
-      toast.success("Profile updated successfully", { id: "profile-update", duration: 2000 });
+      console.log("[SUBMIT] GET response:", userRes.data);
+      
+      dispatch(setUser(userRes.data.user));
+      
+      toast.success("Profile updated successfully!", { 
+        id: "profile-update", 
+        duration: 3000 
+      });
+      
       setTimeout(() => {
         setIsEditing(false);
         localStorage.removeItem("tempProfilePhoto");
-      }, 1000); // Delay by 1 second
+      }, 1000);
+      
     } catch (err: any) {
-      console.error("Submission error:", err);
+      console.error("[SUBMIT] Profile update failed:", err);
+      
       let errorMessage = "Failed to update profile. Please try again.";
+      
       if (err.response?.status === 401) {
         errorMessage = "Unauthorized: Please log in again.";
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-      toast.error(errorMessage, { id: "profile-error", duration: 2000 });
+      
+      toast.error(errorMessage, { 
+        id: "profile-error", 
+        duration: 4000 
+      });
     }
   };
 
-
   return (
     <>
-    <div className="px-4 py-10 sm:px-6 lg:px-8 max-w-4xl m-10">
-      <h1 className="text-2xl font-semibold mb-6" onClick={() => {console.log(form.formState.errors)}}>Update Profile</h1>
-      <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <div className="flex flex-col lg:flex-row items-center gap-8">
-            <label htmlFor="profile-upload" className="cursor-pointer shrink-0">
-              <Avatar className="w-32 h-32 ring-2 ring-primary">
-                <AvatarImage
-                  src={form.watch("profile_photo_url")?.url}
-                  className="object-cover rounded-full"
+      <div className="px-4 py-10 sm:px-6 lg:px-8 max-w-4xl m-10">
+        <h1 className="text-2xl font-semibold mb-6">Update Profile</h1>
+        
+        <FormProvider {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="flex flex-col lg:flex-row items-center gap-8">
+              
+              {/* ✅ UPDATED: Profile photo upload section */}
+              <label htmlFor="profile-upload" className="cursor-pointer shrink-0 relative group">
+                <Avatar className="w-32 h-32 ring-2 ring-primary">
+                  <AvatarImage
+                    src={form.watch("profile_photo_url")?.url}
+                    className="object-cover rounded-full"
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {defaultValues.first_name?.[0]}
+                    {defaultValues.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* Upload overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {uploading ? "Uploading..." : "Change Photo"}
+                  </span>
+                </div>
+                
+                <input
+                  id="profile-upload"
+                  type="file"
+                  className="hidden"
+                  onChange={onImageChange}
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  disabled={uploading}
                 />
-                <AvatarFallback className="text-2xl">
-                  {defaultValues.first_name?.[0]}
-                  {defaultValues.last_name?.[0]}
-                </AvatarFallback>
-              </Avatar>
-              <input
-                id="profile-upload"
-                type="file"
-                className="hidden"
-                onChange={onImageChange}
-                accept="image/*"
-              />
-            </label>
+              </label>
 
-            <div className="w-full grid sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="first_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Form fields remain the same */}
+              <div className="w-full grid sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="first_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="last_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="last_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g. +919999999999"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. +919999999999"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="date_of_birth"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date of Birth</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} value={field.value ?? ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="date_of_birth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Gender</FormLabel>
-                    <FormControl>
-                      <select
-                        {...field}
-                        value={field.value ?? ""}
-                        className="w-full border rounded px-3 py-2 dark:bg-background"
-                      >
-                        {genders.map((g) => (
-                          <option key={g} value={g}>
-                            {g}
-                          </option>
-                        ))}
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <FormControl>
+                        <select
+                          {...field}
+                          value={field.value ?? ""}
+                          className="w-full border rounded px-3 py-2 dark:bg-background"
+                        >
+                          <option value="">Select Gender</option>
+                          {genders.map((g) => (
+                            <option key={g} value={g}>
+                              {g.charAt(0).toUpperCase() + g.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem className="col-span-full">
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem className="col-span-full">
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="portfolio_url"
-                render={({ field }) => (
-                  <FormItem className="col-span-full">
-                    <FormLabel>Portfolio URL</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="portfolio_url"
+                  render={({ field }) => (
+                    <FormItem className="col-span-full">
+                      <FormLabel>Portfolio URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} placeholder="https://your-portfolio.com" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-          </div>
-        <div className="flex gap-2 justify-start items-center mt-10">
-          <Button variant="default" type="button" size="lg" onClick={handleReset}>
-            <span className="text-md">Reset</span> 
-          </Button>  
-          <Button type="submit" className="" disabled={uploading || !form.formState.isDirty}>
-            {uploading ? "Uploading..." : "Save Changes"}
-          </Button>
-          <Button variant="outline" type="button" size="lg" onClick={handleCancel}>
-            <span className="text-md">Cancel</span> 
-          </Button>
-        </div>
-        </form>
-      </FormProvider>
-    </div>
-    <DocumentCRUD />
-    <div className="w-10 flex justify-start items-center ml-14 mb-10">
-    <Button variant="outline" type="button" size="lg" onClick={() => setIsEditing(false)}>
-            <span className="text-md">Back to profile</span> 
-    </Button>
-    </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 justify-start items-center mt-10">
+              <Button variant="default" type="button" size="lg" onClick={handleReset}>
+                <span className="text-md">Reset</span> 
+              </Button>  
+              
+              <Button 
+                type="submit" 
+                size="lg"
+                disabled={uploading || !form.formState.isDirty}
+              >
+                {uploading ? "Uploading..." : "Save Changes"}
+              </Button>
+              
+              <Button variant="outline" type="button" size="lg" onClick={handleCancel}>
+                <span className="text-md">Cancel</span> 
+              </Button>
+            </div>
+          </form>
+        </FormProvider>
+      </div>
+
+      <DocumentCRUD />
+      
+      <div className="w-10 flex justify-start items-center ml-14 mb-10">
+        <Button variant="outline" type="button" size="lg" onClick={() => setIsEditing(false)}>
+          <span className="text-md">Back to profile</span> 
+        </Button>
+      </div>
     </>
   );
 }

@@ -48,6 +48,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { registerCandidateSchema } from '@/lib/zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { uploadDocument, uploadProfilePhoto } from "@/lib/fileUpload";
 
 type Job = {
   _id: string;
@@ -621,8 +622,8 @@ case "checkbox": {
       const resumeFile = data.resume[0];
 
       // Upload files
-      const profilePhotoUrl = await uploadToCloudinary(profilePhotoFile, "profiles");
-      const resumeUrl = await uploadToCloudinary(resumeFile, "resume");
+      const profilePhotoUrl = await uploadProfilePhoto(profilePhotoFile);
+      const resumeUrl = await uploadDocument(resumeFile);
 
       // Process HR responses - upload audio files if any
       let processedHRResponses: FormValues['hr_responses'] = [];
