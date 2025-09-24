@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, FileText, Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
   Plus,
   Search,
   Edit,
@@ -30,54 +45,57 @@ import {
   Briefcase,
   Save,
   Eye,
-  Calendar,
   X,
-  PlusCircle,
+  MapPin,
+  Users,
+  Building,
+  DollarSign,
+  Calendar,
+  Tag,
   Award,
-  Star,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast, { Toaster } from "react-hot-toast";
 
+// Updated interface based on new schema
 export interface IJob {
   _id: string;
-  name: string;
-  description: string | object;
-  long_description?: string | object;
-  gradingParameters?: string[]; // New field for grading parameters
+  title: string;
+  category: string;
+  time: string;
+  country: string;
+  location: string;
+  slug: string;
+  expInYears: string;
+  description: string | object; // HTML content
+  requirements: string | object; // HTML content  
+  primarySkills: string[];
+  secondarySkills: string[];
+  position: string[];
+  publishStatus: "open" | "close";
+  vacancies: number;
+  salary: string;
+  schedule: string;
+  type: string;
+  industry: string;
+  tags: string[];
+  note?: string;
+  customQuestions: string[];
+  gradingParameters?: string[];
   createdAt: string;
   updatedAt: string;
 }
 
-interface KeyValuePair {
-  key: string;
-  value: string;
-}
-
-interface BulletPoint {
-  id: string;
-  text: string;
-}
-
-interface BulletSection {
-  id: string;
-  name: string;
-  bullets: BulletPoint[];
-}
-
-interface GradingParameter {
-  id: string;
-  name: string;
-}
-
-interface MissingJob {
-  _id: string;
-  title: string;
-  time: string;
-  country: string;
-  location: string;
-  expInYears: string;
-  salary: string;
+// Autocomplete data interface
+interface AutocompleteData {
+  primarySkills: string[];
+  secondarySkills: string[];
+  category: string[];
+  tags: string[];
+  expInYears: string[];
+  position: string[];
+  gradingParameters: string[];
+  country: string[];
 }
 
 const JobManagement = () => {
@@ -89,30 +107,44 @@ const JobManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [missingJobs, setMissingJobs] = useState<MissingJob[]>([]);
-  const [showMissingJobsSection, setShowMissingJobsSection] = useState(false);
-  const [loadingMissingJobs, setLoadingMissingJobs] = useState(false);
-  // Add this new state near the other state declarations
-  const [currentJobPortalId, setCurrentJobPortalId] = useState<string | null>(null);
 
-
-  // Form states - Support BOTH key-value pairs AND bullet sections simultaneously
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
+  // Autocomplete data
+  const [autocompleteData, setAutocompleteData] = useState<AutocompleteData>({
+    primarySkills: [],
+    secondarySkills: [],
+    category: [],
+    tags: [],
+    expInYears: [],
+    position: [],
+    gradingParameters: [],
+    country: [],
   });
-  const [longDescriptionPairs, setLongDescriptionPairs] = useState<
-    KeyValuePair[]
-  >([{ key: "", value: "" }]);
-  const [bulletSections, setBulletSections] = useState<BulletSection[]>([
-    { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
-  ]);
 
-  // New: Grading Parameters State
-  const [gradingParameters, setGradingParameters] = useState<GradingParameter[]>([
-    { id: "overall", name: "Overall" }, // Default parameter
-    { id: "1", name: "" }
-  ]);
+  // Form data with new schema fields
+  const [formData, setFormData] = useState({
+    title: "",
+    category: "",
+    time: "",
+    country: "",
+    location: "",
+    slug: "",
+    expInYears: "",
+    description: [] as string[], // Array of sentences for HTML formatting
+    requirements: [] as string[], // Array of sentences for HTML formatting
+    primarySkills: [] as string[],
+    secondarySkills: [] as string[],
+    position: [] as string[],
+    publishStatus: "open" as "open" | "close",
+    vacancies: 1,
+    salary: "",
+    schedule: "",
+    type: "",
+    industry: "",
+    tags: [] as string[],
+    note: "",
+    customQuestions: [] as string[],
+    gradingParameters: [] as string[],
+  });
 
   const [editingJob, setEditingJob] = useState<IJob | null>(null);
   const [viewingJob, setViewingJob] = useState<IJob | null>(null);
@@ -122,21 +154,23 @@ const JobManagement = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   // Loading states
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Combobox states for autocomplete
+  const [openComboboxes, setOpenComboboxes] = useState<{ [key: string]: boolean }>({});
+
   useEffect(() => {
     fetchJobs();
+    fetchAutocompleteData();
   }, [searchTerm, sortBy, sortOrder]);
 
   const fetchJobs = async () => {
     try {
       setLoading(true);
-
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
       if (sortBy) params.append("sortBy", sortBy);
@@ -151,8 +185,7 @@ const JobManagement = () => {
       }
     } catch (error: any) {
       console.error("Failed to fetch jobs:", error);
-      const errorMessage =
-        error?.response?.data?.message || "Failed to load jobs";
+      const errorMessage = error?.response?.data?.message || "Failed to load jobs";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -160,355 +193,161 @@ const JobManagement = () => {
     }
   };
 
-  // Key-Value pair handlers
-  const addKeyValuePair = () => {
-    setLongDescriptionPairs((prev) => [...prev, { key: "", value: "" }]);
-  };
+  // Fetch distinct values for autocomplete
+  const fetchAutocompleteData = async () => {
+    const fieldsToFetch = ["primarySkills", "secondarySkills", "category", "tags", "expInYears", "position", "gradingParameters", "country"];
+    
+    try {
+      const promises = fieldsToFetch.map(async (field) => {
+        try {
+          const response = await api.get(`/org/jobs/distinct/${field}`);
+          return {
+            field,
+            data: response.data.success ? response.data.data || [] : []
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch distinct values for ${field}:`, error);
+          return { field, data: [] };
+        }
+      });
 
-  const removeKeyValuePair = (index: number) => {
-    setLongDescriptionPairs((prev) => prev.filter((_, i) => i !== index));
-  };
+      const results = await Promise.all(promises);
+      const newAutocompleteData: AutocompleteData = {
+        primarySkills: [],
+        secondarySkills: [],
+        category: [],
+        tags: [],
+        expInYears: [],
+        position: [],
+        gradingParameters: [],
+        country: [],
+      };
 
-  const updateKeyValuePair = (
-    index: number,
-    field: "key" | "value",
-    value: string
-  ) => {
-    setLongDescriptionPairs((prev) =>
-      prev.map((pair, i) => (i === index ? { ...pair, [field]: value } : pair))
-    );
-  };
+      results.forEach(({ field, data }) => {
+        if (field in newAutocompleteData) {
+          newAutocompleteData[field as keyof AutocompleteData] = data;
+        }
+      });
 
-  // Bullet sections handlers
-  const addBulletSection = () => {
-    const newId = Date.now().toString();
-    setBulletSections((prev) => [
-      ...prev,
-      {
-        id: newId,
-        name: "",
-        bullets: [{ id: "1", text: "" }],
-      },
-    ]);
-  };
-
-  const removeBulletSection = (sectionId: string) => {
-    setBulletSections((prev) =>
-      prev.filter((section) => section.id !== sectionId)
-    );
-  };
-
-  const updateBulletSectionName = (sectionId: string, name: string) => {
-    setBulletSections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId ? { ...section, name } : section
-      )
-    );
-  };
-
-  const addBulletToSection = (sectionId: string) => {
-    const newBulletId = Date.now().toString();
-    setBulletSections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              bullets: [...section.bullets, { id: newBulletId, text: "" }],
-            }
-          : section
-      )
-    );
-  };
-
-  const removeBulletFromSection = (sectionId: string, bulletId: string) => {
-    setBulletSections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              bullets: section.bullets.filter(
-                (bullet) => bullet.id !== bulletId
-              ),
-            }
-          : section
-      )
-    );
-  };
-
-  const updateBulletInSection = (
-    sectionId: string,
-    bulletId: string,
-    text: string
-  ) => {
-    setBulletSections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              bullets: section.bullets.map((bullet) =>
-                bullet.id === bulletId ? { ...bullet, text } : bullet
-              ),
-            }
-          : section
-      )
-    );
-  };
-
-  // New: Grading Parameters Handlers
-  const addGradingParameter = () => {
-    const newId = Date.now().toString();
-    setGradingParameters((prev) => [...prev, { id: newId, name: "" }]);
-  };
-
-  const removeGradingParameter = (id: string) => {
-    // Prevent removing the default "Overall" parameter
-    if (id === "overall") {
-      return;
+      setAutocompleteData(newAutocompleteData);
+    } catch (error) {
+      console.error("Failed to fetch autocomplete data:", error);
     }
-    setGradingParameters((prev) => prev.filter((param) => param.id !== id));
   };
 
-  const updateGradingParameter = (id: string, name: string) => {
-    setGradingParameters((prev) =>
-      prev.map((param) => (param.id === id ? { ...param, name } : param))
-    );
-  };
+    // Convert sentences array to styled HTML format for Description
+    const formatDescriptionToHTML = (sentences: string[]): string => {
+      if (!sentences.length) return "";
+      
+      const listItems = sentences.map(sentence => 
+        `\t<li><span style="tab-stops:list .5in"><span style="font-size:11.0pt"><span style="font-family:&quot;Aptos&quot;,sans-serif">${sentence.trim()}</span></span></span></li>`
+      ).join('\n');
+      
+      return `<ol>\n${listItems}\n</ol>`;
+    };
 
-  // Combined conversion function - handles BOTH key-value pairs AND bullet sections
-  const convertToMixedObject = (
-    pairs: KeyValuePair[],
-    sections: BulletSection[]
-  ) => {
-    const result: { [key: string]: string | string[] } = {};
+    // Convert sentences array to styled HTML format for Requirements  
+    const formatRequirementsToHTML = (sentences: string[]): string => {
+      if (!sentences.length) return "";
+      
+      const listItems = sentences.map(sentence => 
+        `\t<li><span style="tab-stops:list .5in"><span style="font-size:11.0pt"><span style="font-family:&quot;Aptos&quot;,sans-serif">${sentence.trim()}</span></span></span></li>`
+      ).join('\n');
+      
+      return `<ol>\n${listItems}\n</ol>`;
+    };
 
-    // Add key-value pairs
-    pairs.forEach((pair) => {
-      if (pair.key.trim() && pair.value.trim()) {
-        result[pair.key.trim()] = pair.value.trim();
-      }
-    });
-
-    // Add bullet sections
-    sections.forEach((section) => {
-      if (section.name.trim()) {
-        const validBullets = section.bullets.filter((bullet) =>
-          bullet.text.trim()
-        );
-        if (validBullets.length > 0) {
-          result[section.name.trim()] = validBullets.map((bullet) =>
-            bullet.text.trim()
-          );
+    // Parse HTML back to sentences array for editing (updated to handle <ol> and complex spans)
+    const parseFromHTML = (html: string | object): string[] => {
+      if (typeof html !== 'string') return [];
+      
+      // Extract list items from HTML (handles both <ul> and <ol>)
+      const listItemRegex = /<li[^>]*>(?:<span[^>]*>)*(?:<span[^>]*>)*(?:<span[^>]*>)*([^<]+)(?:<\/span>)*(?:<\/span>)*(?:<\/span>)*<\/li>/gi;
+      const matches = [];
+      let match;
+      
+      while ((match = listItemRegex.exec(html)) !== null) {
+        const content = match[1].trim();
+        if (content) {
+          matches.push(content);
         }
       }
-    });
-
-    return Object.keys(result).length > 0 ? result : null;
-  };
-
-  // Convert mixed object back to separate arrays
-  const convertMixedObjectToArrays = (
-    obj: any
-  ): { pairs: KeyValuePair[]; sections: BulletSection[] } => {
-    const pairs: KeyValuePair[] = [];
-    const sections: BulletSection[] = [];
-    let sectionIdCounter = 1;
-
-    if (!obj || typeof obj !== "object") {
-      return {
-        pairs: [{ key: "", value: "" }],
-        sections: [{ id: "1", name: "", bullets: [{ id: "1", text: "" }] }],
-      };
-    }
-
-    Object.entries(obj).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        // It's a bullet section
-        const sectionBullets = value.map((text, index) => ({
-          id: `${sectionIdCounter}-${index + 1}`,
-          text: String(text),
-        }));
-
-        sections.push({
-          id: sectionIdCounter.toString(),
-          name: key,
-          bullets:
-            sectionBullets.length > 0
-              ? sectionBullets
-              : [{ id: `${sectionIdCounter}-1`, text: "" }],
-        });
-        sectionIdCounter++;
-      } else {
-        // It's a key-value pair
-        pairs.push({
-          key,
-          value: String(value),
-        });
+      
+      // If no list items found, try to extract plain text
+      if (matches.length === 0) {
+        const plainText = html.replace(/<[^>]*>/g, '').trim();
+        return plainText ? [plainText] : [];
       }
-    });
-
-    return {
-      pairs: pairs.length > 0 ? pairs : [{ key: "", value: "" }],
-      sections:
-        sections.length > 0
-          ? sections
-          : [{ id: "1", name: "", bullets: [{ id: "1", text: "" }] }],
+      
+      return matches;
     };
-  };
 
   const handleCreateJob = async () => {
-    if (!formData.name.trim() || !formData.description.trim()) {
-      toast.error("Name and description are required");
+    if (!formData.title.trim() || !formData.category.trim() || !formData.description.length) {
+      toast.error("Title, category, and description are required");
       return;
     }
 
     try {
       setIsCreating(true);
-
-      const jobData: any = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
+      
+      // Format description and requirements as HTML
+      const formattedData = {
+        ...formData,
+        description: formatDescriptionToHTML(formData.description),
+        requirements: formatRequirementsToHTML(formData.requirements),
       };
 
-      // Combine both key-value pairs and bullet sections
-      const mixedObj = convertToMixedObject(
-        longDescriptionPairs,
-        bulletSections
-      );
-      if (mixedObj) {
-        jobData.long_description = mixedObj;
-      }
-
-      // Add grading parameters
-      const validGradingParams = gradingParameters
-        .filter((param) => param.name.trim() !== "")
-        .map((param) => param.name.trim());
-
-      if (validGradingParams.length > 0) {
-        jobData.gradingParameters = validGradingParams;
-      }
-
-      // Add jobPortalId if available (from Change Networks import)
-      if (currentJobPortalId) {
-        jobData.jobPortalId = currentJobPortalId;
-      }
-
-      const response = await api.post("/org/jobs", jobData);
+      const response = await api.post("/org/jobs", formattedData);
 
       if (response.data.success) {
-        toast.success(response.data.message || "Job created successfully");
+        toast.success("Job created successfully");
         setShowCreateDialog(false);
         resetForm();
-        // Clear the jobPortalId after successful creation
-        setCurrentJobPortalId(null);
-        // Remove the job from missing jobs list if it was imported
-        if (currentJobPortalId) {
-          setMissingJobs(prev => prev.filter(job => job._id !== currentJobPortalId));
-        }
         await fetchJobs();
+        await fetchAutocompleteData(); // Refresh autocomplete data
       } else {
         toast.error(response.data.message || "Failed to create job");
       }
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message || "Failed to create job";
-      
-      // Handle specific case where job already exists
-      if (error?.response?.status === 409) {
-        toast.error("This job has already been imported from Change Networks");
-        // Remove from missing jobs list since it already exists
-        if (currentJobPortalId) {
-          setMissingJobs(prev => prev.filter(job => job._id !== currentJobPortalId));
-        }
-      } else {
-        toast.error(errorMessage);
-      }
+      const errorMessage = error?.response?.data?.message || "Failed to create job";
+      toast.error(errorMessage);
     } finally {
       setIsCreating(false);
     }
   };
 
-
   const handleEditJob = async () => {
-    if (!editingJob || !formData.name.trim() || !formData.description.trim()) {
-      toast.error("Name and description are required");
-      return;
-    }
+    if (!editingJob) return;
 
     try {
       setIsEditing(true);
-
-      const updateData: any = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
+      
+      // Format description and requirements as HTML
+      const formattedData = {
+        ...formData,
+        description: formatDescriptionToHTML(formData.description),
+        requirements: formatRequirementsToHTML(formData.requirements),
       };
 
-      // Combine both key-value pairs and bullet sections
-      const mixedObj = convertToMixedObject(
-        longDescriptionPairs,
-        bulletSections
-      );
-      if (mixedObj) {
-        updateData.long_description = mixedObj;
-      }
-
-      // Add grading parameters
-      const validGradingParams = gradingParameters
-        .filter((param) => param.name.trim() !== "")
-        .map((param) => param.name.trim());
-
-      if (validGradingParams.length > 0) {
-        updateData.gradingParameters = validGradingParams;
-      }
-
-      const response = await api.put(`/org/jobs/${editingJob._id}`, updateData);
+      const response = await api.put(`/org/jobs/${editingJob._id}`, formattedData);
 
       if (response.data.success) {
-        toast.success(response.data.message || "Job updated successfully");
+        toast.success("Job updated successfully");
         setShowEditDialog(false);
         setEditingJob(null);
         resetForm();
         await fetchJobs();
+        await fetchAutocompleteData(); // Refresh autocomplete data
       } else {
         toast.error(response.data.message || "Failed to update job");
       }
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message || "Failed to update job";
+      const errorMessage = error?.response?.data?.message || "Failed to update job";
       toast.error(errorMessage);
     } finally {
       setIsEditing(false);
     }
-  };
-
-  const getOptimalLayout = (longDescription: any) => {
-    if (!longDescription || typeof longDescription !== "object") return "none";
-    // Check if it has any array values (bullet sections)
-    const hasArrayValues = Object.values(longDescription).some((value) =>
-      Array.isArray(value)
-    );
-    // Mixed content or bullets only
-    if (hasArrayValues) {
-      return "mixed";
-    }
-
-    // Key-value pairs only
-    const entries = Object.entries(longDescription).filter(
-      ([_, value]) => !Array.isArray(value)
-    );
-    const totalLength = entries.reduce(
-      (acc, [key, value]) => acc + key.length + String(value).length,
-      0
-    );
-
-    const hasLongValues = entries.some(
-      ([_, value]) => String(value).length > 30
-    );
-    const hasMany = entries.length > 4;
-
-    if (hasLongValues || hasMany || totalLength > 150) {
-      return "rows";
-    }
-    return "grid";
   };
 
   const handleDeleteJob = async (jobId: string) => {
@@ -517,102 +356,48 @@ const JobManagement = () => {
       const response = await api.delete(`/org/jobs/${jobId}`);
 
       if (response.data.success) {
-        toast.success(response.data.message || "Job deleted successfully");
+        toast.success("Job deleted successfully");
         setShowDeleteDialog(false);
         setEditingJob(null);
         await fetchJobs();
+        await fetchAutocompleteData(); // Refresh autocomplete data
       } else {
         toast.error(response.data.message || "Failed to delete job");
       }
     } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message || "Failed to delete job";
+      const errorMessage = error?.response?.data?.message || "Failed to delete job";
       toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedJobs.length === 0) return;
-
-    try {
-      setIsDeleting(true);
-      const response = await api.delete("/org/jobs/bulk/delete", {
-        data: { ids: selectedJobs },
-      });
-
-      if (response.data.success) {
-        toast.success(
-          response.data.message ||
-            `${response.data.deletedCount} jobs deleted successfully`
-        );
-        setShowBulkDeleteDialog(false);
-        setSelectedJobs([]);
-        await fetchJobs();
-      } else {
-        toast.error(response.data.message || "Failed to delete jobs");
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.message || "Failed to delete jobs";
-      toast.error(errorMessage);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  // Update the openEditDialog function
   const openEditDialog = (job: IJob) => {
     setEditingJob(job);
     setFormData({
-      name: job.name,
-      description:
-        typeof job.description === "string"
-          ? job.description
-          : JSON.stringify(job.description),
+      title: job.title,
+      category: job.category,
+      time: job.time,
+      country: job.country,
+      location: job.location,
+      slug: job.slug,
+      expInYears: job.expInYears,
+      description: parseFromHTML(job.description),
+      requirements: parseFromHTML(job.requirements),
+      primarySkills: job.primarySkills || [],
+      secondarySkills: job.secondarySkills || [],
+      position: job.position || [],
+      publishStatus: job.publishStatus,
+      vacancies: job.vacancies,
+      salary: job.salary,
+      schedule: job.schedule,
+      type: job.type,
+      industry: job.industry,
+      tags: job.tags || [],
+      note: job.note || "",
+      customQuestions: job.customQuestions || [],
+      gradingParameters: job.gradingParameters || [],
     });
-
-    // Convert mixed data to separate arrays
-    if (job.long_description && typeof job.long_description === "object") {
-      const { pairs, sections } = convertMixedObjectToArrays(
-        job.long_description
-      );
-      setLongDescriptionPairs(pairs);
-      setBulletSections(sections);
-    } else {
-      setLongDescriptionPairs([{ key: "", value: "" }]);
-      setBulletSections([
-        { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
-      ]);
-    }
-
-    // Convert grading parameters - always ensure "Overall" is included
-    if (job.gradingParameters && job.gradingParameters.length > 0) {
-      const gradingParams = job.gradingParameters.map((param, index) => ({
-        id: param === "Overall" ? "overall" : (index + 1).toString(),
-        name: param,
-      }));
-      
-      // Ensure "Overall" is always present
-      const hasOverall = gradingParams.some(param => param.name === "Overall");
-      if (!hasOverall) {
-        gradingParams.unshift({ id: "overall", name: "Overall" });
-      }
-      
-      // Add empty parameter if needed
-      if (gradingParams.length === 1 || !gradingParams.some(param => param.name === "")) {
-        gradingParams.push({ id: Date.now().toString(), name: "" });
-      }
-      
-      setGradingParameters(gradingParams);
-    } else {
-      setGradingParameters([
-        { id: "overall", name: "Overall" },
-        { id: "1", name: "" }
-      ]);
-    }
-
     setShowEditDialog(true);
   };
 
@@ -623,21 +408,30 @@ const JobManagement = () => {
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
+      title: "",
+      category: "",
+      time: "",
+      country: "",
+      location: "",
+      slug: "",
+      expInYears: "",
+      description: [],
+      requirements: [],
+      primarySkills: [],
+      secondarySkills: [],
+      position: [],
+      publishStatus: "open",
+      vacancies: 1,
+      salary: "",
+      schedule: "",
+      type: "",
+      industry: "",
+      tags: [],
+      note: "",
+      customQuestions: [],
+      gradingParameters: [],
     });
-    setLongDescriptionPairs([{ key: "", value: "" }]);
-    setBulletSections([
-      { id: "1", name: "", bullets: [{ id: "1", text: "" }] },
-    ]);
-    setGradingParameters([
-      { id: "overall", name: "Overall" },
-      { id: "1", name: "" }
-    ]);
-    // Clear the jobPortalId when resetting form
-    setCurrentJobPortalId(null);
   };
-
 
   const openCreateDialog = () => {
     resetForm();
@@ -653,10 +447,7 @@ const JobManagement = () => {
   };
 
   const handleSelectAll = () => {
-    if (
-      selectedJobs.length === filteredJobs.length &&
-      filteredJobs.length > 0
-    ) {
+    if (selectedJobs.length === filteredJobs.length && filteredJobs.length > 0) {
       setSelectedJobs([]);
     } else {
       setSelectedJobs(filteredJobs.map((job) => job._id));
@@ -665,6 +456,7 @@ const JobManagement = () => {
 
   const refreshData = async () => {
     await fetchJobs();
+    await fetchAutocompleteData();
     toast.success("Data refreshed successfully");
   };
 
@@ -679,203 +471,318 @@ const JobManagement = () => {
   };
 
   const getContentPreview = (content: string | object, maxLength = 100) => {
-    const text =
-      typeof content === "string" ? content : JSON.stringify(content);
-    return text.length > maxLength
-      ? `${text.substring(0, maxLength)}...`
-      : text;
+    const text = typeof content === "string" ? content.replace(/<[^>]*>/g, '') : JSON.stringify(content);
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
-  const filteredJobs = jobs.filter(
-    (job) =>
-      job.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof job.description === "string"
-        ? job.description
-        : JSON.stringify(job.description)
-      )
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
+  const filteredJobs = jobs.filter((job) =>
+    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.industry.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Fetch missing jobs from your backend
-  const fetchMissingJobs = async () => {
-    try {
-      setLoadingMissingJobs(true);
-      const response = await api.get('/org/admin/check-missing-jobs');
-      
-      if (response.data.success) {
-        setMissingJobs(response.data.missingJobs || []);
-        return response.data.missingJobs || [];
-      } else {
-        toast.error('Failed to fetch missing jobs');
-        return [];
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch missing jobs:', error);
-      toast.error('Failed to fetch missing jobs');
-      return [];
-    } finally {
-      setLoadingMissingJobs(false);
+  // Helper functions for array field management
+  const addToArray = (field: keyof typeof formData, value: string) => {
+    if (!value.trim()) return;
+    const currentArray = formData[field] as string[];
+    if (!currentArray.includes(value.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: [...currentArray, value.trim()]
+      }));
     }
   };
 
-  // Fetch job details from your backend
-  const fetchJobDetails = async (jobId: string) => {
-    try {
-      const response = await api.get(`/org/admin/jobdetails?id=${jobId}`);
-      
-      if (response.data.success) {
-        return response.data.job;
-      } else {
-        toast.error('Failed to fetch job details');
-        return null;
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch job details:', error);
-      toast.error('Failed to fetch job details');
-      return null;
-    }
+  const removeFromArray = (field: keyof typeof formData, index: number) => {
+    const currentArray = formData[field] as string[];
+    setFormData(prev => ({
+      ...prev,
+      [field]: currentArray.filter((_, i) => i !== index)
+    }));
   };
 
-  // Helper function to parse HTML and extract text content
-  const parseHtmlToText = (htmlString: string): string => {
-    if (!htmlString) return '';
-    // Create a temporary div to parse HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlString;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  };
+  // Enhanced Autocomplete component with ability to add new values
+  const AutocompleteField = ({ 
+    field, 
+    placeholder, 
+    value, 
+    onSelect,
+    allowCustom = true,
+    allowClear = true // New prop to show/hide clear button
+  }: { 
+    field: keyof AutocompleteData; 
+    placeholder: string;
+    value: string;
+    onSelect: (value: string) => void;
+    allowCustom?: boolean;
+    allowClear?: boolean;
+  }) => {
+    const options = autocompleteData[field] || [];
+    const isOpen = openComboboxes[field] || false;
+    const [inputValue, setInputValue] = useState("");
 
-  // Helper function to parse HTML and extract bullet points
-  const parseHtmlToBullets = (htmlString: string): string[] => {
-    if (!htmlString) return [];
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlString;
-    const listItems = tempDiv.querySelectorAll('li');
-    return Array.from(listItems).map(li => li.textContent?.trim() || '').filter(Boolean);
-  };
-
-  // Convert Change Networks job to your internal format
-  const convertChangeNetworksJob = (cnJob: any) => {
-    // Parse description and requirements
-    const descriptionText = parseHtmlToText(cnJob.description || '');
-    const descriptionBullets = parseHtmlToBullets(cnJob.description || '');
-    const requirementsBullets = parseHtmlToBullets(cnJob.requirements || '');
-
-    // Create key-value pairs for job details
-    const jobDetails: { [key: string]: string | string[] } = {};
-    
-    // Add basic details as key-value pairs
-    if (cnJob.salary) jobDetails['Salary'] = cnJob.salary;
-    if (cnJob.location) jobDetails['Location'] = cnJob.location;
-    if (cnJob.time) jobDetails['Work Hours'] = cnJob.time;
-    if (cnJob.expInYears) jobDetails['Experience Required'] = cnJob.expInYears;
-    if (cnJob.type) jobDetails['Employment Type'] = cnJob.type;
-    if (cnJob.schedule) jobDetails['Schedule'] = cnJob.schedule;
-    if (cnJob.industry) jobDetails['Industry'] = cnJob.industry;
-    if (cnJob.category) jobDetails['Category'] = cnJob.category;
-    if (cnJob.vacancies) jobDetails['Vacancies'] = cnJob.vacancies.toString();
-
-    // Add bullet point sections
-    if (descriptionBullets.length > 0) {
-      jobDetails['Job Responsibilities'] = descriptionBullets;
-    }
-    if (requirementsBullets.length > 0) {
-      jobDetails['Requirements'] = requirementsBullets;
-    }
-    if (cnJob.primarySkills && cnJob.primarySkills.length > 0) {
-      jobDetails['Primary Skills'] = cnJob.primarySkills;
-    }
-    if (cnJob.secondarySkills && cnJob.secondarySkills.length > 0) {
-      jobDetails['Secondary Skills'] = cnJob.secondarySkills;
-    }
-    if (cnJob.position && cnJob.position.length > 0) {
-      jobDetails['Position Types'] = cnJob.position;
-    }
-
-    // Convert to your format
-    const { pairs, sections } = convertMixedObjectToArrays(jobDetails);
-
-    // Create grading parameters from skills and requirements
-    const gradingParams: GradingParameter[] = [
-      { id: "overall", name: "Overall" } // Always include Overall
-    ];
-
-    // Add skill-based parameters
-    if (cnJob.primarySkills && cnJob.primarySkills.length > 0) {
-      cnJob.primarySkills.slice(0, 3).forEach((skill: string, index: number) => {
-        gradingParams.push({
-          id: `skill_${index}`,
-          name: skill.length > 30 ? skill.substring(0, 27) + '...' : skill
-        });
-      });
-    }
-
-    // Add common job-related parameters
-    gradingParams.push(
-      { id: "tech_skills", name: "Technical Skills" },
-      { id: "communication", name: "Communication" },
-      { id: "problem_solving", name: "Problem Solving" }
+    const filteredOptions = options.filter(option => 
+      option.toLowerCase().includes(inputValue.toLowerCase())
     );
 
-    // Add empty parameter for user to add more
-    gradingParams.push({ id: Date.now().toString(), name: "" });
-
-    return {
-      formData: {
-        name: cnJob.title || '',
-        description: descriptionText || cnJob.title || 'Job imported from Change Networks'
-      },
-      longDescriptionPairs: pairs,
-      bulletSections: sections,
-      gradingParameters: gradingParams
+    const handleSelect = (selectedValue: string) => {
+      onSelect(selectedValue);
+      setInputValue("");
+      setOpenComboboxes(prev => ({ ...prev, [field]: false }));
     };
-  };
 
-  // Handle adding job from Change Networks
-  const handleAddFromChangeNetworks = async (jobId: string) => {
-    try {
-      const jobDetails = await fetchJobDetails(jobId);
-      if (!jobDetails) return;
+    const handleClear = (e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent opening the popover
+      onSelect("");
+      setInputValue("");
+    };
 
-      const convertedJob = convertChangeNetworksJob(jobDetails);
-      
-      // Populate form with converted data
-      setFormData(convertedJob.formData);
-      setLongDescriptionPairs(convertedJob.longDescriptionPairs);
-      setBulletSections(convertedJob.bulletSections);
-      setGradingParameters(convertedJob.gradingParameters);
-      
-      // Set the current job portal ID
-      setCurrentJobPortalId(jobId);
-      
-      // Open create dialog
-      setShowCreateDialog(true);
-      
-      toast.success('Job details loaded from Change Networks portal');
-    } catch (error: any) {
-      console.error('Failed to add job from Change Networks:', error);
-      toast.error('Failed to load job details');
-    }
-  };
-
-
-  // Main function to sync with Change Networks
-  const syncWithChangeNetworks = async () => {
-    try {
-      const missingJobsList = await fetchMissingJobs();
-      if (missingJobsList.length === 0) {
-        toast.success('All Change Networks jobs are already synced!');
-        setShowMissingJobsSection(false);
-      } else {
-        toast.success(`Found ${missingJobsList.length} jobs that need to be synced`);
-        setShowMissingJobsSection(true);
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && allowCustom && inputValue.trim() && !filteredOptions.includes(inputValue.trim())) {
+        e.preventDefault();
+        handleSelect(inputValue.trim());
       }
-    } catch (error) {
-      console.error('Sync failed:', error);
-      toast.error('Failed to sync with Change Networks');
-    }
+    };
+
+    return (
+      <div className="relative">
+        <Popover 
+          open={isOpen} 
+          onOpenChange={(open) => {
+            setOpenComboboxes(prev => ({ ...prev, [field]: open }));
+            if (!open) setInputValue("");
+          }}
+        >
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={isOpen}
+              className="w-full justify-between pr-8" // Add right padding for clear button
+            >
+              <span className="truncate">{value || placeholder}</span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] md:w-xs p-0 break-words" align="start">
+            <Command shouldFilter={false}>
+              <CommandInput 
+                placeholder={`Search ${placeholder.toLowerCase()}...`}
+                value={inputValue}
+                onValueChange={setInputValue}
+                onKeyDown={handleKeyDown}
+              />
+              <CommandEmpty>
+                {allowCustom && inputValue.trim() ? (
+                  <div className="p-2 text-center">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      No existing option found.
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleSelect(inputValue.trim())}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add "{inputValue.trim()}"
+                    </Button>
+                  </div>
+                ) : (
+                  "No option found."
+                )}
+              </CommandEmpty>
+              <CommandGroup className="max-h-48 overflow-y-auto">
+                {filteredOptions.map((option) => (
+                  <CommandItem
+                    key={option}
+                    onSelect={() => handleSelect(option)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        
+        {/* Clear button - only show when there's a value and allowClear is true */}
+        {allowClear && value && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute right-8 top-1/2 transform -translate-y-1/2 h-4 w-4 p-0 hover:bg-muted"
+            onClick={handleClear}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+    );
   };
+
+  const ArrayFieldWithAutocomplete = ({
+    field,
+    label,
+    placeholder,
+    values,
+    onAdd,
+    onRemove,
+    variant = "default",
+    icon,
+    required = false
+  }: {
+    field: keyof AutocompleteData;
+    label: string;
+    placeholder: string;
+    values: string[];
+    onAdd: (value: string) => void;
+    onRemove: (index: number) => void;
+    variant?: "default" | "secondary" | "outline";
+    icon?: React.ReactNode;
+    required?: boolean;
+  }) => {
+    const options = autocompleteData[field] || [];
+    const [isOpen, setIsOpen] = useState(false);
+    const [inputValue, setInputValue] = useState("");
+
+    const filteredOptions = options.filter(option => 
+      option.toLowerCase().includes(inputValue.toLowerCase()) &&
+      !values.includes(option)
+    );
+
+    const handleSelect = (value: string) => {
+      if (value.trim() && !values.includes(value.trim())) {
+        onAdd(value.trim());
+        setInputValue("");
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && inputValue.trim()) {
+        e.preventDefault();
+        handleSelect(inputValue.trim());
+      }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setInputValue(value);
+      // Open popover when typing
+      if (value.trim() && !isOpen) {
+        setIsOpen(true);
+      }
+    };
+
+    return (
+      <div className="space-y-2">
+        <Label>{label} {required && "*"}</Label>
+        <div className="space-y-2">
+          {/* Input with Add Button */}
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Input
+                placeholder={placeholder}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
+                  if (inputValue.trim()) {
+                    setIsOpen(true);
+                  }
+                }}
+                onBlur={() => {
+                  // Delay closing to allow for option selection
+                  setTimeout(() => setIsOpen(false), 200);
+                }}
+                className="flex-1"
+              />
+              
+              {/* Autocomplete Suggestions Dropdown */}
+              {isOpen && (inputValue.trim() || filteredOptions.length > 0) && (
+                <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {filteredOptions.length > 0 && (
+                    <div className="p-1">
+                      {filteredOptions.map((option) => (
+                        <div
+                          key={option}
+                          className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-3 py-2 text-sm rounded-sm flex items-center"
+                          onClick={() => handleSelect(option)}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          {option}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Add custom value option */}
+                  {inputValue.trim() && !values.includes(inputValue.trim()) && (
+                    <div className="border-t border-border p-2">
+                      <div
+                        className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-3 py-2 text-sm rounded-sm flex items-center"
+                        onClick={() => handleSelect(inputValue.trim())}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add "{inputValue.trim()}"
+                      </div>
+                    </div>
+                  )}
+                  
+                  {filteredOptions.length === 0 && !inputValue.trim() && (
+                    <div className="p-3 text-sm text-muted-foreground text-center">
+                      Type to add or search options
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (inputValue.trim()) {
+                  handleSelect(inputValue.trim());
+                }
+              }}
+              disabled={!inputValue.trim()}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Display selected values as badges */}
+          <div className="flex flex-wrap gap-1">
+            {values.map((value, index) => (
+              <Badge key={index} variant={variant} className="text-xs">
+                {icon && <span className="mr-1">{icon}</span>}
+                {value}
+                <button
+                  type="button"
+                  onClick={() => onRemove(index)}
+                  className="ml-1 hover:text-red-500"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
 
   if (initialLoading) {
     return (
@@ -887,22 +794,22 @@ const JobManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
-
+    <div className="min-h-screen bg-background p-4 sm:p-6">
+      <Toaster position="bottom-right" />
+      
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
-            Job Management with Glory System
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+            Job Management
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Create, view, edit, and delete job postings with candidate grading
-            parameters
+            Create, view, edit, and manage job postings for your organization
           </p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
@@ -911,7 +818,7 @@ const JobManagement = () => {
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Total Jobs
                   </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {jobs.length}
                   </p>
                 </div>
@@ -925,9 +832,25 @@ const JobManagement = () => {
                 <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
                 <div className="ml-3 sm:ml-4">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                    Open Positions
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {jobs.filter(job => job.publishStatus === "open").length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
+                <div className="ml-3 sm:ml-4">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                     Selected
                   </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {selectedJobs.length}
                   </p>
                 </div>
@@ -938,19 +861,13 @@ const JobManagement = () => {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Award className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
+                <Award className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
                 <div className="ml-3 sm:ml-4">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                    Jobs with Grading
+                    With Grading
                   </p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    {
-                      jobs.filter(
-                        (job) =>
-                          job.gradingParameters &&
-                          job.gradingParameters.length > 0
-                      ).length
-                    }
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {jobs.filter(job => job.gradingParameters && job.gradingParameters.length > 0).length}
                   </p>
                 </div>
               </div>
@@ -958,749 +875,1511 @@ const JobManagement = () => {
           </Card>
         </div>
 
-        {/* Change Networks Integration Section */}
-        {/* Change Networks Integration Section */}
-{showMissingJobsSection && (
-  <Card className="mb-4 sm:mb-6 lg:mb-8">
-    <CardHeader className="p-4 sm:p-6">
-      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div>
-          <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-blue-600 dark:text-blue-400">
-            🔗 Change Networks Jobs Integration
-          </h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Jobs from Change Networks portal that are not yet in your database
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowMissingJobsSection(false)}
-          variant="ghost"
-          size="sm"
-          className="shrink-0 self-start sm:self-auto"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    </CardHeader>
-    <CardContent className="p-4 sm:p-6">
-      {loadingMissingJobs ? (
-        <div className="flex items-center justify-center py-6 sm:py-8">
-          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mr-3"></div>
-          <span className="text-xs sm:text-sm text-muted-foreground">
-            Checking missing jobs...
-          </span>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {missingJobs.length === 0 ? (
-            <div className="text-center py-6 sm:py-8">
-              <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 text-green-500 dark:text-green-400 mx-auto mb-3" />
-              <p className="text-xs sm:text-sm text-muted-foreground">All jobs are already synced!</p>
+        {/* Main Interface - Same as before but with job list rendering */}
+        <Card>
+          <CardHeader className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold">Job Operations</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={openCreateDialog} size="sm" className="flex-1 sm:flex-none h-9">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="sm:hidden">Add</span>
+                <span className="hidden sm:inline">Add Job</span>
+              </Button>
+              
+              <Button onClick={refreshData} variant="outline" size="sm" disabled={loading} className="h-9 w-9 p-0 sm:w-auto sm:p-2">
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline ml-2">Refresh</span>
+              </Button>
             </div>
-          ) : (
-            <>
-              <div className="mb-4">
-                <h3 className="font-medium text-sm sm:text-base mb-2 text-foreground">
-                  Missing Jobs ({missingJobs.length})
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Click "Add to Portal" to import these jobs with auto-filled details
-                </p>
+          </CardHeader>
+          
+          <CardContent className="p-4 sm:p-6">
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-4 mb-4 sm:mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search jobs by title, category, location..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10"
+                />
               </div>
-              <div className="grid gap-3">
-                {missingJobs.map((missingJob) => (
-                  <div
-                    key={missingJob._id}
-                    className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 p-3 sm:p-4 border border-border dark:border-gray-700 rounded-lg hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm sm:text-base text-foreground truncate">
-                        {missingJob.title}
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                          📍 {missingJob.location}
-                        </span>
-                        <span className="text-xs bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 px-2 py-1 rounded">
-                          💰 {missingJob.salary}
-                        </span>
-                        <span className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
-                          📅 {missingJob.expInYears}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleAddFromChangeNetworks(missingJob._id)}
-                      size="sm"
-                      className="w-full sm:w-auto shrink-0"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add to Portal
+              <div className="flex gap-2 sm:gap-3">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="flex-1 sm:w-40 h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Created</SelectItem>
+                    <SelectItem value="updatedAt">Updated</SelectItem>
+                    <SelectItem value="title">Title</SelectItem>
+                    <SelectItem value="category">Category</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortOrder} onValueChange={setSortOrder}>
+                  <SelectTrigger className="flex-1 sm:w-24 h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Desc</SelectItem>
+                    <SelectItem value="asc">Asc</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* Select All Checkbox */}
+            {filteredJobs.length > 0 && (
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  checked={selectedJobs.length === filteredJobs.length && filteredJobs.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <Label className="text-sm">Select All ({filteredJobs.length})</Label>
+              </div>
+            )}
+            
+            {/* Jobs List - Same as before */}
+            <div className="space-y-3 sm:space-y-4">
+              {filteredJobs.length === 0 ? (
+                <div className="text-center py-8 sm:py-12">
+                  <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground text-sm sm:text-base">
+                    {searchTerm ? "No jobs match your search." : "No jobs available. Create your first job!"}
+                  </p>
+                  {!searchTerm && (
+                    <Button onClick={openCreateDialog} className="mt-4" size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Job
                     </Button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </CardContent>
-  </Card>
-)}
-
-{/* Main Interface */}
-<Card className="dark:bg-card dark:border-gray-700">
-  <CardHeader className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 p-4 sm:p-6">
-    <h2 className="text-lg sm:text-xl font-semibold text-foreground">Job Operations</h2>
-    <div className="flex flex-wrap items-center gap-2">
-      <Button
-        onClick={openCreateDialog}
-        size="sm"
-        className="flex-1 sm:flex-none h-9"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        <span className="sm:hidden">Add</span>
-        <span className="hidden sm:inline">Add Job</span>
-      </Button>
-      
-      <Button
-        onClick={syncWithChangeNetworks}
-        variant="outline"
-        size="sm"
-        disabled={loadingMissingJobs}
-        className="flex-1 sm:flex-none h-9"
-      >
-        {loadingMissingJobs ? (
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-        ) : (
-          <RefreshCw className="h-4 w-4 mr-2" />
-        )}
-        <span className="sm:hidden">Sync</span>
-        <span className="hidden sm:inline">Sync with Change Networks</span>
-      </Button>
-
-      {selectedJobs.length > 0 && (
-        <Button
-          onClick={() => setShowBulkDeleteDialog(true)}
-          variant="destructive"
-          size="sm"
-          className="flex-1 sm:flex-none h-9"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          <span className="sm:hidden">Del ({selectedJobs.length})</span>
-          <span className="hidden sm:inline">Delete ({selectedJobs.length})</span>
-        </Button>
-      )}
-      
-      <Button
-        onClick={refreshData}
-        variant="outline"
-        size="sm"
-        disabled={loading}
-        className="h-9 w-9 p-0 sm:w-auto sm:p-2"
-      >
-        <RefreshCw
-          className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-        />
-        <span className="hidden sm:inline ml-2">Refresh</span>
-      </Button>
-    </div>
-  </CardHeader>
-  
-  <CardContent className="p-4 sm:p-6">
-    {/* Search and Filter Controls */}
-    <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-4 mb-4 sm:mb-6">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search jobs by name or description..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 h-10 dark:bg-background dark:border-gray-700 dark:text-foreground"
-        />
-      </div>
-      <div className="flex gap-2 sm:gap-3">
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="flex-1 sm:w-40 h-10 dark:bg-background dark:border-gray-700 dark:text-foreground">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-background dark:border-gray-700">
-            <SelectItem value="createdAt" className="dark:text-foreground dark:focus:bg-gray-800">Created</SelectItem>
-            <SelectItem value="updatedAt" className="dark:text-foreground dark:focus:bg-gray-800">Updated</SelectItem>
-            <SelectItem value="name" className="dark:text-foreground dark:focus:bg-gray-800">Name</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sortOrder} onValueChange={setSortOrder}>
-          <SelectTrigger className="flex-1 sm:w-24 h-10 dark:bg-background dark:border-gray-700 dark:text-foreground">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-background dark:border-gray-700">
-            <SelectItem value="desc" className="dark:text-foreground dark:focus:bg-gray-800">Desc</SelectItem>
-            <SelectItem value="asc" className="dark:text-foreground dark:focus:bg-gray-800">Asc</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-    
-    {/* Select All Checkbox */}
-    {filteredJobs.length > 0 && (
-      <div className="flex items-center space-x-2 mb-4">
-        <Checkbox
-          checked={
-            selectedJobs.length === filteredJobs.length &&
-            filteredJobs.length > 0
-          }
-          onCheckedChange={handleSelectAll}
-          className="dark:border-gray-600 dark:data-[state=checked]:bg-primary"
-        />
-        <Label className="text-sm dark:text-foreground">
-          Select All ({filteredJobs.length})
-        </Label>
-      </div>
-    )}
-    
-    {/* Jobs List */}
-    <div className="space-y-3 sm:space-y-4">
-      {filteredJobs.length === 0 ? (
-        <div className="text-center py-8 sm:py-12">
-          <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm sm:text-base">
-            {searchTerm
-              ? "No jobs match your search."
-              : "No jobs available. Create your first job!"}
-          </p>
-          {!searchTerm && (
-            <Button
-              onClick={openCreateDialog}
-              className="mt-4"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Job
-            </Button>
-          )}
-        </div>
-      ) : (
-        filteredJobs.map((job) => {
-          const layout = getOptimalLayout(job.long_description);
-          return (
-            <Card
-              key={job._id}
-              className="hover:shadow-md dark:hover:shadow-gray-900/25 transition-shadow dark:bg-card dark:border-gray-700"
-            >
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    checked={selectedJobs.includes(job._id)}
-                    onCheckedChange={(checked) =>
-                      handleJobSelect(job._id, !!checked)
-                    }
-                    className="mt-1 dark:border-gray-600 dark:data-[state=checked]:bg-primary"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col space-y-2 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 mb-3">
-                      <h3 className="font-semibold text-foreground text-base sm:text-lg break-words pr-2">
-                        {job.name}
-                        {job.gradingParameters &&
-                          job.gradingParameters.length > 0 && (
-                            <span className="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 rounded-full">
-                              <Award className="h-3 w-3 mr-1" />
-                              {job.gradingParameters.length} params
-                            </span>
-                          )}
-                      </h3>
-                      <div className="flex items-center space-x-1 self-start">
-                        <Button
-                          onClick={() => openViewDialog(job)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => openEditDialog(job)}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setEditingJob(job);
-                            setShowDeleteDialog(true);
-                          }}
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 dark:hover:bg-red-900/20"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <p className="text-muted-foreground text-xs sm:text-sm mb-3 break-words line-clamp-2 sm:line-clamp-none">
-                      {getContentPreview(job.description, 120)}
-                    </p>
-
-                    {/* Display Grading Parameters */}
-                    {job.gradingParameters &&
-                      job.gradingParameters.length > 0 && (
-                        <div className="mb-3">
-                          <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-2">
-                            Glory Parameters:
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {job.gradingParameters
-                              .slice(0, 5)
-                              .map((param, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex items-center px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded border dark:border-purple-800"
+                  )}
+                </div>
+              ) : (
+                filteredJobs.map((job) => (
+                  <Card key={job._id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-start space-x-3">
+                        <Checkbox
+                          checked={selectedJobs.includes(job._id)}
+                          onCheckedChange={(checked) => handleJobSelect(job._id, !!checked)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col space-y-2 sm:flex-row sm:items-start sm:justify-between sm:space-y-0 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base sm:text-lg break-words pr-2">
+                                {job.title}
+                              </h3>
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  <Building className="h-3 w-3 mr-1" />
+                                  {job.category}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  {job.location}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  <DollarSign className="h-3 w-3 mr-1" />
+                                  {job.salary}
+                                </Badge>
+                                <Badge 
+                                  variant={job.publishStatus === "open" ? "default" : "destructive"} 
+                                  className="text-xs"
                                 >
-                                  {param}
-                                </span>
-                              ))}
-                            {job.gradingParameters.length > 5 && (
-                              <span className="text-xs text-muted-foreground self-center">
-                                +{job.gradingParameters.length - 5} more
-                              </span>
-                            )}
+                                  {job.publishStatus}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1 self-start">
+                              <Button
+                                onClick={() => openViewDialog(job)}
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                onClick={() => openEditDialog(job)}
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setEditingJob(job);
+                                  setShowDeleteDialog(true);
+                                }}
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      )}
 
-                    {/* Unified Bullet Display - Mobile Optimized */}
-                    {job.long_description &&
-                      typeof job.long_description === "object" && (
-                        <div className="mb-3">
-                          <div className="space-y-3">
-                            {/* Bullet Sections - render as bullets */}
-                            {Object.entries(job.long_description)
-                              .filter(([_, value]) =>
-                                Array.isArray(value)
-                              )
-                              .slice(0, 2)
-                              .map(
-                                ([sectionName, bullets]: [
-                                  string,
-                                  any
-                                ]) => (
-                                  <div
-                                    key={sectionName}
-                                    className="space-y-1.5"
-                                  >
-                                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 capitalize">
-                                      {sectionName}:
-                                    </div>
-                                    <ul className="space-y-1 ml-2">
-                                      {bullets
-                                        .slice(0, window.innerWidth < 640 ? 2 : 3)
-                                        .map(
-                                          (
-                                            bullet: string,
-                                            index: number
-                                          ) => (
-                                            <li
-                                              key={index}
-                                              className="flex items-start text-xs sm:text-sm"
-                                            >
-                                              <span className="text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0">
-                                                •
-                                              </span>
-                                              <span className="text-foreground break-words">
-                                                {bullet.length > (window.innerWidth < 640 ? 40 : 50)
-                                                  ? `${bullet.substring(
-                                                      0,
-                                                      window.innerWidth < 640 ? 40 : 50
-                                                    )}...`
-                                                  : bullet}
-                                              </span>
-                                            </li>
-                                          )
-                                        )}
-                                    </ul>
-                                    {bullets.length > (window.innerWidth < 640 ? 2 : 3) && (
-                                      <div className="text-xs text-muted-foreground ml-4">
-                                        +{bullets.length - (window.innerWidth < 640 ? 2 : 3)} more
-                                        points
-                                      </div>
+                          <p className="text-muted-foreground text-xs sm:text-sm mb-3 break-words line-clamp-2">
+                            {getContentPreview(job.description, 120)}
+                          </p>
+
+                          {/* Skills and Tags - Same as before */}
+                          {(job.primarySkills?.length > 0 || job.tags?.length > 0) && (
+                            <div className="mb-3 space-y-2">
+                              {job.primarySkills?.length > 0 && (
+                                <div>
+                                  <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
+                                    Primary Skills:
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {job.primarySkills.slice(0, 3).map((skill, index) => (
+                                      <Badge key={index} variant="outline" className="text-xs">
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                    {job.primarySkills.length > 3 && (
+                                      <span className="text-xs text-muted-foreground self-center">
+                                        +{job.primarySkills.length - 3} more
+                                      </span>
                                     )}
                                   </div>
-                                )
-                              )}
-
-                            {/* Key-Value Pairs - render as bullets too */}
-                            {Object.entries(
-                              job.long_description
-                            ).filter(
-                              ([_, value]) => !Array.isArray(value)
-                            ).length > 0 && (
-                              <div className="space-y-1.5">
-                                <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                                  Extra Details:
                                 </div>
-                                <ul className="space-y-1 ml-2">
-                                  {Object.entries(job.long_description)
-                                    .filter(
-                                      ([_, value]) =>
-                                        !Array.isArray(value)
-                                    )
-                                    .slice(0, window.innerWidth < 640 ? 2 : 4)
-                                    .map(([key, value]) => (
-                                      <li
-                                        key={key}
-                                        className="flex items-start text-xs sm:text-sm"
-                                      >
-                                        <span className="text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0">
-                                          •
-                                        </span>
-                                        <span className="text-foreground break-words">
-                                          <span className="font-medium capitalize">
-                                            {key
-                                              .replace(
-                                                /([A-Z])/g,
-                                                " $1"
-                                              )
-                                              .trim()}
-                                            :
-                                          </span>{" "}
-                                          {String(value).length > (window.innerWidth < 640 ? 30 : 40)
-                                            ? `${String(
-                                                value
-                                              ).substring(0, window.innerWidth < 640 ? 30 : 40)}...`
-                                            : String(value)}
-                                        </span>
-                                      </li>
-                                    ))}
-                                </ul>
-                                {Object.entries(
-                                  job.long_description
-                                ).filter(
-                                  ([_, value]) => !Array.isArray(value)
-                                ).length > (window.innerWidth < 640 ? 2 : 4) && (
-                                  <div className="text-xs text-muted-foreground ml-4">
-                                    +
-                                    {Object.entries(
-                                      job.long_description
-                                    ).filter(
-                                      ([_, value]) =>
-                                        !Array.isArray(value)
-                                    ).length - (window.innerWidth < 640 ? 2 : 4)}{" "}
-                                    more details
+                              )}
+                              
+                              {job.tags?.length > 0 && (
+                                <div>
+                                  <div className="text-xs font-semibold text-green-600 dark:text-green-400 mb-1">
+                                    Tags:
                                   </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {job.tags.slice(0, 3).map((tag, index) => (
+                                      <Badge key={index} variant="secondary" className="text-xs">
+                                        <Tag className="h-2 w-2 mr-1" />
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {job.tags.length > 3 && (
+                                      <span className="text-xs text-muted-foreground self-center">
+                                        +{job.tags.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Grading Parameters */}
+                          {job.gradingParameters && job.gradingParameters.length > 0 && (
+                            <div className="mb-3">
+                              <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">
+                                Grading Parameters:
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {job.gradingParameters.slice(0, 3).map((param, index) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    <Award className="h-2 w-2 mr-1" />
+                                    {param}
+                                  </Badge>
+                                ))}
+                                {job.gradingParameters.length > 3 && (
+                                  <span className="text-xs text-muted-foreground self-center">
+                                    +{job.gradingParameters.length - 3} more
+                                  </span>
                                 )}
                               </div>
-                            )}
+                            </div>
+                          )}
 
-                            {/* View More Button */}
-                            {(Object.keys(job.long_description).filter(
-                              (key) =>
-                                Array.isArray(job.long_description[key])
-                            ).length > 2 ||
-                              Object.keys(job.long_description).filter(
-                                (key) =>
-                                  !Array.isArray(
-                                    job.long_description[key]
-                                  )
-                              ).length > (window.innerWidth < 640 ? 2 : 4)) && (
-                              <div className="text-center mt-3">
-                                <button
-                                  onClick={() => openViewDialog(job)}
-                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full border dark:border-blue-800 transition-colors"
-                                >
-                                  View all details
-                                </button>
-                              </div>
-                            )}
+                          <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 text-xs text-muted-foreground pt-2 border-t">
+                            <span>Created: {formatDate(job.createdAt)}</span>
+                            <span>Updated: {formatDate(job.updatedAt)}</span>
                           </div>
                         </div>
-                      )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-                    <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 text-xs text-muted-foreground pt-2 border-t dark:border-gray-700">
-                      <span>Created: {formatDate(job.createdAt)}</span>
-                      <span>Updated: {formatDate(job.updatedAt)}</span>
+        {/* Create Job Dialog with Autocomplete and Structured HTML Input */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] xl:max-w-[95vw] w-full h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Create New Job</DialogTitle>
+              <DialogDescription>
+                Add a new job posting to your organization
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="overflow-y-auto flex-1 p-1">
+              <div className="grid gap-4 py-4">
+                {/* Basic Information with Autocomplete - 3 columns on large screens */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="job-title">Job Title *</Label>
+                    <Input
+                      id="job-title"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter job title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="job-category">Category *</Label>
+                    <AutocompleteField
+                      field="category"
+                      placeholder="Select or type category"
+                      value={formData.category}
+                      onSelect={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                      allowCustom={true}
+                      allowClear={true}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Label htmlFor="job-location">Location *</Label>
+                    <Input
+                      id="job-location"
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="City, Country"
+                    />
+                  </div>
+                </div>
+
+                {/* Country, Slug, Experience - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="job-country">Country *</Label>
+                    <AutocompleteField
+                      field="country"
+                      placeholder="Select or type country"
+                      value={formData.country}
+                      onSelect={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                      allowCustom={true}
+                      allowClear={true}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="job-slug">URL Slug *</Label>
+                    <Input
+                      id="job-slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))}
+                      placeholder="job-title-slug"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Label htmlFor="job-experience">Experience Required *</Label>
+                    <AutocompleteField
+                      field="expInYears"
+                      placeholder="Select or type experience"
+                      value={formData.expInYears}
+                      onSelect={(value) => setFormData(prev => ({ ...prev, expInYears: value }))}
+                      allowCustom={true}
+                      allowClear={true}
+                    />
+                  </div>
+                </div>
+
+                {/* Job Type, Schedule, Industry - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="job-type">Job Type *</Label>
+                    <Input
+                      id="job-type"
+                      value={formData.type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                      placeholder="e.g., Full-time, Part-time"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="job-schedule">Schedule *</Label>
+                    <Input
+                      id="job-schedule"
+                      value={formData.schedule}
+                      onChange={(e) => setFormData(prev => ({ ...prev, schedule: e.target.value }))}
+                      placeholder="e.g., Monday to Friday"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Label htmlFor="job-industry">Industry *</Label>
+                    <Input
+                      id="job-industry"
+                      value={formData.industry}
+                      onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
+                      placeholder="e.g., Software Development"
+                    />
+                  </div>
+                </div>
+
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px] space-y-2">
+                  <Label htmlFor="job-salary">Salary *</Label>
+                  <Input
+                    id="job-salary"
+                    value={formData.salary}
+                    onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
+                    placeholder="e.g., $50,000 - $80,000"
+                  />
+                </div>
+
+                <div className="flex-1 min-w-[200px] space-y-2">
+                  <Label htmlFor="job-vacancies">Vacancies *</Label>
+                  <Input
+                    id="job-vacancies"
+                    type="number"
+                    min="1"
+                    value={formData.vacancies}
+                    onChange={(e) => setFormData(prev => ({ ...prev, vacancies: parseInt(e.target.value) || 1 }))}
+                    placeholder="Number of positions"
+                  />
+                </div>
+
+                {/* 👇 Status shrinks to content instead of flexing */}
+                <div className="w-auto space-y-2">
+                  <Label htmlFor="job-status">Status</Label>
+                  <Select
+                    value={formData.publishStatus}
+                    onValueChange={(value: "open" | "close") => setFormData(prev => ({ ...prev, publishStatus: value }))}
+                  >
+                    <SelectTrigger className="min-w-[120px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="close">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1 min-w-[200px] space-y-2">
+                  <Label htmlFor="job-time">Working Hours *</Label>
+                  <Input
+                    id="job-time"
+                    value={formData.time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                    placeholder="e.g., 9:00 AM - 5:00 PM"
+                  />
+                </div>
+              </div>
+
+
+
+                {/* Description and Requirements - Full width sections */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Enhanced Job Description Input */}
+                  <div className="space-y-2">
+                    <Label>Job Description *</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add description point (press Enter to add)"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value;
+                              if (value.trim()) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  description: [...prev.description, value.trim()]
+                                }));
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              setFormData(prev => ({
+                                ...prev,
+                                description: [...prev.description, input.value.trim()]
+                              }));
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        {formData.description.map((point, index) => (
+                          <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded text-sm border-l-4 border-blue-500">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                  Point {index + 1}
+                                </span>
+                              </div>
+                              <span className="text-sm">{point}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFromArray('description', index)}
+                              className="hover:text-red-500 mt-0.5 p-1 hover:bg-red-50 rounded"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.description.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No description points added yet. Add points above.
+                          </div>
+                        )}
+                      </div>
+                      {formData.description.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {formData.description.length} point{formData.description.length !== 1 ? 's' : ''} added
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Enhanced Job Requirements Input */}
+                  <div className="space-y-2">
+                    <Label>Job Requirements *</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add requirement point (press Enter to add)"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value;
+                              if (value.trim()) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  requirements: [...prev.requirements, value.trim()]
+                                }));
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              setFormData(prev => ({
+                                ...prev,
+                                requirements: [...prev.requirements, input.value.trim()]
+                              }));
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        {formData.requirements.map((point, index) => (
+                          <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded text-sm border-l-4 border-green-500">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
+                                  Req {index + 1}
+                                </span>
+                              </div>
+                              <span className="text-sm">{point}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFromArray('requirements', index)}
+                              className="hover:text-red-500 mt-0.5 p-1 hover:bg-red-50 rounded"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.requirements.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No requirement points added yet. Add points above.
+                          </div>
+                        )}
+                      </div>
+                      {formData.requirements.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {formData.requirements.length} requirement{formData.requirements.length !== 1 ? 's' : ''} added
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })
-      )}
-    </div>
-  </CardContent>
-</Card>
 
-{/* Create Job Dialog - Mobile Optimized */}
-<Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-  <DialogContent className="w-[95vw] max-w-[700px] max-h-[90vh] overflow-y-auto mx-auto dark:bg-background dark:border-gray-700">
-    <DialogHeader>
-      <DialogTitle className="text-foreground">Create New Job</DialogTitle>
-      <DialogDescription className="text-muted-foreground">
-        {currentJobPortalId 
-          ? "Importing job from Change Networks portal with auto-filled details" 
-          : "Add a new job posting to your organization with glory parameters"
-        }
-      </DialogDescription>
-    </DialogHeader>
-    <div className="grid gap-4 py-4">
-      <div className="space-y-2">
-        <Label htmlFor="job-name" className="text-foreground">Job Name *</Label>
-        <Input
-          id="job-name"
-          value={formData.name}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, name: e.target.value }))
-          }
-          placeholder="Enter job title"
-          className="dark:bg-background dark:border-gray-700 dark:text-foreground"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="job-description" className="text-foreground">Description *</Label>
-        <Textarea
-          id="job-description"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData((prev) => ({
-              ...prev,
-              description: e.target.value,
-            }))
-          }
-          placeholder="Enter job description"
-          rows={4}
-          className="dark:bg-background dark:border-gray-700 dark:text-foreground"
-        />
-      </div>
+                {/* Skills and Position - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <ArrayFieldWithAutocomplete
+                    field="primarySkills"
+                    label="Primary Skills"
+                    placeholder="Add primary skill"
+                    values={formData.primarySkills}
+                    onAdd={(value) => addToArray('primarySkills', value)}
+                    onRemove={(index) => removeFromArray('primarySkills', index)}
+                    variant="default"
+                    required={true}
+                  />
 
-      {/* Grading Parameters Section - Mobile Optimized */}
-      <div className="space-y-3">
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <Label className="text-sm sm:text-base font-semibold text-purple-700 dark:text-purple-400">
-            <Award className="inline h-4 w-4 mr-2" />
-            Add Glory Parameters
-          </Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addGradingParameter}
-            className="w-full sm:w-auto"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Parameter
-          </Button>
-        </div>
-        <div className="space-y-2 max-h-48 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border dark:border-purple-800">
-          {gradingParameters.map((param, index) => (
-            <div key={param.id} className="flex gap-2 items-center">
-              <Input
-                placeholder="Parameter name (e.g., Technical Skills, Communication, Problem Solving)"
-                value={param.name}
-                onChange={(e) =>
-                  updateGradingParameter(param.id, e.target.value)
-                }
-                className="flex-1 text-sm dark:bg-background dark:border-gray-700 dark:text-foreground"
-              />
-              {gradingParameters.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeGradingParameter(param.id)}
-                  className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+                  <ArrayFieldWithAutocomplete
+                    field="secondarySkills"
+                    label="Secondary Skills"
+                    placeholder="Add secondary skill"
+                    values={formData.secondarySkills}
+                    onAdd={(value) => addToArray('secondarySkills', value)}
+                    onRemove={(index) => removeFromArray('secondarySkills', index)}
+                    variant="secondary"
+                  />
 
-      {/* Key-Value Pairs Section - Mobile Optimized */}
-      <div className="space-y-3">
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <Label className="text-sm sm:text-base font-semibold text-foreground">
-            Key-Value Details
-          </Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addKeyValuePair}
-            className="w-full sm:w-auto"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Field
-          </Button>
-        </div>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {longDescriptionPairs.map((pair, index) => (
-            <div key={index} className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:gap-2 sm:items-center">
-              <Input
-                placeholder="Field name (e.g., Salary, Location)"
-                value={pair.key}
-                onChange={(e) =>
-                  updateKeyValuePair(index, "key", e.target.value)
-                }
-                className="flex-1 dark:bg-background dark:border-gray-700 dark:text-foreground"
-              />
-              <Input
-                placeholder="Value"
-                value={pair.value}
-                onChange={(e) =>
-                  updateKeyValuePair(index, "value", e.target.value)
-                }
-                className="flex-1 dark:bg-background dark:border-gray-700 dark:text-foreground"
-              />
-              {longDescriptionPairs.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeKeyValuePair(index)}
-                  className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 self-start sm:self-auto"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Bullet Sections - Mobile Optimized */}
-      <div className="space-y-3">
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <Label className="text-sm sm:text-base font-semibold text-foreground">
-            Bullet Point Sections
-          </Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addBulletSection}
-            className="w-full sm:w-auto"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add Section
-          </Button>
-        </div>
-        <div className="space-y-3 max-h-60 overflow-y-auto">
-          {bulletSections.map((section) => (
-            <div
-              key={section.id}
-              className="border rounded-lg p-3 space-y-3 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
-            >
-              <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:gap-2 sm:items-center">
-                <Input
-                  placeholder="Section name (e.g., Responsibilities, Requirements, Benefits)"
-                  value={section.name}
-                  onChange={(e) =>
-                    updateBulletSectionName(section.id, e.target.value)
-                  }
-                  className="flex-1 font-medium dark:bg-background dark:border-gray-700 dark:text-foreground"
-                />
-                {bulletSections.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeBulletSection(section.id)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 self-start sm:self-auto"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              <div className="space-y-2 ml-2">
-                {section.bullets.map((bullet, bulletIndex) => (
-                  <div key={bullet.id} className="flex gap-2 items-start">
-                    <div className="flex items-center justify-center w-6 h-9 text-sm text-muted-foreground shrink-0">
-                      •
-                    </div>
-                    <Textarea
-                      placeholder={`Point ${bulletIndex + 1}`}
-                      value={bullet.text}
-                      onChange={(e) =>
-                        updateBulletInSection(
-                          section.id,
-                          bullet.id,
-                          e.target.value
-                        )
-                      }
-                      className="flex-1 min-h-[36px] resize-none dark:bg-background dark:border-gray-700 dark:text-foreground"
-                      rows={1}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = "auto";
-                        target.style.height = target.scrollHeight + "px";
-                      }}
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <ArrayFieldWithAutocomplete
+                      field="position"
+                      label="Position Types"
+                      placeholder="Add position type"
+                      values={formData.position}
+                      onAdd={(value) => addToArray('position', value)}
+                      onRemove={(index) => removeFromArray('position', index)}
+                      variant="outline"
+                      required={true}
                     />
-                    {section.bullets.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          removeBulletFromSection(section.id, bullet.id)
-                        }
-                        className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 mt-1 shrink-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
-                ))}
+                </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addBulletToSection(section.id)}
-                  className="ml-6 mt-2 w-full sm:w-auto"
-                >
-                  <PlusCircle className="h-3 w-3 mr-1" />
-                  Add Point
-                </Button>
+                {/* Tags, Custom Questions, Grading Parameters - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <ArrayFieldWithAutocomplete
+                    field="tags"
+                    label="Tags"
+                    placeholder="Add tag"
+                    values={formData.tags}
+                    onAdd={(value) => addToArray('tags', value)}
+                    onRemove={(index) => removeFromArray('tags', index)}
+                    variant="secondary"
+                    icon={<Tag className="h-2 w-2" />}
+                  />
+
+                  <div className="space-y-2">
+                    <Label>Custom Questions</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add custom question"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addToArray('customQuestions', (e.target as HTMLInputElement).value);
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              addToArray('customQuestions', input.value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {formData.customQuestions.map((question, index) => (
+                          <div key={index} className="flex items-start gap-2 p-2 bg-muted rounded">
+                            <span className="text-xs flex-1">{question}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFromArray('customQuestions', index)}
+                              className="hover:text-red-500"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <ArrayFieldWithAutocomplete
+                      field="gradingParameters"
+                      label="Grading Parameters"
+                      placeholder="Add grading parameter"
+                      values={formData.gradingParameters}
+                      onAdd={(value) => addToArray('gradingParameters', value)}
+                      onRemove={(index) => removeFromArray('gradingParameters', index)}
+                      variant="outline"
+                      icon={<Award className="h-2 w-2" />}
+                    />
+                  </div>
+                </div>
+
+                {/* Note - Full width */}
+                <div className="space-y-2">
+                  <Label htmlFor="job-note">Additional Notes</Label>
+                  <Textarea
+                    id="job-note"
+                    value={formData.note}
+                    onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+                    placeholder="Any additional notes or information"
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+
+            <DialogFooter className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateDialog(false)}
+                disabled={isCreating}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateJob} 
+                disabled={isCreating} 
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Create Job
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Job Dialog - Complete Form Content with Responsive Layout */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] xl:max-w-[95vw] w-full h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Edit Job</DialogTitle>
+              <DialogDescription>
+                Update job posting details
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="overflow-y-auto flex-1 p-1">
+              <div className="grid gap-4 py-4">
+                {/* Basic Information with Autocomplete - 3 columns on large screens */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-job-title">Job Title *</Label>
+                    <Input
+                      id="edit-job-title"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter job title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-job-category">Category *</Label>
+                    <AutocompleteField
+                      field="category"
+                      placeholder="Select or type category"
+                      value={formData.category}
+                      onSelect={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                      allowCustom={true}
+                      allowClear={true}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Label htmlFor="edit-job-location">Location *</Label>
+                    <Input
+                      id="edit-job-location"
+                      value={formData.location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="City, Country"
+                    />
+                  </div>
+                </div>
+
+                {/* Country, Slug, Experience - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-job-country">Country *</Label>
+                    <AutocompleteField
+                      field="country"
+                      placeholder="Select or type country"
+                      value={formData.country}
+                      onSelect={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                      allowCustom={true}
+                      allowClear={true}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-job-slug">URL Slug *</Label>
+                    <Input
+                      id="edit-job-slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))}
+                      placeholder="job-title-slug"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Label htmlFor="edit-job-experience">Experience Required *</Label>
+                    <AutocompleteField
+                      field="expInYears"
+                      placeholder="Select or type experience"
+                      value={formData.expInYears}
+                      onSelect={(value) => setFormData(prev => ({ ...prev, expInYears: value }))}
+                      allowCustom={true}
+                      allowClear={true}
+                    />
+                  </div>
+                </div>
+
+                {/* Job Type, Schedule, Industry - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-job-type">Job Type *</Label>
+                    <Input
+                      id="edit-job-type"
+                      value={formData.type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                      placeholder="e.g., Full-time, Part-time"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-job-schedule">Schedule *</Label>
+                    <Input
+                      id="edit-job-schedule"
+                      value={formData.schedule}
+                      onChange={(e) => setFormData(prev => ({ ...prev, schedule: e.target.value }))}
+                      placeholder="e.g., Monday to Friday"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 lg:col-span-1">
+                    <Label htmlFor="edit-job-industry">Industry *</Label>
+                    <Input
+                      id="edit-job-industry"
+                      value={formData.industry}
+                      onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
+                      placeholder="e.g., Software Development"
+                    />
+                  </div>
+                </div>
+
+                {/* Salary, Vacancies, Status, Working Hours - Flexible layout */}
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-[200px] space-y-2">
+                    <Label htmlFor="edit-job-salary">Salary *</Label>
+                    <Input
+                      id="edit-job-salary"
+                      value={formData.salary}
+                      onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
+                      placeholder="e.g., $50,000 - $80,000"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-[200px] space-y-2">
+                    <Label htmlFor="edit-job-vacancies">Vacancies *</Label>
+                    <Input
+                      id="edit-job-vacancies"
+                      type="number"
+                      min="1"
+                      value={formData.vacancies}
+                      onChange={(e) => setFormData(prev => ({ ...prev, vacancies: parseInt(e.target.value) || 1 }))}
+                      placeholder="Number of positions"
+                    />
+                  </div>
+
+                  <div className="w-auto space-y-2">
+                    <Label htmlFor="edit-job-status">Status</Label>
+                    <Select
+                      value={formData.publishStatus}
+                      onValueChange={(value: "open" | "close") => setFormData(prev => ({ ...prev, publishStatus: value }))}
+                    >
+                      <SelectTrigger className="min-w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="close">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex-1 min-w-[200px] space-y-2">
+                    <Label htmlFor="edit-job-time">Working Hours *</Label>
+                    <Input
+                      id="edit-job-time"
+                      value={formData.time}
+                      onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                      placeholder="e.g., 9:00 AM - 5:00 PM"
+                    />
+                  </div>
+                </div>
+
+                {/* Description and Requirements - Full width sections */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Enhanced Job Description Input for Edit */}
+                  <div className="space-y-2">
+                    <Label>Job Description *</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add description point (press Enter to add)"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value;
+                              if (value.trim()) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  description: [...prev.description, value.trim()]
+                                }));
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              setFormData(prev => ({
+                                ...prev,
+                                description: [...prev.description, input.value.trim()]
+                              }));
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        {formData.description.map((point, index) => (
+                          <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded text-sm border-l-4 border-blue-500">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                  Point {index + 1}
+                                </span>
+                              </div>
+                              <span className="text-sm">{point}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFromArray('description', index)}
+                              className="hover:text-red-500 mt-0.5 p-1 hover:bg-red-50 rounded"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.description.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No description points added yet. Add points above.
+                          </div>
+                        )}
+                      </div>
+                      {formData.description.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {formData.description.length} point{formData.description.length !== 1 ? 's' : ''} added
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Enhanced Job Requirements Input for Edit */}
+                  <div className="space-y-2">
+                    <Label>Job Requirements *</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add requirement point (press Enter to add)"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value;
+                              if (value.trim()) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  requirements: [...prev.requirements, value.trim()]
+                                }));
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              setFormData(prev => ({
+                                ...prev,
+                                requirements: [...prev.requirements, input.value.trim()]
+                              }));
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1">
+                        {formData.requirements.map((point, index) => (
+                          <div key={index} className="flex items-start gap-2 p-3 bg-muted rounded text-sm border-l-4 border-green-500">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
+                                  Req {index + 1}
+                                </span>
+                              </div>
+                              <span className="text-sm">{point}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFromArray('requirements', index)}
+                              className="hover:text-red-500 mt-0.5 p-1 hover:bg-red-50 rounded"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {formData.requirements.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            No requirement points added yet. Add points above.
+                          </div>
+                        )}
+                      </div>
+                      {formData.requirements.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {formData.requirements.length} requirement{formData.requirements.length !== 1 ? 's' : ''} added
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills and Position - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <ArrayFieldWithAutocomplete
+                    field="primarySkills"
+                    label="Primary Skills"
+                    placeholder="Add primary skill"
+                    values={formData.primarySkills}
+                    onAdd={(value) => addToArray('primarySkills', value)}
+                    onRemove={(index) => removeFromArray('primarySkills', index)}
+                    variant="default"
+                    required={true}
+                  />
+
+                  <ArrayFieldWithAutocomplete
+                    field="secondarySkills"
+                    label="Secondary Skills"
+                    placeholder="Add secondary skill"
+                    values={formData.secondarySkills}
+                    onAdd={(value) => addToArray('secondarySkills', value)}
+                    onRemove={(index) => removeFromArray('secondarySkills', index)}
+                    variant="secondary"
+                  />
+
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <ArrayFieldWithAutocomplete
+                      field="position"
+                      label="Position Types"
+                      placeholder="Add position type"
+                      values={formData.position}
+                      onAdd={(value) => addToArray('position', value)}
+                      onRemove={(index) => removeFromArray('position', index)}
+                      variant="outline"
+                      required={true}
+                    />
+                  </div>
+                </div>
+
+                {/* Tags, Custom Questions, Grading Parameters - 3 columns responsive */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <ArrayFieldWithAutocomplete
+                    field="tags"
+                    label="Tags"
+                    placeholder="Add tag"
+                    values={formData.tags}
+                    onAdd={(value) => addToArray('tags', value)}
+                    onRemove={(index) => removeFromArray('tags', index)}
+                    variant="secondary"
+                    icon={<Tag className="h-2 w-2" />}
+                  />
+
+                  <div className="space-y-2">
+                    <Label>Custom Questions</Label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Add custom question"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addToArray('customQuestions', (e.target as HTMLInputElement).value);
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input?.value.trim()) {
+                              addToArray('customQuestions', input.value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {formData.customQuestions.map((question, index) => (
+                          <div key={index} className="flex items-start gap-2 p-2 bg-muted rounded">
+                            <span className="text-xs flex-1">{question}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeFromArray('customQuestions', index)}
+                              className="hover:text-red-500"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <ArrayFieldWithAutocomplete
+                      field="gradingParameters"
+                      label="Grading Parameters"
+                      placeholder="Add grading parameter"
+                      values={formData.gradingParameters}
+                      onAdd={(value) => addToArray('gradingParameters', value)}
+                      onRemove={(index) => removeFromArray('gradingParameters', index)}
+                      variant="outline"
+                      icon={<Award className="h-2 w-2" />}
+                    />
+                  </div>
+                </div>
+
+                {/* Note - Full width */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-job-note">Additional Notes</Label>
+                  <Textarea
+                    id="edit-job-note"
+                    value={formData.note}
+                    onChange={(e) => setFormData(prev => ({ ...prev, note: e.target.value }))}
+                    placeholder="Any additional notes or information"
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+                disabled={isEditing}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditJob} 
+                disabled={isEditing} 
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
+                {isEditing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Update Job
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+
+        {/* View Job Dialog - Fully Responsive */}
+        <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+          <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] xl:max-w-[95vw] w-full h-[90vh] flex flex-col">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Briefcase className="h-5 w-5 sm:h-6 sm:w-6" />
+                <span className="truncate">{viewingJob?.title}</span>
+              </DialogTitle>
+              <DialogDescription className="text-sm sm:text-base">
+                Detailed job information
+              </DialogDescription>
+            </DialogHeader>
+            
+            {viewingJob && (
+              <div className="overflow-y-auto flex-1 p-1">
+                <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+                  {/* Job Status and Basic Info - Responsive badges */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <Badge 
+                      variant={viewingJob.publishStatus === "open" ? "default" : "destructive"} 
+                      className="text-xs sm:text-sm"
+                    >
+                      {viewingJob.publishStatus.toUpperCase()}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs sm:text-sm">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">{viewingJob.location}</span>
+                      <span className="sm:hidden">{viewingJob.location.split(',')[0]}</span>
+                    </Badge>
+                    <Badge variant="outline" className="text-xs sm:text-sm">
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      <span className="truncate max-w-[120px] sm:max-w-none">{viewingJob.salary}</span>
+                    </Badge>
+                    <Badge variant="outline" className="text-xs sm:text-sm">
+                      <Users className="h-3 w-3 mr-1" />
+                      <span className="hidden sm:inline">{viewingJob.vacancies} positions</span>
+                      <span className="sm:hidden">{viewingJob.vacancies}</span>
+                    </Badge>
+                  </div>
+
+                  {/* Job Details Grid - Responsive columns */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    {/* Basic Information */}
+                    <div className="space-y-4 lg:col-span-1">
+                      <div className="bg-card rounded-lg border p-4">
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                          <Building className="h-4 w-4" />
+                          BASIC INFORMATION
+                        </h4>
+                        <div className="space-y-3 text-sm">
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Category:</span>
+                            <span className="text-foreground">{viewingJob.category}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Industry:</span>
+                            <span className="text-foreground">{viewingJob.industry}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Type:</span>
+                            <span className="text-foreground">{viewingJob.type}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Schedule:</span>
+                            <span className="text-foreground">{viewingJob.schedule}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-card rounded-lg border p-4">
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          LOCATION & TIMING
+                        </h4>
+                        <div className="space-y-3 text-sm">
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Country:</span>
+                            <span className="text-foreground">{viewingJob.country}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Working Hours:</span>
+                            <span className="text-foreground">{viewingJob.time}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                            <span className="font-medium text-muted-foreground">Experience:</span>
+                            <span className="text-foreground">{viewingJob.expInYears}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Skills Section */}
+                    <div className="space-y-4 lg:col-span-1">
+                      {/* Primary Skills */}
+                      {viewingJob.primarySkills?.length > 0 && (
+                        <div className="bg-card rounded-lg border p-4">
+                          <h4 className="font-semibold text-sm text-muted-foreground mb-3">PRIMARY SKILLS</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {viewingJob.primarySkills.map((skill, index) => (
+                              <Badge key={index} variant="default" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Secondary Skills */}
+                      {viewingJob.secondarySkills?.length > 0 && (
+                        <div className="bg-card rounded-lg border p-4">
+                          <h4 className="font-semibold text-sm text-muted-foreground mb-3">SECONDARY SKILLS</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {viewingJob.secondarySkills.map((skill, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Position Types */}
+                      {viewingJob.position?.length > 0 && (
+                        <div className="bg-card rounded-lg border p-4">
+                          <h4 className="font-semibold text-sm text-muted-foreground mb-3">POSITION TYPES</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {viewingJob.position.map((pos, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {pos}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Additional Info - Tags, Grading etc. */}
+                    <div className="space-y-4 lg:col-span-2 xl:col-span-1">
+                      {/* Tags */}
+                      {viewingJob.tags?.length > 0 && (
+                        <div className="bg-card rounded-lg border p-4">
+                          <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                            <Tag className="h-4 w-4" />
+                            TAGS
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {viewingJob.tags.map((tag, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                <Tag className="h-2 w-2 mr-1" />
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Grading Parameters */}
+                      {viewingJob.gradingParameters?.length > 0 && (
+                        <div className="bg-card rounded-lg border p-4">
+                          <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                            <Award className="h-4 w-4" />
+                            GRADING PARAMETERS
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {viewingJob.gradingParameters.map((param, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                <Award className="h-2 w-2 mr-1" />
+                                {param}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description and Requirements - Full width sections */}
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                    {/* Enhanced Description Display */}
+                    <div className="bg-card rounded-lg border p-4">
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        JOB DESCRIPTION
+                      </h4>
+                      {(() => {
+                        const descriptionPoints = parseFromHTML(viewingJob.description);
+                        return descriptionPoints.length > 0 ? (
+                          <div className="space-y-2">
+                            {descriptionPoints.map((point, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded text-sm border-l-4 border-blue-500">
+                                <span className="text-xs font-medium text-blue-600 bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded min-w-fit">
+                                  {index + 1}
+                                </span>
+                                <span className="flex-1 leading-relaxed">{point}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
+                            No description available
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Enhanced Requirements Display */}
+                    <div className="bg-card rounded-lg border p-4">
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        JOB REQUIREMENTS
+                      </h4>
+                      {(() => {
+                        const requirementPoints = parseFromHTML(viewingJob.requirements);
+                        return requirementPoints.length > 0 ? (
+                          <div className="space-y-2">
+                            {requirementPoints.map((point, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded text-sm border-l-4 border-green-500">
+                                <span className="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded min-w-fit">
+                                  R{index + 1}
+                                </span>
+                                <span className="flex-1 leading-relaxed">{point}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
+                            No requirements specified
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Custom Questions - Full width if present */}
+                  {viewingJob.customQuestions?.length > 0 && (
+                    <div className="bg-card rounded-lg border p-4">
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-3">CUSTOM QUESTIONS</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {viewingJob.customQuestions.map((question, index) => (
+                          <div key={index} className="p-3 bg-muted/50 rounded text-sm">
+                            <span className="font-medium text-blue-600">Q{index + 1}:</span>{" "}
+                            <span className="leading-relaxed">{question}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Note */}
+                  {viewingJob.note && (
+                    <div className="bg-card rounded-lg border p-4">
+                      <h4 className="font-semibold text-sm text-muted-foreground mb-3">ADDITIONAL NOTES</h4>
+                      <div className="p-3 bg-muted/50 rounded-md text-sm whitespace-pre-wrap leading-relaxed">
+                        {viewingJob.note}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Meta Information */}
+                  <div className="bg-card rounded-lg border p-4">
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-3">METADATA</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs text-muted-foreground">
+                      <div className="flex flex-col space-y-1">
+                        <span className="font-medium">Created:</span>
+                        <span className="text-foreground">{formatDate(viewingJob.createdAt)}</span>
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <span className="font-medium">Last Updated:</span>
+                        <span className="text-foreground">{formatDate(viewingJob.updatedAt)}</span>
+                      </div>
+                      <div className="flex flex-col space-y-1 sm:col-span-2 lg:col-span-1">
+                        <span className="font-medium">Slug:</span>
+                        <span className="text-foreground font-mono bg-muted/50 px-2 py-1 rounded text-xs break-all">
+                          {viewingJob.slug}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowViewDialog(false)}
+                className="w-full sm:w-auto"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+         <DialogContent className="w-full max-w-[90vw] sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl h-auto max-h-[40vh] flex flex-col" >
+
+            <DialogHeader>
+              <DialogTitle>Delete Job</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{editingJob?.title}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => editingJob && handleDeleteJob(editingJob._id)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Job
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
-    <DialogFooter className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-      <Button
-        variant="outline"
-        onClick={() => setShowCreateDialog(false)}
-        disabled={isCreating}
-        className="w-full sm:w-auto"
-      >
-        Cancel
-      </Button>
-      <Button onClick={handleCreateJob} disabled={isCreating} className="w-full sm:w-auto">
-        {isCreating ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Creating...
-          </>
-        ) : (
-          <>
-            <Save className="h-4 w-4 mr-2" />
-            Create Job
-          </>
-        )}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
- </div>
-
- </div>
   );
 };
 

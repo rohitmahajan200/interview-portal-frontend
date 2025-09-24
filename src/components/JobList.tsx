@@ -1,6 +1,4 @@
 import { useAppSelector } from "@/hooks/useAuth"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 
 const JobList = () => {
   const role = useAppSelector((state) => state.auth.user?.applied_job)
@@ -24,9 +22,11 @@ const JobList = () => {
 
             {/* Scrollable section */}
             <div className="prose prose-sm sm:prose-base text-muted-foreground max-w-none max-h-64 overflow-y-auto pr-2">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {String(role.description ?? "")}
-              </ReactMarkdown>
+              <div
+                className="prose prose-sm sm:prose-base text-muted-foreground max-w-none max-h-64 overflow-y-auto pr-2"
+                dangerouslySetInnerHTML={{ __html: role.description as unknown as string }}
+              ></div>
+
             </div>
           </div>
         )}
