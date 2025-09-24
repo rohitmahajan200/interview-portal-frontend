@@ -7,7 +7,10 @@ interface OrgUser {
   name: string;
   email: string;
   role: "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER";
-  profile_photo_url?: string; // Add this field
+  profile_photo_url?:{
+    url:string,
+    filename:string
+  }; // Add this field
 }
 
 // Define the shape of the org auth slice state

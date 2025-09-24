@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-// import RadioGroupItem
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import {
@@ -27,7 +26,6 @@ import {
   X,
 } from "lucide-react";
 import api from "@/lib/api";
-import { uploadToCloudinary } from "@/lib/clodinary";
 
 interface Question {
   question: string;
@@ -55,43 +53,59 @@ const hrQuestionnaireResponseSchema = z.object({
 
 type FormData = z.infer<typeof hrQuestionnaireResponseSchema>;
 
+// 🆕 ADDED: Audio upload function using your API
+const uploadAudioToBackend = async (file: File, questionId: string): Promise<string> => {
+  try {
+    const formData = new FormData();
+    formData.append('audio', file); // Field name for audio files
+    formData.append('questionId', questionId);
+    formData.append('type', 'questionnaire_audio');
+    formData.append('timestamp', Date.now().toString());
+
+    console.log('[AUDIO] Uploading audio file...');
+    
+    const response = await api.post('/candidates/audio-response', formData);
+
+    if (response.data?.success && response.data?.data?.url) {
+      return response.data.data.url;
+    } else if (response.data?.url) {
+      return response.data.url;
+    } else {
+      throw new Error(response.data?.message || 'Upload failed - no URL returned');
+    }
+  } catch (error: any) {
+    console.error('[AUDIO] Backend upload failed:', error);
+    
+    let errorMessage = 'Audio upload failed';
+    if (error?.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+    
+    throw new Error(errorMessage);
+  }
+};
+
 const HRQuestionnaireResponse: React.FC = () => {
   const navigate = useNavigate();
 
   // State
-  const [audioUrls, setAudioUrls] = useState<{ [key: number]: string | null }>(
-    {}
-  );
-  const [playingStates, setPlayingStates] = useState<{
-    [key: number]: boolean;
-  }>({});
+  const [audioUrls, setAudioUrls] = useState<{ [key: number]: string | null }>({});
+  const [playingStates, setPlayingStates] = useState<{ [key: number]: boolean }>({});
   const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
 
-  const [questionnaire, setQuestionnaire] = useState<QuestionnaireData | null>(
-    null
-  );
+  const [questionnaire, setQuestionnaire] = useState<QuestionnaireData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [recordingStates, setRecordingStates] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const [mediaRecorders, setMediaRecorders] = useState<{
-    [key: number]: MediaRecorder | null;
-  }>({});
-  const [audioBlobs, setAudioBlobs] = useState<{ [key: number]: Blob | null }>(
-    {}
-  );
-  const [checkboxSelections, setCheckboxSelections] = useState<{
-    [key: number]: string[];
-  }>({});
+  const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
+  const [mediaRecorders, setMediaRecorders] = useState<{ [key: number]: MediaRecorder | null }>({});
+  const [audioBlobs, setAudioBlobs] = useState<{ [key: number]: Blob | null }>({});
+  const [checkboxSelections, setCheckboxSelections] = useState<{ [key: number]: string[] }>({});
 
-  // New state for file uploads
-  const [uploadedFiles, setUploadedFiles] = useState<{
-    [key: number]: File | null;
-  }>({});
-  const [uploadingStates, setUploadingStates] = useState<{
-    [key: number]: boolean;
-  }>({});
+  // File upload states
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: File | null }>({});
+  const [uploadingStates, setUploadingStates] = useState<{ [key: number]: boolean }>({});
 
   // Form
   const {
@@ -130,6 +144,7 @@ const HRQuestionnaireResponse: React.FC = () => {
           attachment: undefined,
         }));
         replace(initialResponses);
+        
         const initialCheckboxSelections: { [key: number]: string[] } = {};
         data.questions.forEach((q: Question, index: number) => {
           if (q.input_type === "checkbox") {
@@ -166,7 +181,7 @@ const HRQuestionnaireResponse: React.FC = () => {
     };
   }, []);
 
-  // File upload functions
+  // 🆕 UPDATED: File upload with backend API
   const handleFileUpload = async (questionIndex: number, file: File) => {
     if (!file.type.startsWith("audio/")) {
       toast.error("Please select an audio file");
@@ -176,22 +191,28 @@ const HRQuestionnaireResponse: React.FC = () => {
     setUploadingStates((prev) => ({ ...prev, [questionIndex]: true }));
 
     try {
+      const question = questionnaire?.questions[questionIndex];
+      if (!question) {
+        throw new Error("Question not found");
+      }
+
+      // Upload to backend
+      const audioUrl = await uploadAudioToBackend(file, question.id);
+      
       setUploadedFiles((prev) => ({ ...prev, [questionIndex]: file }));
+      
+      // Create local URL for playback
+      const localAudioUrl = URL.createObjectURL(file);
+      setAudioUrls((prev) => ({ ...prev, [questionIndex]: localAudioUrl }));
 
-      // Create audio URL for playback
-      const audioUrl = URL.createObjectURL(file);
-      setAudioUrls((prev) => ({ ...prev, [questionIndex]: audioUrl }));
-
-      // Set a temporary answer to indicate file is uploaded
-      setValue(
-        `responses.${questionIndex}.answer`,
-        `audio_uploaded_${questionIndex}`
-      );
+      // Set the actual uploaded URL as answer
+      setValue(`responses.${questionIndex}.answer`, audioUrl);
+      setValue(`responses.${questionIndex}.attachment`, audioUrl);
 
       toast.success("Audio file uploaded successfully");
-    } catch (error) {
-      console.error("Error handling file upload:", error);
-      toast.error("Failed to upload audio file");
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error(error.message || "Failed to upload audio file");
     } finally {
       setUploadingStates((prev) => ({ ...prev, [questionIndex]: false }));
     }
@@ -219,11 +240,12 @@ const HRQuestionnaireResponse: React.FC = () => {
 
     // Clear the form answer
     setValue(`responses.${questionIndex}.answer`, "");
+    setValue(`responses.${questionIndex}.attachment`, undefined);
 
     toast.success("Audio file removed");
   };
 
-  // Audio recording functions (existing code remains the same)
+  // Audio recording functions
   const startRecording = async (questionIndex: number) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -244,11 +266,8 @@ const HRQuestionnaireResponse: React.FC = () => {
         const audioUrl = URL.createObjectURL(audioBlob);
         setAudioUrls((prev) => ({ ...prev, [questionIndex]: audioUrl }));
 
-        // Set a temporary answer to indicate audio is recorded
-        setValue(
-          `responses.${questionIndex}.answer`,
-          `audio_recorded_${questionIndex}`
-        );
+        // Set a temporary answer to indicate audio is recorded (will be uploaded on submit)
+        setValue(`responses.${questionIndex}.answer`, `audio_recorded_${questionIndex}`);
 
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -273,7 +292,7 @@ const HRQuestionnaireResponse: React.FC = () => {
     }
   };
 
-  // Audio playback functions (existing code remains the same)
+  // Audio playback functions (unchanged)
   const playAudio = (questionIndex: number) => {
     const audioUrl = audioUrls[questionIndex];
     if (!audioUrl) return;
@@ -361,7 +380,7 @@ const HRQuestionnaireResponse: React.FC = () => {
     toast.success("Recording deleted");
   };
 
-  // Form submission with audio upload
+  // 🆕 UPDATED: Form submission with backend audio upload
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
 
@@ -371,68 +390,56 @@ const HRQuestionnaireResponse: React.FC = () => {
         data.responses.map(async (response, index) => {
           const question = questionnaire?.questions[index];
 
-          // If it's an audio question and we have an audio blob or uploaded file, upload it
-          if (question?.input_type === "audio") {
-            let fileToUpload: File | null = null;
-
-            // Priority: uploaded file > recorded blob
-            if (uploadedFiles[index]) {
-              fileToUpload = uploadedFiles[index];
-            } else if (audioBlobs[index]) {
-              fileToUpload = new File(
-                [audioBlobs[index]!],
-                `audio_${index}.wav`,
-                { type: "audio/wav" }
-              );
-            }
-
-            if (fileToUpload) {
+          // If it's an audio question and we have a recorded blob, upload it
+          if (question?.input_type === "audio" && response.answer.startsWith("audio_recorded_")) {
+            const audioBlob = audioBlobs[index];
+            
+            if (audioBlob) {
               try {
-                const uploadResult = await uploadToCloudinary(
-                  fileToUpload,
-                  "audio"
+                // Convert blob to file for upload
+                const audioFile = new File(
+                  [audioBlob],
+                  `recording_${question.id}_${Date.now()}.wav`,
+                  { type: "audio/wav" }
                 );
+
+                // Upload to backend
+                const audioUrl = await uploadAudioToBackend(audioFile, question.id);
 
                 return {
                   question: response.question,
-                  answer: uploadResult.url,
-                  attachment: uploadResult.url,
+                  answer: audioUrl,
+                  attachment: audioUrl,
                 };
               } catch (uploadError) {
-                console.error(
-                  `Failed to upload audio for question ${index}:`,
-                  uploadError
-                );
-                throw new Error(
-                  `Failed to upload audio for question ${index + 1}`
-                );
+                console.error(`Failed to upload audio for question ${index}:`, uploadError);
+                throw new Error(`Failed to upload audio for question ${index + 1}`);
               }
             }
           }
-          
+
+          // Handle checkbox responses
           if (question?.input_type === 'checkbox') {
-          let answer = response.answer;
-          // Ensure checkbox answers are properly formatted
-          if (answer) {
-            try {
-              // Validate it's a proper JSON array
-              const parsed = JSON.parse(answer);
-              if (Array.isArray(parsed)) {
-                answer = JSON.stringify(parsed);
+            let answer = response.answer;
+            if (answer) {
+              try {
+                const parsed = JSON.parse(answer);
+                if (Array.isArray(parsed)) {
+                  answer = JSON.stringify(parsed);
+                }
+              } catch (e) {
+                answer = JSON.stringify([answer]);
               }
-            } catch (e) {
-              // If not valid JSON, wrap in array
-              answer = JSON.stringify([answer]);
             }
+            
+            return {
+              question: response.question,
+              answer: answer,
+              attachment: response.attachment
+            };
           }
-          
-          return {
-            question: response.question,
-            answer: answer,
-            attachment: response.attachment
-          };
-        }
-          // For non-audio questions, return as is
+
+          // For other question types (including uploaded audio files), return as is
           return {
             question: response.question,
             answer: response.answer,
@@ -445,7 +452,7 @@ const HRQuestionnaireResponse: React.FC = () => {
         responses: processedResponses,
       };
 
-      console.log("Answers data==>", submissionData);
+      console.log("Submission data:", submissionData);
 
       await api.post("/candidates/hr-questionnaire-response", submissionData);
 
@@ -463,7 +470,7 @@ const HRQuestionnaireResponse: React.FC = () => {
     }
   };
 
-  // Render question input based on type
+  // Render question input based on type (keeping existing MCQ, checkbox, text, date cases unchanged)
   const renderQuestionInput = (question: Question, index: number) => {
     const currentAnswer = watchedResponses[index]?.answer || "";
 
@@ -487,8 +494,6 @@ const HRQuestionnaireResponse: React.FC = () => {
         );
 
       case "mcq":
-        console.log(question);
-
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
@@ -499,20 +504,17 @@ const HRQuestionnaireResponse: React.FC = () => {
             <div className="space-y-3">
               {question.options?.map((optionText, optionIndex) => {
                 return (
-                  <div
-                    key={optionIndex}
-                    className="flex items-center space-x-2"
-                  >
+                  <div key={optionIndex} className="flex items-center space-x-2">
                     <input
                       type="radio"
                       name={`question-${index}`}
-                      value={optionText} // ✅ Store the actual option text
+                      value={optionText}
                       id={`question-${index}-option-${optionIndex}`}
                       checked={currentAnswer === optionText}
                       onChange={(e) =>
                         setValue(`responses.${index}.answer`, e.target.value)
                       }
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
                     />
                     <Label
                       htmlFor={`question-${index}-option-${optionIndex}`}
@@ -551,10 +553,7 @@ const HRQuestionnaireResponse: React.FC = () => {
                 const isSelected = selectedOptions.includes(optionText);
 
                 return (
-                  <div
-                    key={optionIndex}
-                    className="flex items-center space-x-2"
-                  >
+                  <div key={optionIndex} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       id={`question-${index}-checkbox-${optionIndex}`}
@@ -562,30 +561,24 @@ const HRQuestionnaireResponse: React.FC = () => {
                       onChange={(e) => {
                         let newSelections;
                         if (e.target.checked) {
-                          // Add to selections
                           newSelections = [...selectedOptions, optionText];
                         } else {
-                          // Remove from selections
                           newSelections = selectedOptions.filter(
                             (option) => option !== optionText
                           );
                         }
 
-                        // Update checkbox state
                         setCheckboxSelections((prev) => ({
                           ...prev,
                           [index]: newSelections,
                         }));
 
-                        // Update form value (store as JSON string)
                         setValue(
                           `responses.${index}.answer`,
-                          newSelections.length > 0
-                            ? JSON.stringify(newSelections)
-                            : ""
+                          newSelections.length > 0 ? JSON.stringify(newSelections) : ""
                         );
                       }}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <Label
                       htmlFor={`question-${index}-checkbox-${optionIndex}`}
@@ -611,12 +604,6 @@ const HRQuestionnaireResponse: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {selectedOptions.length === 0 && currentAnswer && (
-              <div className="text-sm text-gray-500">
-                Please select at least one option.
-              </div>
-            )}
           </div>
         );
 
@@ -635,34 +622,43 @@ const HRQuestionnaireResponse: React.FC = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   Upload an audio file or record below
                 </p>
-                <Input
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleFileUpload(index, file);
-                    }
-                  }}
-                  className="hidden"
-                  id={`file-upload-${index}`}
-                />
-                <Label
-                  htmlFor={`file-upload-${index}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-md cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  Choose Audio File
-                </Label>
+                
+                {uploadingStates[index] ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Uploading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      type="file"
+                      accept="audio/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileUpload(index, file);
+                        }
+                      }}
+                      className="hidden"
+                      id={`file-upload-${index}`}
+                      disabled={uploadingStates[index]}
+                    />
+                    <Label
+                      htmlFor={`file-upload-${index}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-md cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Choose Audio File
+                    </Label>
+                  </>
+                )}
               </div>
             </div>
 
             {/* OR Divider */}
             <div className="flex items-center gap-4">
               <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                OR
-              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">OR</span>
               <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
             </div>
 
@@ -775,7 +771,7 @@ const HRQuestionnaireResponse: React.FC = () => {
               </div>
             )}
 
-            {currentAnswer && currentAnswer.startsWith("audio_uploaded_") && (
+            {currentAnswer && currentAnswer.startsWith("http") && (
               <div className="text-sm text-green-600 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Audio file uploaded and ready for submission

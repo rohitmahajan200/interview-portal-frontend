@@ -104,17 +104,17 @@ type Candidate = {
   updatedAt: string;
   documents?: Array<{
     _id: string;
-    document_type: string;
-    document_url: string;
+    documenttype: string;
+    documenturl: string;
     isVerified: boolean;
-    uploaded_at?: string;
+    uploadedat?: string;
   }>;
   hired_docs?: Array<{
     _id: string;
-    document_type: string;
-    document_url: string;
+    documenttype: string;
+    documenturl: string;
     isVerified: boolean;
-    uploaded_at: string;
+    uploadedat: string;
   }>;
   glory?: { [role: string]: any };
   hrQuestionnaire?: Array<{
@@ -254,7 +254,6 @@ const AdminHome = () => {
       setCandidates(response.data.data || []);
       setFilteredCandidates(response.data.data || []);
     } catch (error) {
-      console.error("Failed to fetch candidates:", error);
       toast.error("Failed to load candidates");
     } finally {
       setLoading(false);
@@ -268,7 +267,6 @@ const AdminHome = () => {
       setSelectedCandidate(response.data.data);
       setDialogOpen(true);
     } catch (error) {
-      console.error("Failed to fetch candidate details:", error);
       toast.error("Failed to load candidate details");
     } finally {
       setLoadingCandidate(false);
@@ -862,7 +860,7 @@ const AdminHome = () => {
                             >
                               <div className="flex justify-between items-center">
                                 <h3 className="text-sm font-medium capitalize">
-                                  {doc.document_type}
+                                  {doc.documenttype}
                                 </h3>
                               </div>
                               <Button
@@ -870,7 +868,7 @@ const AdminHome = () => {
                                 size="sm"
                                 className="mt-2 w-full"
                                 onClick={() =>
-                                  window.open(doc.document_url, "_blank")
+                                  window.open(doc.documenturl, "_blank")
                                 }
                               >
                                 <Eye className="w-4 h-4 mr-1" />

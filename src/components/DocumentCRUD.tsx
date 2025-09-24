@@ -1,136 +1,414 @@
+// Updated DocumentCRUD.tsx
 import { useAppSelector } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { setUser } from '@/features/Candidate/auth/authSlice';
 import { Input } from '@/components/ui/input';
-import { uploadToCloudinary } from '@/lib/clodinary';
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import api from '@/lib/api';
 import { useDispatch } from 'react-redux';
 
+// 🆕 FIXED: Don't define local types that conflict with existing ones
+// Instead, work with the existing types and handle missing properties gracefully
+
+// 🆕 ADDED: Error type for better error handling
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
 
 export default function DocumentCRUD() {
-  const documents = useAppSelector((state) => state.auth.user!.documents);
-  const dispatch = useDispatch()
+  // 🆕 FIXED: Remove type casting to avoid conflicts
+  const user = useAppSelector((state) => state.auth.user);
+  const documents = user?.documents || [];
+  const profilePhoto = user?.profile_photo_url.url;
+  
+  const dispatch = useDispatch();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(0);
-  const [documentType, setDocumentType] = useState('');
+  const [fileInputKey, setFileInputKey] = useState<number>(0);
+  const [documentType, setDocumentType] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingType, setEditingType] = useState('');
-  const refreshUser = async () => {
-    const res = await api.get("/candidates/me");
-    dispatch(setUser(res.data.user));
+  const [editingType, setEditingType] = useState<string>('');
+  const [uploading, setUploading] = useState<boolean>(false);
+
+  // Profile photo states
+  const [selectedProfilePhoto, setSelectedProfilePhoto] = useState<File | null>(null);
+  const [profilePhotoInputKey, setProfilePhotoInputKey] = useState<number>(0);
+  const [uploadingProfilePhoto, setUploadingProfilePhoto] = useState<boolean>(false);
+
+  // Better error handling and type safety
+  const refreshUser = async (): Promise<void> => {
+    try {
+      const res = await api.get("/candidates/me");
+      if (res.data?.user) {
+        dispatch(setUser(res.data.user));
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      toast.error('Failed to refresh user data');
+    }
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile || !documentType.trim()) return toast.error('Type and file required');
+  // File validation helper
+  const validateFile = (file: File, maxSizeMB: number = 20): string | null => {
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      return `File size must be less than ${maxSizeMB}MB`;
+    }
+    return null;
+  };
+
+  // Document upload
+  const handleUpload = async (): Promise<void> => {
+    if (!selectedFile || !documentType.trim()) {
+       toast.error('Type and file required');
+       return;
+    }
+
+    const validationError = validateFile(selectedFile);
+    if (validationError) {
+       toast.error(validationError);
+       return;
+    }
+
+    setUploading(true);
     try {
-      const { url, publicId } = await uploadToCloudinary(selectedFile, 'candidate_docs');
-      await api.post('/candidates/documents', {
-        document_type: documentType,
-        document_url: url,
-        public_id: publicId,
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('documenttype', documentType);
+
+      const response = await api.post('/candidates/documents', formData);
+
+      if (response.data?.success) {
+        toast.success('Document uploaded successfully!', { duration: 2000 });
+        setDocumentType('');
+        setSelectedFile(null);
+        setFileInputKey(prev => prev + 1);
+        await refreshUser();
+      } else {
+        throw new Error(response.data?.message || 'Upload failed');
+      }
+    } catch (err: unknown) {
+      console.error("Doc upload fail=>", err);
+      const error = err as ApiError;
+      const errorMessage = error?.response?.data?.message || error?.message || 'Upload failed';
+      toast.error(errorMessage, { duration: 2000 });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Profile photo upload
+  const handleProfilePhotoUpload = async (): Promise<void> => {
+    if (!selectedProfilePhoto) {
+       toast.error('Please select a profile photo');
+       return;
+    }
+
+    // Validate file type
+    if (!selectedProfilePhoto.type.startsWith('image/')) {
+       toast.error('Please select an image file');
+       return;
+    }
+
+    // Validate file size (5MB max)
+    const validationError = validateFile(selectedProfilePhoto, 5);
+    if (validationError) {
+       toast.error(validationError);
+       return;
+    }
+
+    setUploadingProfilePhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('profilephoto', selectedProfilePhoto);
+
+      const response = await api.post('/candidates/profile-photo', formData);
+
+      if (response.data?.success) {
+        toast.success('Profile photo updated successfully!', { duration: 2000 });
+        setSelectedProfilePhoto(null);
+        setProfilePhotoInputKey(prev => prev + 1);
+        await refreshUser();
+      } else {
+        throw new Error(response.data?.message || 'Profile photo upload failed');
+      }
+    } catch (err: unknown) {
+      console.error("Profile photo upload fail=>", err);
+      const error = err as ApiError;
+      const errorMessage = error?.response?.data?.message || error?.message || 'Profile photo upload failed';
+      toast.error(errorMessage, { duration: 2000 });
+    } finally {
+      setUploadingProfilePhoto(false);
+    }
+  };
+
+  const handleUpdate = async (id: string): Promise<void> => {
+    if (!editingType.trim()) {
+       toast.error('Document type cannot be empty');
+       return;
+    }
+
+    try {
+      const response = await api.put(`/candidates/documents/${id}`, { 
+        documenttype: editingType
       });
-      toast.success('Document uploaded', {duration: 1000});
-      setDocumentType('');
-      setSelectedFile(null);
-      setFileInputKey(prev => prev + 1);
-      await refreshUser();
-    } catch (err: any) {
-      console.log("Doc upload fail=>",err);
+
+      if (response.data?.success) {
+        toast.success('Updated', { duration: 1000 });
+        setEditingId(null);
+        setEditingType('');
+        await refreshUser();
+      } else {
+        throw new Error(response.data?.message || 'Update failed');
+      }
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      const errorMessage = error?.response?.data?.message || error?.message || 'Update failed';
+      toast.error(errorMessage, { duration: 1000 });
+    }
+  };
+
+  const handleDelete = async (id: string): Promise<void> => {
+    if (!window.confirm('Are you sure you want to delete this document?')) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/candidates/documents/${id}`);
       
-      toast.error(err.response?.data?.message || 'Upload failed', {duration: 1000});
+      if (response.data?.success !== false) {
+        toast.success('Deleted', { duration: 1000 });
+        await refreshUser();
+      } else {
+        throw new Error(response.data?.message || 'Delete failed');
+      }
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      const errorMessage = error?.response?.data?.message || error?.message || 'Delete failed';
+      toast.error(errorMessage, { duration: 1000 });
     }
   };
 
-  const handleUpdate = async (id: string) => {
-    try {
-      await api.put(`/candidates/documents/${id}`, { document_type: editingType });
-      toast.success('Updated', {duration: 1000});
-      setEditingId(null);
-      await refreshUser();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Update failed', {duration: 1000});
+  // Helper to get profile photo URL
+  const getProfilePhotoUrl = (): string | null => {
+    if (!profilePhoto) return null;
+    
+    if (typeof profilePhoto === 'string') {
+      return profilePhoto;
     }
+    
+    if (typeof profilePhoto === 'object' && profilePhoto !== null && 'url' in profilePhoto) {
+      return (profilePhoto as { url: string }).url;
+    }
+    
+    return null;
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await api.delete(`/candidates/documents/${id}`);
-      toast.success('Deleted', {duration: 1000});
-      await refreshUser();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Delete failed', {duration: 1000});
-    }
+  // Helper to format file size
+  const formatFileSize = (bytes: number | undefined): string => {
+    if (!bytes) return 'Unknown size';
+    
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   };
+
+  // 🆕 FIXED: Helper to safely check if document has isVerified property
+  const getDocumentStatus = (doc: any): string => {
+    // Check if isVerified property exists and is boolean
+    if (typeof doc.isVerified === 'boolean') {
+      return doc.isVerified ? '✅ Verified' : '⏳ Pending';
+    }
+    // Fallback for documents without isVerified property
+    return '⏳ Pending';
+  };
+
+  const profilePhotoUrl = getProfilePhotoUrl();
 
   return (
     <div className="max-w-md md:max-w-2xl p-4 md:p-6 space-y-4 text-foreground bg-background m-10">
-    <div className="grid gap-4">
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <Input
-            placeholder="Document Type"
-            value={documentType}
-            onChange={(e) => setDocumentType(e.target.value)}
-          />
-          <Input
-            key={fileInputKey}
-            type="file"
-            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-          />
-          <Button onClick={handleUpload} disabled={!selectedFile || !documentType}>Upload Document</Button>
-        </CardContent>
-      </Card>
-
-      {documents.map((doc) => (
-        <Card key={doc._id}>
-          <CardContent className="p-4 space-y-2">
-            <div className="text-sm">
-              URL:{' '}
-              <a href={doc.document_url} target="_blank" className="text-blue-500 underline">
-                {doc.document_url}
-              </a>
-            </div>
-            {editingId === doc._id ? (
-              <div className="flex gap-2 items-center">
-                <Input
-                  value={editingType}
-                  onChange={(e) => setEditingType(e.target.value)}
+      <div className="grid gap-4">
+        
+        {/* Profile Photo Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Photo</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            {/* Current Profile Photo */}
+            {profilePhotoUrl && (
+              <div className="flex items-center space-x-4">
+                <img 
+                  src={profilePhotoUrl} 
+                  alt="Profile" 
+                  className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
                 />
-                <Button onClick={() => handleUpdate(doc._id)}>Save</Button>
-                <Button variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">{doc.document_type}</span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setEditingId(doc._id);
-                      setEditingType(doc.document_type);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(doc._id)}
-                  >
-                    Delete
-                  </Button>
+                <div className="text-sm text-gray-600">
+                  <div>Current profile photo</div>
+                  {typeof profilePhoto === 'object' && profilePhoto && 'filename' in profilePhoto && (profilePhoto as any).filename && (
+                    <div>File: {(profilePhoto as any).filename}</div>
+                  )}
                 </div>
               </div>
             )}
+            
+            {/* Profile Photo Upload */}
+            <div className="space-y-2">
+              <Input
+                key={profilePhotoInputKey}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                onChange={(e) => setSelectedProfilePhoto(e.target.files?.[0] || null)}
+                disabled={uploadingProfilePhoto}
+              />
+              {selectedProfilePhoto && (
+                <div className="text-sm text-gray-600">
+                  Selected: {selectedProfilePhoto.name} ({formatFileSize(selectedProfilePhoto.size)})
+                </div>
+              )}
+              <Button 
+                onClick={handleProfilePhotoUpload} 
+                disabled={!selectedProfilePhoto || uploadingProfilePhoto}
+                className="w-full"
+              >
+                {uploadingProfilePhoto ? 'Uploading...' : 'Update Profile Photo'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      ))}
-      <Toaster position="top-center" />
-    </div>
+
+        {/* Document Upload Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Document</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-2">
+            <Input
+              placeholder="Document Type (e.g., resume, certificate)"
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+              disabled={uploading}
+            />
+            <Input
+              key={fileInputKey}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              disabled={uploading}
+            />
+            {selectedFile && (
+              <div className="text-sm text-gray-600">
+                Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
+              </div>
+            )}
+            <Button 
+              onClick={handleUpload} 
+              disabled={!selectedFile || !documentType.trim() || uploading}
+              className="w-full"
+            >
+              {uploading ? 'Uploading...' : 'Upload Document'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Documents List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>My Documents ({documents.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {documents.length === 0 ? (
+              <div className="text-center text-gray-500 py-4">
+                No documents uploaded yet
+              </div>
+            ) : (
+              documents.map((doc: any) => (
+                <Card key={doc._id} className="border border-gray-200">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="text-sm space-y-1">
+                      <div><strong>Type:</strong> {doc.documenttype}</div>
+                      {doc.filename && <div><strong>File:</strong> {doc.filename}</div>}
+                      {doc.mimetype && <div><strong>Format:</strong> {doc.mimetype}</div>}
+                      {doc.size && <div><strong>Size:</strong> {formatFileSize(doc.size)}</div>}
+                      <div><strong>Status:</strong> {getDocumentStatus(doc)}</div>
+                      <a 
+                        href={doc.documenturl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline hover:text-blue-700 inline-block"
+                      >
+                        View Document
+                      </a>
+                    </div>
+                    
+                    {editingId === doc._id ? (
+                      <div className="flex gap-2 items-center flex-wrap">
+                        <Input
+                          value={editingType}
+                          onChange={(e) => setEditingType(e.target.value)}
+                          placeholder="Enter document type"
+                          className="flex-1 min-w-[200px]"
+                        />
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => handleUpdate(doc._id)}
+                            disabled={!editingType.trim()}
+                            size="sm"
+                          >
+                            Save
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditingType('');
+                            }}
+                            size="sm"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <span className="font-semibold">{doc.documenttype}</span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingId(doc._id);
+                              setEditingType(doc.documenttype);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDelete(doc._id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

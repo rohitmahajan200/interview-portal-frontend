@@ -97,7 +97,7 @@ export const ManagerSidebar: React.FC<ManagerSidebarProps> = (props) => {
                       user={{
                         name: orgState.user.name,
                         email: orgState.user.email,
-                        profile_photo_url: orgState.user.profile_photo_url
+                        profile_photo_url: orgState.user.profile_photo_url?.url,
                       }}
                     />
         )}

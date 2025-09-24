@@ -87,7 +87,7 @@ export function HRSidebar(props: React.ComponentProps<typeof Sidebar>) {
                       user={{
                         name: orgState.user.name,
                         email: orgState.user.email,
-                        profile_photo_url: orgState.user.profile_photo_url
+                        profile_photo_url: orgState.user.profile_photo_url?.url
                       }}
                     />
         )}

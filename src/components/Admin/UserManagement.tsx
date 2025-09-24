@@ -41,6 +41,8 @@ import {
   Mail,
   Shield,
   MoreHorizontal,
+  Building,
+  Calendar,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
@@ -57,7 +59,8 @@ import ResetOrgPasswordDialog from "../ui/ResetOrgPasswordDialog";
 
 type Role = "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER";
 
-interface User {
+// 🆕 FIXED: Use a more flexible user interface that matches both components
+interface AdminUser {
   _id: string;
   name?: string;
   email: string;
@@ -66,9 +69,20 @@ interface User {
   last_login?: string;
   createdAt: string;
   updatedAt: string;
-  profilephotourl?: string; // ✅ new
+  // Make profile photo fields more flexible
+  profilephotourl?: string | {
+    url: string;
+    filepath?: string;
+    filename?: string;
+  };
+  profile_photo_url?: string | {
+    url: string;
+    filepath?: string;
+    filename?: string;
+  };
+  // Add additional properties that might exist
+  [key: string]: any;
 }
-
 
 // Zod schemas
 const inviteSchema = z.object({
@@ -78,6 +92,7 @@ const inviteSchema = z.object({
     error: "Please select a valid role",
   }),
 });
+
 type InviteFormData = z.infer<typeof inviteSchema>;
 
 const updateSchema = z.object({
@@ -95,9 +110,8 @@ interface UpdateFormData {
 }
 
 const AdminHome = () => {
-
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -108,7 +122,7 @@ const AdminHome = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Selected user for operations
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   // Loading states
   const [isInviting, setIsInviting] = useState(false);
@@ -116,23 +130,63 @@ const AdminHome = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [passwordUpdateDialogOpen, setPasswordUpdateDialogOpen] = useState(false);
-      function useIsCompact(breakpoint = 1220) {
+
+  // Responsive hook
+  function useIsCompact(breakpoint = 1220) {
     const [isCompact, setIsCompact] = useState(false);
 
     useEffect(() => {
       const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
-      checkWidth(); // run on mount
+      checkWidth();
       window.addEventListener("resize", checkWidth);
       return () => window.removeEventListener("resize", checkWidth);
     }, [breakpoint]);
 
     return isCompact;
   }
-  const isCompact = useIsCompact(1220);
   
+  const isCompact = useIsCompact(1220);
 
-    // Update the openPasswordUpdateDialog function
-  const openPasswordUpdateDialog = (user: User) => {
+  // UTILITY: Get profile photo URL from user object
+  const getProfilePhotoUrl = (user: AdminUser): string => {
+    // Handle profile_photo_url field  
+    if (user.profile_photo_url) {
+      if (typeof user.profile_photo_url === 'string') {
+        return user.profile_photo_url;
+      } else if (typeof user.profile_photo_url === 'object' && user.profile_photo_url.url) {
+        return user.profile_photo_url.url;
+      }
+    }
+    return "";
+  };
+
+  // UTILITY: Get user initials
+  const getUserInitials = (user: AdminUser): string => {
+    if (user.name && user.name.trim()) {
+      return user.name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return user.email[0].toUpperCase();
+  };
+
+  // 🆕 FIXED: Convert AdminUser to format expected by ResetOrgPasswordDialog
+  const convertUserForPasswordDialog = (user: AdminUser | null) => {
+    if (!user) return null;
+    
+    return {
+      ...user,
+      // Ensure profilephotourl is a string for the dialog component
+      profilephotourl: typeof user.profilephotourl === 'string' 
+        ? user.profilephotourl 
+        : user.profilephotourl?.url || ''
+    };
+  };
+
+  const openPasswordUpdateDialog = (user: AdminUser) => {
     setSelectedUser(user);
     setPasswordUpdateDialogOpen(true);
   };
@@ -156,39 +210,45 @@ const AdminHome = () => {
     },
   });
 
-
-
+  // ENHANCED: Fetch users with better error handling
   const fetchUsers = useCallback(async () => {
-  try {
-    setLoading(true);
-    const response = await api.get("/org/orgUser");
-    if (response?.data?.data) {
-      setUsers(response.data.data);
-      setFilteredUsers(response.data.data);
+    try {
+      setLoading(true);
+      const response = await api.get("/org/orgUser");
+      
+      if (response?.data?.success && response?.data?.data) {
+        console.log('📥 Fetched users:', response.data.data.length);
+        setUsers(response.data.data);
+        setFilteredUsers(response.data.data);
+      } else {
+        console.error('❌ Invalid response format:', response?.data);
+        toast.error("Invalid response format from server");
+      }
+    } catch (error: any) {
+      console.error('❌ Fetch users error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          "Failed to load users";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  } catch (error: any) {
-    console.error('Fetch users error:', error);
-    toast.error("Failed to load users");
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  }, []);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   // Filter users
   useEffect(() => {
     let filtered = users;
 
     if (searchTerm) {
-      filtered = filtered.filter(
-        (user) =>
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (user.name &&
-            user.name.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      filtered = filtered.filter((user) => {
+        const nameMatch = user.name?.toLowerCase().includes(searchTerm.toLowerCase());
+        const emailMatch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        return nameMatch || emailMatch;
+      });
     }
 
     if (roleFilter !== "all") {
@@ -208,26 +268,23 @@ const AdminHome = () => {
         toast.success(`Invitation sent to ${data.email}`);
         setInviteDialogOpen(false);
         inviteForm.reset();
-        fetchUsers(); // Refresh the list
+        fetchUsers();
       }
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || "Failed to send invitation"
-      );
+      const errorMessage = error?.response?.data?.message || "Failed to send invitation";
+      toast.error(errorMessage);
     } finally {
       setIsInviting(false);
     }
   };
 
-
-const handlePasswordUpdateSuccess = useCallback(() => {
-  setPasswordUpdateDialogOpen(false);
-  setSelectedUser(null);
-  // Use setTimeout to prevent immediate re-render conflicts
-  setTimeout(() => {
-    fetchUsers();
-  }, 100);
-}, [fetchUsers]);
+  const handlePasswordUpdateSuccess = useCallback(() => {
+    setPasswordUpdateDialogOpen(false);
+    setSelectedUser(null);
+    setTimeout(() => {
+      fetchUsers();
+    }, 100);
+  }, [fetchUsers]);
 
   // Update user
   const onUpdateSubmit = async (data: UpdateFormData) => {
@@ -242,10 +299,11 @@ const handlePasswordUpdateSuccess = useCallback(() => {
         setUpdateDialogOpen(false);
         setSelectedUser(null);
         updateForm.reset();
-        fetchUsers(); // Refresh the list
+        fetchUsers();
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update user");
+      const errorMessage = error?.response?.data?.message || "Failed to update user";
+      toast.error(errorMessage);
     } finally {
       setIsUpdating(false);
     }
@@ -258,21 +316,23 @@ const handlePasswordUpdateSuccess = useCallback(() => {
     try {
       setIsDeleting(true);
       const response = await api.delete(`/org/delete/${selectedUser._id}`);
+      
       if (response.data.success) {
         toast.success("User deleted successfully");
         setDeleteDialogOpen(false);
         setSelectedUser(null);
-        fetchUsers(); // Refresh the list here
+        fetchUsers();
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to delete user");
+      const errorMessage = error?.response?.data?.message || "Failed to delete user";
+      toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
     }
   };
 
   // Open update dialog
-  const openUpdateDialog = (user: User) => {
+  const openUpdateDialog = (user: AdminUser) => {
     setSelectedUser(user);
     updateForm.setValue("name", user.name || "");
     updateForm.setValue("email", user.email);
@@ -281,7 +341,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
   };
 
   // Open delete dialog
-  const openDeleteDialog = (user: User) => {
+  const openDeleteDialog = (user: AdminUser) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
   };
@@ -312,31 +372,36 @@ const handlePasswordUpdateSuccess = useCallback(() => {
     });
   };
 
-  // Statistics
+  // ENHANCED: Statistics with better calculations
   const stats = {
     total: users.length,
+    admin: users.filter((u) => u.role === "ADMIN").length,
     hr: users.filter((u) => u.role === "HR").length,
     invigilator: users.filter((u) => u.role === "INVIGILATOR").length,
     manager: users.filter((u) => u.role === "MANAGER").length,
     verified: users.filter((u) => u.email_verified).length,
+    active: users.filter((u) => u.last_login).length,
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <p className="text-muted-foreground">Loading users...</p>
+        </div>
       </div>
     );
   }
 
-  
-
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
+      <Toaster position="top-center" />
+      
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">User Management</h1>
           <p className="text-muted-foreground">
             Manage organization users, roles, and permissions
           </p>
@@ -351,7 +416,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -359,6 +424,19 @@ const handlePasswordUpdateSuccess = useCallback(() => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.verified} verified
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Admins</CardTitle>
+            <Shield className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.admin}</div>
           </CardContent>
         </Card>
 
@@ -375,7 +453,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Invigilators</CardTitle>
-            <Shield className="h-4 w-4 text-green-600" />
+            <Building className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
@@ -412,11 +490,14 @@ const handlePasswordUpdateSuccess = useCallback(() => {
       {/* Users Management Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Organization Users</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Organization Users
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {/* Filters and Search */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -430,11 +511,12 @@ const handlePasswordUpdateSuccess = useCallback(() => {
 
             {/* Role Filter */}
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full md:w-48">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
                 <SelectItem value="HR">HR</SelectItem>
                 <SelectItem value="INVIGILATOR">Invigilator</SelectItem>
                 <SelectItem value="MANAGER">Manager</SelectItem>
@@ -443,7 +525,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
           </div>
 
           {/* Users Table */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -451,6 +533,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
+                  {!isCompact && <TableHead>Joined</TableHead>}
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -459,32 +542,33 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                   <TableRow key={user._id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src={user.profilephotourl || ""} alt={user.name || user.email} />
-                            <AvatarFallback>
-                              {user.name ? user.name[0] : user.email[0].toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        <div>
-                          <div className="font-medium">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage 
+                            src={getProfilePhotoUrl(user)} 
+                            alt={user.name || user.email}
+                          />
+                          <AvatarFallback className="text-sm font-medium">
+                            {getUserInitials(user)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">
                             {user.name || "No name set"}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground truncate">
                             ID: {user._id.slice(-8)}
                           </div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="text-sm">{user.email}</div>
+                      <div className="min-w-0">
+                        <div className="text-sm truncate">{user.email}</div>
                         <div className="text-xs text-muted-foreground">
                           {user.email_verified ? (
                             <span className="text-green-600">✓ Verified</span>
                           ) : (
-                            <span className="text-orange-600">
-                              ⚠ Unverified
-                            </span>
+                            <span className="text-orange-600">⚠ Unverified</span>
                           )}
                         </div>
                       </div>
@@ -498,16 +582,24 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                       <div className="flex items-center gap-2">
                         <div
                           className={`w-2 h-2 rounded-full ${
-                            user.email_verified
-                              ? "bg-green-500"
-                              : "bg-orange-500"
+                            user.email_verified ? "bg-green-500" : "bg-orange-500"
                           }`}
                         ></div>
-                        {!isCompact && <span className="text-sm">
-                          {user.email_verified ? "Active" : "Pending"}
-                        </span>}
+                        {!isCompact && (
+                          <span className="text-sm">
+                            {user.email_verified ? "Active" : "Pending"}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
+                    {!isCompact && (
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          <Calendar className="inline h-3 w-3 mr-1" />
+                          {formatDate(user.createdAt)}
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -532,7 +624,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => openDeleteDialog(user)}
-                            className="text-red-600"
+                            className="text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete User
@@ -546,24 +638,32 @@ const handlePasswordUpdateSuccess = useCallback(() => {
             </Table>
           </div>
 
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8">
+          {/* Empty State */}
+          {filteredUsers.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium mb-2">No users found</p>
               <p className="text-muted-foreground">
-                No users found matching your criteria.
+                {searchTerm || roleFilter !== "all"
+                  ? "Try adjusting your search criteria"
+                  : "Start by inviting your first user"}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
+      {/* 🆕 FIXED: Reset Password Dialog with converted user */}
       <ResetOrgPasswordDialog 
         isOpen={passwordUpdateDialogOpen}
         onOpenChange={setPasswordUpdateDialogOpen}
-        selectedUser={selectedUser}
+        selectedUser={convertUserForPasswordDialog(selectedUser)}
         onSuccess={handlePasswordUpdateSuccess}
-        apiEndpoint="/org/update-password" // Optional: customize endpoint
+        apiEndpoint="/org/update-password"
       />
 
+      {/* Rest of the dialogs remain the same... */}
+      {/* Invite Dialog */}
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -692,10 +792,9 @@ const handlePasswordUpdateSuccess = useCallback(() => {
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <Avatar>
+                    <AvatarImage src={getProfilePhotoUrl(selectedUser)} />
                     <AvatarFallback>
-                      {selectedUser.name
-                        ? selectedUser.name[0]
-                        : selectedUser.email[0].toUpperCase()}
+                      {getUserInitials(selectedUser)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -764,9 +863,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="HR">HR</SelectItem>
-                          <SelectItem value="INVIGILATOR">
-                            Invigilator
-                          </SelectItem>
+                          <SelectItem value="INVIGILATOR">Invigilator</SelectItem>
                           <SelectItem value="MANAGER">Manager</SelectItem>
                         </SelectContent>
                       </Select>
@@ -828,10 +925,9 @@ const handlePasswordUpdateSuccess = useCallback(() => {
               <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
                 <div className="flex items-center gap-3">
                   <Avatar>
+                    <AvatarImage src={getProfilePhotoUrl(selectedUser)} />
                     <AvatarFallback>
-                      {selectedUser.name
-                        ? selectedUser.name[0]
-                        : selectedUser.email[0].toUpperCase()}
+                      {getUserInitials(selectedUser)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -841,10 +937,7 @@ const handlePasswordUpdateSuccess = useCallback(() => {
                     <p className="text-sm text-muted-foreground">
                       {selectedUser.email}
                     </p>
-                    <Badge
-                      className={getRoleColor(selectedUser.role)}
-                      variant="outline"
-                    >
+                    <Badge className={getRoleColor(selectedUser.role)} variant="outline">
                       {selectedUser.role}
                     </Badge>
                   </div>

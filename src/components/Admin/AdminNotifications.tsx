@@ -53,7 +53,7 @@ const AdminNotifications = () => {
         );
       }
     } catch (error: any) {
-      console.error("Failed to fetch admin notifications:", error);
+    
       toast.error("Failed to load notifications");
     } finally {
       dispatch(setLoading(false));

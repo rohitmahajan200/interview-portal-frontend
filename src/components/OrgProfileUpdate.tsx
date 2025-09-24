@@ -12,7 +12,6 @@ import { User, Camera, Save, Loader2 } from 'lucide-react';
 import { useAppSelector } from '@/hooks/useAuth';
 import { useDispatch } from 'react-redux';
 import { setUser } from '@/features/Org/Auth/orgAuthSlice';
-import { uploadToCloudinary } from '@/lib/clodinary';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -26,12 +25,47 @@ interface OrgProfileUpdateProps {
   className?: string;
 }
 
+// 🆕 ADDED: Type definition for profile photo URL
+type ProfilePhotoUrl = string | {
+  url: string;
+  filepath?: string;
+  filename?: string;
+} | null | undefined;
+
+// File validation function
+const validateFile = (file: File): string | null => {
+  if (!file.type.startsWith('image/')) {
+    return 'Please select a valid image file (JPG, PNG, GIF, WEBP)';
+  }
+
+  if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    return 'Image size should be less than 5MB';
+  }
+
+  return null;
+};
+
+// 🆕 ADDED: Helper function to extract URL from profile photo
+const getProfilePhotoUrl = (profilePhoto: ProfilePhotoUrl): string | undefined => {
+  if (!profilePhoto) return undefined;
+  
+  if (typeof profilePhoto === 'string') {
+    return profilePhoto;
+  }
+  
+  if (typeof profilePhoto === 'object' && profilePhoto.url) {
+    return profilePhoto.url;
+  }
+  
+  return undefined;
+};
+
 export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
   const dispatch = useDispatch();
   const currentUser = useAppSelector((state) => state.orgAuth.user);
-  const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pendingProfilePhoto, setPendingProfilePhoto] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const {
     register,
@@ -48,42 +82,40 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
   useEffect(() => {
     if (currentUser) {
       reset({
-        name: currentUser.name,
+        name: currentUser.name || '', // 🆕 FIXED: Handle undefined name
       });
     }
   }, [currentUser, reset]);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select a valid image file');
+    if (!file) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      event.target.value = '';
       return;
     }
 
-    try {
-      setUploading(true);
-      const result = await uploadToCloudinary(file, 'profiles');
-      
-      if (result?.url) {
-        setPendingProfilePhoto(result.url);
-        toast.success('Image uploaded. Click "Save Changes" to update your profile.');
-      }
-    } catch (error: any) {
-      console.error('Failed to upload image:', error);
-      toast.error(error?.response?.data?.message || 'Failed to upload image');
-    } finally {
-      setUploading(false);
-    }
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    
+    toast.success('Photo selected. Click "Save Changes" to update.');
   };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const onSubmit = async (data: OrgProfileUpdateData) => {
     if (!currentUser) return;
@@ -91,81 +123,108 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
     try {
       setIsSubmitting(true);
       
-      // Prepare the update payload
-      const updatePayload: { name: string; profilephotourl?: string } = {
-        name: data.name,
-      };
-
-      // Include profile photo URL if there's a pending one
-      if (pendingProfilePhoto) {
-        updatePayload.profilephotourl = pendingProfilePhoto;
+      console.log('📤 Submitting form:', { name: data.name, hasFile: !!selectedFile });
+      
+      const formData = new FormData();
+      formData.append('name', data.name);
+      
+      if (selectedFile) {
+        formData.append('profilephoto', selectedFile);
+        console.log('📎 Added file to FormData:', selectedFile.name);
       }
 
-      const response = await api.patch('/org/profile', updatePayload);
+      // Debug FormData contents
+      console.log('📋 FormData entries:');
+      for (const [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value instanceof File ? `File(${value.name})` : value);
+      }
 
-      if (response.data.success) {
-        // Fetch fresh user data from server
+      const response = await api.patch('/org/profile', formData);
+
+      if (response.data?.success) {
         try {
           const userResponse = await api.get('/org/me');
           
-          if (userResponse.data.success && userResponse.data.user) {
-            // Update Redux state with fresh data from server
+          if (userResponse.data?.success && userResponse.data?.user) {
             dispatch(setUser(userResponse.data.user));
-            
             toast.success('Profile updated successfully');
-            reset(data); // Reset form dirty state
-            setPendingProfilePhoto(null); // Clear pending photo
+            reset(data);
+            setSelectedFile(null);
+            setPreviewUrl(null);
           } else {
-            // Fallback to manual update if /org/me fails
-            dispatch(setUser({
-              ...currentUser,
-              name: data.name,
-              ...(pendingProfilePhoto && { profilephotourl: pendingProfilePhoto }),
-            }));
-            
+            // Fallback to response data
+            if (response.data?.data?.user) {
+              dispatch(setUser(response.data.data.user));
+            }
             toast.success('Profile updated successfully');
-            window.location.reload();
+            reset(data);
+            setSelectedFile(null);
+            setPreviewUrl(null);
           }
         } catch (fetchError) {
-          console.error('Failed to fetch updated user data:', fetchError);
-          
-          // Fallback to manual update if /org/me fails
-          dispatch(setUser({
-            ...currentUser,
-            name: data.name,
-            ...(pendingProfilePhoto && { profilephotourl: pendingProfilePhoto }),
-          }));
-          
+          console.warn('Failed to fetch fresh user data, using response data');
+          if (response.data?.data?.user) {
+            dispatch(setUser(response.data.data.user));
+          }
           toast.success('Profile updated successfully');
           reset(data);
-          setPendingProfilePhoto(null);
+          setSelectedFile(null);
+          setPreviewUrl(null);
         }
       }
-    } catch (error: any) {
-      console.error('Failed to update profile:', error);
-      toast.error(error?.response?.data?.message || 'Failed to update profile');
+    } catch (error: unknown) {
+      console.error('❌ Profile update failed:', error);
+      
+      // 🆕 FIXED: Proper error type handling
+      let errorMessage = 'Failed to update profile';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as {
+          response?: {
+            data?: {
+              message?: string;
+            };
+          };
+        };
+        errorMessage = axiosError.response?.data?.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
+      
+      // Debug error details
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: unknown } };
+        if (axiosError.response?.data) {
+          console.error('Error details:', axiosError.response.data);
+        }
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return 'U'; // Default fallback
+    
     return name
       .split(' ')
       .map((n) => n[0])
       .join('')
-      .toUpperCase();
+      .toUpperCase()
+      .slice(0, 2); // Limit to 2 characters
   };
 
-  // Check if there are any changes to save
-  const hasChanges = isDirty || pendingProfilePhoto !== null;
+  const hasChanges = isDirty || selectedFile !== null;
 
-  // Display current or pending profile photo
-  const displayPhotoUrl = pendingProfilePhoto || currentUser?.profile_photo_url;
+  // 🆕 FIXED: Handle different possible field names for profile photo with proper typing
+  const displayPhotoUrl = previewUrl || 
+    getProfilePhotoUrl(currentUser?.profile_photo_url?.url as ProfilePhotoUrl);
 
   if (!currentUser) {
     return (
-      <Card className={`w-full ${className}`}>
+      <Card className={`w-full ${className || ''}`}>
         <CardContent className="p-4 sm:p-6">
           <div className="text-center text-muted-foreground text-sm sm:text-base">
             No user data available
@@ -176,7 +235,7 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
   }
 
   return (
-    <Card className={`w-full ${className}`}>
+    <Card className={`w-full ${className || ''}`}>
       <CardHeader className="p-4 sm:p-6">
         <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
           <User className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
@@ -193,45 +252,49 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
             <Avatar className="w-16 h-16 sm:w-20 sm:h-20">
               <AvatarImage 
                 src={displayPhotoUrl} 
-                alt={currentUser.name}
+                alt={currentUser.name || 'User avatar'}
               />
               <AvatarFallback className="text-base sm:text-lg font-semibold">
                 {getInitials(currentUser.name)}
               </AvatarFallback>
             </Avatar>
             
-            {/* Upload Button Overlay */}
             <label 
               htmlFor="profile-photo-upload"
               className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 hover:opacity-100 cursor-pointer transition-opacity"
             >
-              {uploading ? (
-                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 text-white animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-              )}
+              <Camera className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </label>
             
             <input
               id="profile-photo-upload"
               type="file"
               accept="image/*"
-              onChange={handleImageUpload}
+              onChange={handleImageChange}
               className="hidden"
-              disabled={uploading}
+              disabled={isSubmitting}
             />
           </div>
           
           <div className="text-center sm:text-left min-w-0 flex-1">
-            <h3 className="font-medium text-base sm:text-lg truncate">{currentUser.name}</h3>
-            <p className="text-sm sm:text-base text-muted-foreground">{currentUser.role}</p>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Click on avatar to change photo (Max 5MB)
+            <h3 className="font-medium text-base sm:text-lg truncate">
+              {currentUser.name || 'No name set'}
+            </h3>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              {currentUser.role || 'No role assigned'}
             </p>
-            {pendingProfilePhoto && (
-              <p className="text-xs sm:text-sm text-amber-600 mt-1 font-medium">
-                New photo ready - click Save Changes to update
-              </p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Click on avatar to change photo (Max 5MB, JPG/PNG/GIF/WEBP)
+            </p>
+            {selectedFile && (
+              <div className="mt-1">
+                <p className="text-xs sm:text-sm text-amber-600 font-medium">
+                  New photo selected - click Save Changes to update
+                </p>
+                <p className="text-xs text-gray-500">
+                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </p>
+              </div>
             )}
           </div>
         </div>

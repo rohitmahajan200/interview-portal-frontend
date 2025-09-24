@@ -60,8 +60,9 @@ export interface RegisterData {
   profile_photo_url: string; // Cloudinary URL
   applied_job: string;
   documents: Array<{
-    document_type: string;
-    document_url: string;
+    documenttype: string;
+    documenturl: string;
+    filepath: string;
   }>;
   password: string;
 }
@@ -80,10 +81,10 @@ export interface StageHistory {
 export interface DocumentItem {
   _id: string;
   candidate: string;
-  document_type: string;
-  document_url: string;
-  uploaded_at: string; // ISO date string
-  public_id?: string;
+  documenttype: string;
+  documenturl: string;
+  uploadedat: string; // ISO date string
+  filepath?: string;
 }
 
 export interface JobItem {

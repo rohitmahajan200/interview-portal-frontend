@@ -18,11 +18,13 @@ import { Button } from "@/components/ui/button";
 import UpdateProfile from "@/components/UpdateProfile";
 import { Clipboard, ClipboardCheck, Eye } from "lucide-react";
 
-const DocumentRow = ({ doc }: { doc: { document_type: string; document_url: string } }) => {
+
+const DocumentRow = ({ doc }: { doc: { documenttype: string; documenturl: string } }) => {
+  console.log("docu=>",doc)
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(doc.document_url);
+    await navigator.clipboard.writeText(doc.documenturl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -30,7 +32,7 @@ const DocumentRow = ({ doc }: { doc: { document_type: string; document_url: stri
   return (
     <div className="w-sm flex justify-between items-center p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
       <div className="flex items-center gap-3">
-        <span className="font-medium text-foreground">{doc.document_type}</span>
+        <span className="font-medium text-foreground">{doc.documenttype}</span>
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -40,7 +42,7 @@ const DocumentRow = ({ doc }: { doc: { document_type: string; document_url: stri
           className="h-8 px-3 text-xs font-medium"
         >
           <a
-            href={doc.document_url}
+            href={doc.documenturl}
             target="_blank"
             rel="noreferrer"
           >

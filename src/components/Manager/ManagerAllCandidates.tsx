@@ -92,11 +92,11 @@ const ManagerAllCandidates = ({
     const allDocs = candidate.documents || [];
 
     const resumeDoc = allDocs.find(
-      (doc) => doc.document_type?.toLowerCase() === "resume"
+      (doc) => doc.documenttype?.toLowerCase() === "resume"
     );
 
-    if (resumeDoc && resumeDoc.document_url) {
-      window.open(resumeDoc.document_url, "_blank");
+    if (resumeDoc && resumeDoc.documenturl) {
+      window.open(resumeDoc.documenturl, "_blank");
       toast.success("Opening resume in new tab...");
     } else {
       toast.error("No resume available for this candidate.");
@@ -106,7 +106,7 @@ const ManagerAllCandidates = ({
   // Check if resume exists for styling
   const hasResume = (candidate) => {
     const allDocs = candidate.documents || [];
-    return allDocs.some((doc) => doc.document_type?.toLowerCase() === "resume");
+    return allDocs.some((doc) => doc.documenttype?.toLowerCase() === "resume");
   };
 
   const hasActiveFilters =
@@ -598,14 +598,9 @@ const ManagerAllCandidates = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {allDocuments.map((doc) => {
                 const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(
-                  doc.document_url
+                  doc.documenturl
                 );
-                const isPDF = /\.pdf$/i.test(doc.document_url);
-                const pdfThumbUrl = isPDF
-                  ? doc.document_url
-                      .replace("/upload/", "/upload/pg_1/")
-                      .replace(/\.pdf$/i, ".jpg")
-                  : null;
+                const isPDF = /\.pdf$/i.test(doc.documenturl);
 
                 const isHiredDoc = candidateData?.hired_docs?.some(
                   (hiredDoc) => hiredDoc._id === doc._id
@@ -615,11 +610,11 @@ const ManagerAllCandidates = ({
                   <div
                     key={doc._id}
                     className="group relative border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800 cursor-pointer"
-                    onClick={() => window.open(doc.document_url, "_blank")}
+                    onClick={() => window.open(doc.documenturl, "_blank")}
                   >
                     {/* Document Type Badge */}
                     <div className="absolute top-2 left-2 z-20">
-                      {doc.document_type !== "resume" && (
+                      {doc.documenttype !== "resume" && (
                         <Badge
                           variant={isHiredDoc ? "default" : "secondary"}
                           className="text-xs shadow-sm"
@@ -631,7 +626,7 @@ const ManagerAllCandidates = ({
 
                     {/* Verification Status Badge */}
                     <div className="absolute top-2 right-2 z-20">
-                      {doc.document_type !== "resume" && (
+                      {doc.documenttype !== "resume" && (
                         <Badge
                           variant="outline"
                           className={`text-xs font-medium shadow-sm ${
@@ -662,7 +657,7 @@ const ManagerAllCandidates = ({
                           variant="secondary"
                           className="h-7 w-7 p-0 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-sm"
                           onClick={(e) =>
-                            copyToClipboard(doc.document_url, doc._id, e)
+                            copyToClipboard(doc.documenturl, doc._id, e)
                           }
                           title="Copy document link"
                         >
@@ -678,7 +673,7 @@ const ManagerAllCandidates = ({
                           className="h-7 w-7 p-0 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(doc.document_url, "_blank");
+                            window.open(doc.documenturl, "_blank");
                           }}
                           title="View document"
                         >
@@ -691,25 +686,23 @@ const ManagerAllCandidates = ({
                     <div className="h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                       {isImage ? (
                         <img
-                          src={doc.document_url}
-                          alt={doc.document_type}
+                          src={doc.documenturl}
+                          alt={doc.documenttype}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : isPDF ? (
-                        <img
-                          src={pdfThumbUrl}
-                          alt={`${doc.document_type} preview`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "https://via.placeholder.com/300x200?text=PDF+Preview+Not+Available";
-                          }}
-                        />
+    <div className="flex flex-col items-center justify-center text-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-red-900/20 dark:to-red-800/20 w-full h-full">
+    <FileText className="w-8 h-8 mb-1" />
+    <span className="text-xs text-center px-2 whitespace-normal break-words">
+      {doc.documenttype}
+    </span>
+    <span className="text-xs text-blue-500 mt-1">PDF Document</span>
+  </div>
                       ) : (
                         <div className="flex flex-col items-center text-gray-500 dark:text-gray-400">
                           <FileText className="w-8 h-8 mb-1" />
                           <span className="text-xs text-center px-2 whitespace-normal break-words">
-                            {doc.document_type}
+                            {doc.documenttype}
                           </span>
                         </div>
                       )}
@@ -718,12 +711,12 @@ const ManagerAllCandidates = ({
                     {/* Document Info */}
                     <div className="p-2">
                       <p className="text-xs font-medium capitalize truncate text-center whitespace-normal break-words text-gray-900 dark:text-gray-100">
-                        {doc.document_type}
+                        {doc.documenttype}
                       </p>
                       <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 mt-1">
                         <span className="whitespace-normal break-words text-center">
-                          {doc.uploaded_at
-                            ? formatDate(doc.uploaded_at)
+                          {doc.uploadedat
+                            ? formatDate(doc.uploadedat)
                             : "Click to view"}
                         </span>
                       </div>

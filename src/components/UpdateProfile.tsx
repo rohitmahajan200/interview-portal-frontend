@@ -349,7 +349,6 @@ export default function UpdateProfile({
         </div>
         </form>
       </FormProvider>
-      <Toaster position="top-center" />
     </div>
     <DocumentCRUD />
     <div className="w-10 flex justify-start items-center ml-14 mb-10">

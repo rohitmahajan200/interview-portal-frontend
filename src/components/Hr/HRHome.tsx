@@ -206,17 +206,17 @@ type Candidate = {
   __v: number;
   documents?: {
     _id: string;
-    document_type: string;
-    document_url: string;
+    documenttype: string;
+    documenturl: string;
     isVerified: boolean;
-    uploaded_at?: string;
+    uploadedat?: string;
   }[];
   hired_docs?: {
     _id: string;
-    document_type: string;
-    document_url: string;
+    documenttype: string;
+    documenturl: string;
     isVerified: boolean;
-    uploaded_at: string;
+    uploadedat: string;
   }[];
 
   // ADD THESE NEW FIELDS:

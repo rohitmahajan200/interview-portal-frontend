@@ -17,8 +17,21 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, CheckCircle2, X, Loader2, FileText, Download, GraduationCap, Building, CreditCard, Users, Camera, IndianRupee, Share2 } from "lucide-react";
-import { uploadToCloudinary } from "@/lib/clodinary";
+import {
+  Upload,
+  CheckCircle2,
+  X,
+  Loader2,
+  FileText,
+  Download,
+  GraduationCap,
+  Building,
+  CreditCard,
+  Users,
+  Camera,
+  IndianRupee,
+  Share2,
+} from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import api from "@/lib/api";
 
@@ -37,12 +50,16 @@ interface DocumentType {
   hasTemplate?: boolean;
 }
 
+// 🆕 UPDATED: Interface for uploaded document (now matches Multer response)
 interface UploadedDocument {
-  document_type: string;
-  document_url: string;
-  public_id: string;
-  file_name: string;
-  isVerified: boolean; // Added to match backend schema
+  _id?: string;
+  documenttype: string;
+  documenturl: string;
+  filename: string;
+  filepath: string;
+  mimetype: string;
+  size: number;
+  isVerified: boolean;
 }
 
 interface CompanyReference {
@@ -61,14 +78,14 @@ interface Organization {
 const EDUCATIONAL_DOCUMENTS: DocumentType[] = [
   {
     key: "ssc_certificate",
-    label: "SSC Certificate",
+    label: "Scholling Certificate 1",
     required: true,
     description: "Secondary School Certificate (10th standard)",
     hasTemplate: false,
   },
   {
     key: "hsc_certificate",
-    label: "HSC Certificate",
+    label: "Scholling Certificate 2",
     required: true,
     description: "Higher Secondary Certificate (12th standard)",
     hasTemplate: false,
@@ -77,14 +94,15 @@ const EDUCATIONAL_DOCUMENTS: DocumentType[] = [
     key: "graduation_certificate",
     label: "Bachelor's Degree Certificate",
     required: true,
-    description: "BSc/BA/BCom or equivalent degree certificate",
+    description: "B.E/BSc/BCA/BCom or equivalent degree certificate",
     hasTemplate: false,
   },
   {
     key: "post_graduation_certificate",
     label: "Master's Degree Certificate",
     required: false,
-    description: "MSc/MA/MCom or equivalent degree certificate (if applicable)",
+    description:
+      "M.E/MSc/MCA/MBA/MCom or equivalent degree certificate (if applicable)",
     hasTemplate: false,
   },
   {
@@ -189,28 +207,50 @@ const SOCIAL_MEDIA_HANDLES = [
 const DOWNLOAD_TEMPLATES: Record<string, { url: string; filename: string }> = {
   current_relieving_letter: {
     url: "/templates/relieving_letter_sample.pdf",
-    filename: "Relieving-Letter-Sample.pdf"
+    filename: "Relieving-Letter-Sample.pdf",
   },
   appointment_letter: {
     url: "/templates/appointment_letter_sample.pdf",
-    filename: "Appointment-Letter-Sample.pdf"
+    filename: "Appointment-Letter-Sample.pdf",
   },
   salary_slip_1: {
     url: "/templates/salary_slip_sample.pdf",
-    filename: "Salary-Slip-Sample.pdf"
+    filename: "Salary-Slip-Sample.pdf",
   },
   salary_slip_2: {
     url: "/templates/salary_slip_sample.pdf",
-    filename: "Salary-Slip-Sample.pdf"
+    filename: "Salary-Slip-Sample.pdf",
   },
   salary_slip_3: {
     url: "/templates/salary_slip_sample.pdf",
-    filename: "Salary-Slip-Sample.pdf"
+    filename: "Salary-Slip-Sample.pdf",
   },
   form_16: {
     url: "/templates/form_16_sample.pdf",
-    filename: "Form-16-Sample.pdf"
+    filename: "Form-16-Sample.pdf",
   },
+};
+
+// 🆕 UPDATED: File upload utility function using FormData (Multer)
+const uploadFileToServer = async (
+  file: File,
+  documentType: string
+): Promise<UploadedDocument> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("documenttype", documentType);
+
+  const response = await api.post("/candidates/documents", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || "Upload failed");
+  }
+
+  return response.data.document;
 };
 
 // Helper function to trigger file download
@@ -225,48 +265,87 @@ const triggerDownload = (url: string, filename: string) => {
   a.remove();
 };
 
+// 🆕 UPDATED: File validation
+const validateFile = (file: File): string | null => {
+  const allowedTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    return "Please upload PDF, JPG, PNG, DOC, or DOCX files only";
+  }
+
+  if (file.size > 20 * 1024 * 1024) {
+    // 20MB limit (matches Multer config)
+    return "File size must be less than 20MB";
+  }
+
+  return null;
+};
+
 const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   candidateId,
   onSubmissionComplete,
   isOpen,
   onClose,
 }) => {
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File | null>>({});
-  const [uploadingStates, setUploadingStates] = useState<Record<string, boolean>>({});
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, UploadedDocument>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<
+    Record<string, File | null>
+  >({});
+  const [uploadingStates, setUploadingStates] = useState<
+    Record<string, boolean>
+  >({});
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {}
+  );
+  const [uploadedDocuments, setUploadedDocuments] = useState<
+    Record<string, UploadedDocument>
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Organization data - Updated structure
-  const [organizations, setOrganizations] = useState<Organization[]>([{ name: '' }]);
+  const [organizations, setOrganizations] = useState<Organization[]>([
+    { name: "" },
+  ]);
 
   // Company references
-  const [companyReferences, setCompanyReferences] = useState<CompanyReference[]>([
-    { company_name: '', email: '', phone: '' },
-    { company_name: '', email: '', phone: '' }
+  const [companyReferences, setCompanyReferences] = useState<
+    CompanyReference[]
+  >([
+    { company_name: "", email: "", phone: "" },
+    { company_name: "", email: "", phone: "" },
   ]);
 
   // Social media handles
-  const [socialMediaHandles, setSocialMediaHandles] = useState<Record<string, string>>({});
+  const [socialMediaHandles, setSocialMediaHandles] = useState<
+    Record<string, string>
+  >({});
 
   const handleDialogClose = (open: boolean) => {
     if (!open && onClose) {
-      const hasUploadsInProgress = Object.values(uploadingStates).some((state) => state);
+      const hasUploadsInProgress = Object.values(uploadingStates).some(
+        (state) => state
+      );
       const hasUploadedDocuments = Object.keys(uploadedDocuments).length > 0;
-      
+
       if (hasUploadsInProgress) {
         toast.error("Please wait for all uploads to complete before closing.");
         return;
       }
-      
+
       if (hasUploadedDocuments) {
         const confirmClose = window.confirm(
           "You have uploaded documents but haven't submitted them yet. Are you sure you want to close?"
         );
         if (!confirmClose) return;
       }
-      
+
       onClose();
     }
   };
@@ -274,22 +353,10 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   const handleFileChange = (documentKey: string, file: File | null) => {
     if (!file) return;
 
-    const allowedTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please upload PDF, JPG, PNG, DOC, or DOCX files only");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB");
+    // 🆕 UPDATED: Use new validation function
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -309,6 +376,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     uploadFile(documentKey, file);
   };
 
+  // 🆕 UPDATED: Use Multer upload instead of Cloudinary
   const uploadFile = async (documentKey: string, file: File) => {
     setUploadingStates((prev) => ({ ...prev, [documentKey]: true }));
     setUploadProgress((prev) => ({ ...prev, [documentKey]: 0 }));
@@ -321,32 +389,25 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
         }));
       }, 300);
 
-      const result = await uploadToCloudinary(file, "documents");
+      // 🆕 UPDATED: Use Multer upload function
+      const result = await uploadFileToServer(file, documentKey);
 
       clearInterval(progressInterval);
       setUploadProgress((prev) => ({ ...prev, [documentKey]: 100 }));
 
-      const uploadedDoc: UploadedDocument = {
-        document_type: documentKey,
-        document_url: result.url,
-        public_id: result.publicId,
-        file_name: file.name,
-        isVerified: false, // **Added to match backend schema**
-      };
-
       // Handle organization documents differently
-      if (documentKey.startsWith('org_')) {
-        const parts = documentKey.split('_');
+      if (documentKey.startsWith("org_")) {
+        const parts = documentKey.split("_");
         const orgIndex = parseInt(parts[1]);
         const docType = parts[2]; // 'appointment' or 'relieving'
-        
+
         // Update the organizations array with the document URL
-        setOrganizations(prev => {
+        setOrganizations((prev) => {
           const newOrgs = [...prev];
-          if (docType === 'appointment') {
-            newOrgs[orgIndex].appointment_letter = result.url;
-          } else if (docType === 'relieving') {
-            newOrgs[orgIndex].relieving_letter = result.url;
+          if (docType === "appointment") {
+            newOrgs[orgIndex].appointment_letter = result.documenturl;
+          } else if (docType === "relieving") {
+            newOrgs[orgIndex].relieving_letter = result.documenturl;
           }
           return newOrgs;
         });
@@ -354,14 +415,14 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
         // Handle regular documents
         setUploadedDocuments((prev) => ({
           ...prev,
-          [documentKey]: uploadedDoc,
+          [documentKey]: result,
         }));
       }
 
       toast.success(`${file.name} uploaded successfully`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error(error.message);
+      toast.error(error.message || "Upload failed");
 
       setUploadedFiles((prev) => {
         const newFiles = { ...prev };
@@ -380,17 +441,17 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       return newFiles;
     });
 
-    if (documentKey.startsWith('org_')) {
-      const parts = documentKey.split('_');
+    if (documentKey.startsWith("org_")) {
+      const parts = documentKey.split("_");
       const orgIndex = parseInt(parts[1]);
       const docType = parts[2];
-      
+
       // Remove the document URL from organizations
-      setOrganizations(prev => {
+      setOrganizations((prev) => {
         const newOrgs = [...prev];
-        if (docType === 'appointment') {
+        if (docType === "appointment") {
           delete newOrgs[orgIndex].appointment_letter;
-        } else if (docType === 'relieving') {
+        } else if (docType === "relieving") {
           delete newOrgs[orgIndex].relieving_letter;
         }
         return newOrgs;
@@ -413,16 +474,16 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   };
 
   const addOrganization = () => {
-    setOrganizations([...organizations, { name: '' }]);
+    setOrganizations([...organizations, { name: "" }]);
   };
 
   const removeOrganization = (index: number) => {
     if (organizations.length > 1) {
       const newOrgs = organizations.filter((_, i) => i !== index);
       setOrganizations(newOrgs);
-      
+
       // Clean up any uploaded files for this organization
-      Object.keys(uploadedFiles).forEach(key => {
+      Object.keys(uploadedFiles).forEach((key) => {
         if (key.startsWith(`org_${index}_`)) {
           removeFile(key);
         }
@@ -436,7 +497,11 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     setOrganizations(newOrgs);
   };
 
-  const updateCompanyReference = (index: number, field: keyof CompanyReference, value: string) => {
+  const updateCompanyReference = (
+    index: number,
+    field: keyof CompanyReference,
+    value: string
+  ) => {
     const newRefs = [...companyReferences];
     newRefs[index][field] = value;
     setCompanyReferences(newRefs);
@@ -452,9 +517,10 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
   const validateFiles = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // **Updated validation - only validate if documents are provided**
     // Educational documents validation (only if any are uploaded)
-    const hasEducationalDocs = EDUCATIONAL_DOCUMENTS.some(doc => uploadedDocuments[doc.key]);
+    const hasEducationalDocs = EDUCATIONAL_DOCUMENTS.some(
+      (doc) => uploadedDocuments[doc.key]
+    );
     if (hasEducationalDocs) {
       EDUCATIONAL_DOCUMENTS.forEach((doc) => {
         if (doc.required && !uploadedDocuments[doc.key]) {
@@ -464,7 +530,9 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     }
 
     // Identity documents validation (only if any are uploaded)
-    const hasIdentityDocs = IDENTITY_DOCUMENTS.some(doc => uploadedDocuments[doc.key]);
+    const hasIdentityDocs = IDENTITY_DOCUMENTS.some(
+      (doc) => uploadedDocuments[doc.key]
+    );
     if (hasIdentityDocs) {
       IDENTITY_DOCUMENTS.forEach((doc) => {
         if (doc.required && !uploadedDocuments[doc.key]) {
@@ -474,7 +542,9 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     }
 
     // Photo validation (only if any are uploaded)
-    const hasPhotoDocs = PHOTO_DOCUMENTS.some(doc => uploadedDocuments[doc.key]);
+    const hasPhotoDocs = PHOTO_DOCUMENTS.some(
+      (doc) => uploadedDocuments[doc.key]
+    );
     if (hasPhotoDocs) {
       PHOTO_DOCUMENTS.forEach((doc) => {
         if (doc.required && !uploadedDocuments[doc.key]) {
@@ -488,7 +558,9 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       if (org.name.trim()) {
         // If organization name is provided, it must have at least one document
         if (!org.appointment_letter && !org.relieving_letter) {
-          newErrors[`org_${index}`] = `Organization ${index + 1}: At least one document (appointment or relieving letter) is required when organization name is provided`;
+          newErrors[`org_${index}`] = `Organization ${
+            index + 1
+          }: At least one document (appointment or relieving letter) is required when organization name is provided`;
         }
       }
     });
@@ -497,11 +569,14 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  // In your DocumentUploadForm component, update the handleSubmit function:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateFiles()) {
-      toast.error("Please complete all required fields and upload all required documents");
+      toast.error(
+        "Please complete all required fields and upload all required documents"
+      );
       return;
     }
 
@@ -513,70 +588,81 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      // **Updated payload to match backend schema exactly**
-      
-      // Prepare documents array (only include if there are documents)
-      const documents = Object.values(uploadedDocuments).length > 0 
-        ? Object.values(uploadedDocuments).map(doc => ({
-            document_type: doc.document_type,
-            document_url: doc.document_url,
-            public_id: doc.public_id,
-            isVerified: doc.isVerified, // **Required by backend schema**
-            file_name: doc.file_name || undefined, // Optional field
-          }))
-        : undefined;
+      // Documents are already uploaded individually, just send the metadata
+      const documents =
+        Object.values(uploadedDocuments).length > 0
+          ? Object.values(uploadedDocuments).map((doc) => ({
+              documenttype: doc.documenttype,
+              documenturl: doc.documenturl,
+              filename: doc.filename,
+              filepath: doc.filepath,
+              mimetype: doc.mimetype,
+              size: doc.size,
+              isVerified: doc.isVerified || false,
+            }))
+          : undefined;
 
-      // Prepare organizations array (only include organizations with names)
+      // Prepare organizations array
       const validOrganizations = organizations
-        .filter(org => org.name.trim()) // Only include if name is provided
-        .map(org => ({
+        .filter((org) => org.name.trim())
+        .map((org) => ({
           name: org.name.trim(),
           appointment_letter: org.appointment_letter || undefined,
-          relieving_letter: org.relieving_letter || undefined
+          relieving_letter: org.relieving_letter || undefined,
         }));
 
-      // Prepare company references (only include if any field has content)
+      // Prepare company references
       const validCompanyReferences = companyReferences
-        .filter(ref => ref.company_name.trim() || ref.email.trim() || ref.phone.trim())
-        .map(ref => ({
+        .filter(
+          (ref) =>
+            ref.company_name.trim() || ref.email.trim() || ref.phone.trim()
+        )
+        .map((ref) => ({
           company_name: ref.company_name.trim() || undefined,
           email: ref.email.trim() || undefined,
-          phone: ref.phone.trim() || undefined
+          phone: ref.phone.trim() || undefined,
         }));
 
-      // Prepare social media handles (only include if any have content)
+      // Prepare social media handles
       const validSocialMediaHandles = Object.fromEntries(
         Object.entries(socialMediaHandles)
           .filter(([key, value]) => value?.trim())
           .map(([key, value]) => [key, value.trim()])
       );
 
-      // **Final payload matching backend schema**
-      const payload: any = {
-        organizations: validOrganizations, // Always include (defaults to [] in schema)
-      };
+      const payload: any = {};
 
-      // Only include optional fields if they have content
+      // Only include fields that have content
       if (documents && documents.length > 0) {
         payload.documents = documents;
       }
 
+      if (validOrganizations.length > 0) {
+        payload.organizations = validOrganizations;
+      }
+
       if (validCompanyReferences.length > 0) {
-        payload.company_references = validCompanyReferences;
+        payload.companyreferences = validCompanyReferences;
       }
 
       if (Object.keys(validSocialMediaHandles).length > 0) {
-        payload.social_media_handles = validSocialMediaHandles;
+        payload.socialmediahandles = validSocialMediaHandles;
       }
 
-      console.log("Submitting payload:", payload); // Debug log
+      console.log("📤 Submitting payload:", payload);
 
+      // 🆕 UPDATED: Send as JSON, not FormData
       const response = await api.post(
-        `/candidates/${candidateId}/hired_docs`,
-        payload
+        `/candidates/${candidateId}/hired-docs`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json", // ✅ JSON instead of multipart
+          },
+        }
       );
 
-      if (response.status === 200 || response.status === 201) {
+      if (response.data.success) {
         toast.success(
           "All documents submitted successfully! Welcome to the team! 🎉"
         );
@@ -584,32 +670,24 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
       }
     } catch (error: any) {
       console.error("Error submitting documents:", error);
-      
-      // **Enhanced error handling for validation errors**
-      if (error?.response?.status === 400 && error?.response?.data?.errors) {
-        const validationErrors = error.response.data.errors;
-        const errorMessages = validationErrors.map((err: any) => err.message).join(", ");
-        toast.error(`Validation Error: ${errorMessages}`);
-      } else {
-        toast.error(
-          error?.response?.data?.message ||
-            "Failed to submit documents. Please try again."
-        );
-      }
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to submit documents. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Rest of your existing render methods remain the same...
-  const renderDocumentSection = (documents: DocumentType[], title: string, icon: React.ReactNode, bgColor: string) => (
-    // Your existing renderDocumentSection implementation
-    
+  const renderDocumentSection = (
+    documents: DocumentType[],
+    title: string,
+    icon: React.ReactNode,
+    bgColor: string
+  ) => (
     <Card className={`${bgColor} border-2`}>
-      <Toaster
-  position="top-center"
-  reverseOrder={false}
-/>
+      <Toaster position="top-center" reverseOrder={false} />
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           {icon}
@@ -662,10 +740,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                       onChange={(e) =>
-                        handleFileChange(
-                          doc.key,
-                          e.target.files?.[0] || null
-                        )
+                        handleFileChange(doc.key, e.target.files?.[0] || null)
                       }
                       className="hidden"
                       id={`file-${doc.key}`}
@@ -680,7 +755,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                         Click to upload
                       </span>
                       <span className="text-xs text-gray-500">
-                        PDF, JPG, PNG, DOC, DOCX (Max 10MB)
+                        PDF, JPG, PNG, DOC, DOCX (Max 20MB)
                       </span>
                     </Label>
                   </div>
@@ -708,10 +783,14 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                         <CheckCircle2 className="w-4 h-4 text-green-600" />
                         <div className="flex-1">
                           <p className="text-xs font-medium text-green-700 truncate">
-                            {uploadedFiles[doc.key]?.name}
+                            {uploadedDocuments[doc.key].filename}
                           </p>
                           <p className="text-xs text-green-600">
-                            Uploaded successfully
+                            Uploaded successfully (
+                            {(uploadedDocuments[doc.key].size / 1024).toFixed(
+                              1
+                            )}{" "}
+                            KB)
                           </p>
                         </div>
                         <Button
@@ -765,8 +844,9 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             Congratulations! Welcome to Our Team!
           </DialogTitle>
           <DialogDescription className="text-lg text-gray-700">
-            You have been successfully hired! To complete your onboarding process, 
-            please upload the following documents organized by category. 
+            You have been successfully hired! To complete your onboarding
+            process, please upload the following documents organized by
+            category.
           </DialogDescription>
         </DialogHeader>
 
@@ -810,7 +890,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                     Add Organization
                   </Button>
                 </div>
-                
+
                 {organizations.map((org, index) => (
                   <Card key={index} className="bg-white border">
                     <CardHeader className="pb-3">
@@ -833,18 +913,23 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div>
-                        <Label htmlFor={`org-name-${index}`} className="text-sm">
+                        <Label
+                          htmlFor={`org-name-${index}`}
+                          className="text-sm"
+                        >
                           Organization Name
                         </Label>
                         <Input
                           id={`org-name-${index}`}
                           value={org.name}
-                          onChange={(e) => updateOrganizationName(index, e.target.value)}
+                          onChange={(e) =>
+                            updateOrganizationName(index, e.target.value)
+                          }
                           placeholder="Enter organization name"
                           disabled={isSubmitting}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Appointment Letter */}
                         <div className="space-y-2">
@@ -862,7 +947,10 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                                 }
                                 className="hidden"
                                 id={`org-appointment-${index}`}
-                                disabled={uploadingStates[`org_${index}_appointment`] || isSubmitting}
+                                disabled={
+                                  uploadingStates[`org_${index}_appointment`] ||
+                                  isSubmitting
+                                }
                               />
                               <Label
                                 htmlFor={`org-appointment-${index}`}
@@ -878,13 +966,16 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                             <div className="p-2 bg-green-50 rounded-lg flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-green-600" />
                               <span className="text-xs text-green-700 flex-1 truncate">
-                                {uploadedFiles[`org_${index}_appointment`]?.name || "Document uploaded"}
+                                {uploadedFiles[`org_${index}_appointment`]
+                                  ?.name || "Document uploaded"}
                               </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => removeFile(`org_${index}_appointment`)}
+                                onClick={() =>
+                                  removeFile(`org_${index}_appointment`)
+                                }
                                 disabled={isSubmitting}
                               >
                                 <X className="w-3 h-3" />
@@ -909,7 +1000,10 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                                 }
                                 className="hidden"
                                 id={`org-relieving-${index}`}
-                                disabled={uploadingStates[`org_${index}_relieving`] || isSubmitting}
+                                disabled={
+                                  uploadingStates[`org_${index}_relieving`] ||
+                                  isSubmitting
+                                }
                               />
                               <Label
                                 htmlFor={`org-relieving-${index}`}
@@ -925,13 +1019,16 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                             <div className="p-2 bg-green-50 rounded-lg flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-green-600" />
                               <span className="text-xs text-green-700 flex-1 truncate">
-                                {uploadedFiles[`org_${index}_relieving`]?.name || "Document uploaded"}
+                                {uploadedFiles[`org_${index}_relieving`]
+                                  ?.name || "Document uploaded"}
                               </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => removeFile(`org_${index}_relieving`)}
+                                onClick={() =>
+                                  removeFile(`org_${index}_relieving`)
+                                }
                                 disabled={isSubmitting}
                               >
                                 <X className="w-3 h-3" />
@@ -940,10 +1037,12 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Error display for organizations */}
                       {errors[`org_${index}`] && (
-                        <p className="text-red-500 text-xs mt-2">{errors[`org_${index}`]}</p>
+                        <p className="text-red-500 text-xs mt-2">
+                          {errors[`org_${index}`]}
+                        </p>
                       )}
                     </CardContent>
                   </Card>
@@ -967,7 +1066,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
             <CreditCard className="w-5 h-5" />,
             "bg-orange-50 border-orange-200"
           )}
-          
+
           {/* Company References Section */}
           <Card className="bg-yellow-50 border-yellow-200 border-2">
             <CardHeader>
@@ -976,21 +1075,30 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                 Company References (Optional)
               </CardTitle>
               <CardDescription>
-                Provide contact details for verification from your previous companies
+                Provide contact details for verification from your previous
+                companies
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {companyReferences.map((ref, index) => (
                 <Card key={index} className="bg-white border">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Company Reference {index + 1}</CardTitle>
+                    <CardTitle className="text-sm">
+                      Company Reference {index + 1}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
                       <Label className="text-sm">Company Name</Label>
                       <Input
                         value={ref.company_name}
-                        onChange={(e) => updateCompanyReference(index, 'company_name', e.target.value)}
+                        onChange={(e) =>
+                          updateCompanyReference(
+                            index,
+                            "company_name",
+                            e.target.value
+                          )
+                        }
                         placeholder="Enter company name"
                         disabled={isSubmitting}
                       />
@@ -1001,7 +1109,13 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                         <Input
                           type="email"
                           value={ref.email}
-                          onChange={(e) => updateCompanyReference(index, 'email', e.target.value)}
+                          onChange={(e) =>
+                            updateCompanyReference(
+                              index,
+                              "email",
+                              e.target.value
+                            )
+                          }
                           placeholder="contact@company.com"
                           disabled={isSubmitting}
                         />
@@ -1010,14 +1124,22 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                         <Label className="text-sm">Phone/Landline</Label>
                         <Input
                           value={ref.phone}
-                          onChange={(e) => updateCompanyReference(index, 'phone', e.target.value)}
+                          onChange={(e) =>
+                            updateCompanyReference(
+                              index,
+                              "phone",
+                              e.target.value
+                            )
+                          }
                           placeholder="Phone or landline number"
                           disabled={isSubmitting}
                         />
                       </div>
                     </div>
                     {errors[`reference_${index}`] && (
-                      <p className="text-red-500 text-xs">{errors[`reference_${index}`]}</p>
+                      <p className="text-red-500 text-xs">
+                        {errors[`reference_${index}`]}
+                      </p>
                     )}
                   </CardContent>
                 </Card>
@@ -1033,14 +1155,18 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                 Social Media Handles (Optional)
               </CardTitle>
               <CardDescription className="text-indigo-700">
-                Provide your social media handles for background verification if desired.
+                Provide your social media handles for background verification if
+                desired.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {SOCIAL_MEDIA_HANDLES.map((platform) => (
                   <div key={platform.key} className="space-y-2">
-                    <Label htmlFor={platform.key} className="text-sm font-medium">
+                    <Label
+                      htmlFor={platform.key}
+                      className="text-sm font-medium"
+                    >
                       {platform.label}:
                     </Label>
                     <Input
@@ -1048,7 +1174,9 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                       type="text"
                       placeholder={`Enter your ${platform.label} handle/profile`}
                       value={socialMediaHandles[platform.key] || ""}
-                      onChange={(e) => handleSocialMediaChange(platform.key, e.target.value)}
+                      onChange={(e) =>
+                        handleSocialMediaChange(platform.key, e.target.value)
+                      }
                       className="bg-white"
                       disabled={isSubmitting}
                     />
@@ -1076,12 +1204,23 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                     Instructions:
                   </h3>
                   <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-                    <li>All files must be in PDF, JPG, PNG, DOC, or DOCX format</li>
-                    <li>Maximum file size: 5MB per file</li>
-                    <li>If you upload documents in a section, complete all required fields in that section</li>
+                    <li>
+                      All files must be in PDF, JPG, PNG, DOC, or DOCX format
+                    </li>
+                    <li>Maximum file size: 20MB per file</li>
+                    <li>
+                      If you upload documents in a section, complete all
+                      required fields in that section
+                    </li>
                     <li>Ensure all documents are clear and readable</li>
-                    <li>Use the "Sample" buttons to download template formats where available</li>
-                    <li>You can submit the form even without uploading any documents</li>
+                    <li>
+                      Use the "Sample" buttons to download template formats
+                      where available
+                    </li>
+                    <li>
+                      You can submit the form even without uploading any
+                      documents
+                    </li>
                   </ul>
                 </div>
               </div>
