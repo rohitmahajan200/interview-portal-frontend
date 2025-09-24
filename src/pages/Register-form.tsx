@@ -51,8 +51,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 type Job = {
   _id: string;
-  name: string;
-  jobPortalId?: string; // Add this optional field
+  title: string;
 };
 
 type HRQuestion = {
@@ -144,9 +143,9 @@ export default function RegisterForm({
         if (urlJobId) {
           setJobIdFromUrl(urlJobId);
           
-          // Check if the jobId exists in the fetched jobs (check both _id and jobPortalId)
+          // Check if the jobId exists in the fetched jobs
           const matchingJob = fetchedJobs.find((job: Job) => 
-            job._id === urlJobId || job.jobPortalId === urlJobId
+            job._id === urlJobId
           );
           
           if (matchingJob) {
@@ -154,7 +153,7 @@ export default function RegisterForm({
             setValue("applied_job", matchingJob._id, { shouldValidate: true });
             
             // Show success toast
-            toast.success(`🎯 Auto-applying for: ${matchingJob.name}`, {
+            toast.success(`🎯 Auto-applying for: ${matchingJob.title}`, {
               duration: 4000,
               style: {
                 background: '#10B981',
@@ -886,16 +885,16 @@ case "checkbox": {
                           aria-expanded={open}
                           className={`w-[300px] justify-between ${
                             jobIdFromUrl && selectedJobId && 
-                            jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job.jobPortalId === jobIdFromUrl))
+                            jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job._id === jobIdFromUrl))
                               ? 'border-green-500 bg-green-500/10' : ''
                           }`}
                           type="button"
                         >
                           {selectedJobId
                             ? `${jobIdFromUrl && 
-                                jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job.jobPortalId === jobIdFromUrl))
+                                jobs.find(job => job._id === selectedJobId && (job._id === jobIdFromUrl || job._id === jobIdFromUrl))
                                   ? '🎯 ' : ''}${
-                                  jobs.find((r) => r._id === selectedJobId)?.name
+                                  jobs.find((r) => r._id === selectedJobId)?.title
                                 }`
                             : loadingJobs
                               ? "Loading..."
@@ -919,7 +918,7 @@ case "checkbox": {
                                     setOpen(false);
                                   }}
                                 >
-                                  {job.name}
+                                  {job.title}
                                   <Check
                                     className={cn(
                                       "ml-auto",

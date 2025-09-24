@@ -12,11 +12,13 @@ export interface AnalyticsOverview {
 export interface StageDistribution {
   stage: string;
   count: number;
+  [key: string]: unknown; // Add index signature
 }
 
 export interface StatusDistribution {
   status: string;
   count: number;
+  [key: string]: unknown; // Add index signature
 }
 
 export interface DashboardAnalytics {
@@ -54,6 +56,7 @@ export interface AssessmentStats {
   status: string;
   count: number;
   avgDuration: number;
+  [key: string]: unknown; // Add index signature
 }
 
 export interface ScoreAnalysis {
@@ -74,6 +77,7 @@ export interface InterviewTypeStats {
 export interface InterviewFormatStats {
   format: string;
   count: number;
+  [key: string]: unknown; // Add index signature
 }
 
 export interface UpcomingInterview {

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "serve -s dist -l 5173",
     "lint": "eslint .",
     "preview": "vite preview",
     "generate:icons": "node scripts/generate-icons.js"
