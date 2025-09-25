@@ -49,6 +49,7 @@ interface Job {
   _id: string;
   name: string;
   description?: string;
+  title?:string;
 }
 
 interface Candidate {
@@ -271,7 +272,7 @@ const UnifiedAssignmentDashboard = () => {
         if (response.data.success) {
           totalAssigned += response.data.data?.assignedCandidates?.length || 0;
           jobNames.push(
-            jobs.find((job) => job._id === selectedJobs[index])?.name ||
+            jobs.find((job) => job._id === selectedJobs[index])?.title ||
               "Unknown Job"
           );
         }
@@ -705,8 +706,38 @@ const UnifiedAssignmentDashboard = () => {
                           <X className="h-4 w-4 mr-2 flex-shrink-0" />
                           <span className="truncate">Clear Selection</span>
                         </Button>
+
+                        
+                    {/* Assignment Button */}
+                    <Button
+                      onClick={handleInvigilatorAssignment}
+                      disabled={
+                        isAssigningToInvigilator ||
+                        !selectedInvigilator ||
+                        (selectedJobs || []).length === 0
+                      }
+                      className="w-full sm:w-auto sm:min-w-[220px]"
+                    >
+                      {isAssigningToInvigilator ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                          <span className="truncate">Assigning...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">Assign to {(selectedJobs || []).length} Job(s)</span>
+                        </>
+                      )}
+                    </Button>
+
+
                       </div>
                     </div>
+
+                  
+
+
                   </div>
 
                   {/* Candidate Selection */}
@@ -918,7 +949,7 @@ const UnifiedAssignmentDashboard = () => {
                     </div>
 
                     {/* Jobs List */}
-                    <div className="max-h-48 sm:max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 sm:p-4">
+                    <div className="space-y-2 border rounded-lg p-3 sm:p-4">
                       {jobs.length === 0 ? (
                         <div className="text-center py-6 sm:py-8">
                           <Briefcase className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
@@ -940,7 +971,7 @@ const UnifiedAssignmentDashboard = () => {
                               className="flex-shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm sm:text-base truncate">{job.name}</p>
+                              <p className="font-medium text-sm sm:text-base truncate">{job.title}</p>
                             </div>
                           </div>
                         ))
@@ -1003,31 +1034,6 @@ const UnifiedAssignmentDashboard = () => {
                         </p>
                       </div>
                     )}
-
-                  {/* Assignment Button */}
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleInvigilatorAssignment}
-                      disabled={
-                        isAssigningToInvigilator ||
-                        !selectedInvigilator ||
-                        (selectedJobs || []).length === 0
-                      }
-                      className="w-full sm:w-auto sm:min-w-[220px]"
-                    >
-                      {isAssigningToInvigilator ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
-                          <span className="truncate">Assigning...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">Assign to {(selectedJobs || []).length} Job(s)</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
               </TabsContent>
 

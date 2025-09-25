@@ -92,8 +92,8 @@ export default function UpdateProfile({
     setUploading(true);
 
     // File size validation
-    if (file.size > 5 * 1024 * 1024) { // 5 MB
-      toast.error("File size should not exceed 5 MB");
+    if (file.size > 1 * 1024 * 1024) { // 1 MB
+      toast.error("File size should not exceed 1 MB");
       setUploading(false);
       return;
     }
@@ -200,7 +200,7 @@ export default function UpdateProfile({
 
   return (
     <>
-      <div className="px-4 py-10 sm:px-6 lg:px-8 max-w-4xl m-10">
+      <div className="px-4 py-0 sm:px-6 lg:px-8 max-w-4xl m-10">
         <h1 className="text-2xl font-semibold mb-6">Update Profile</h1>
         
         <FormProvider {...form}>

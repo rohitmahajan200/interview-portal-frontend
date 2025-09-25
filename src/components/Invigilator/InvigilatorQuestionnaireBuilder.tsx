@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Edit, Trash, Search,Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // Replace the existing schemas with these updated ones
 const assessmentSchema = z.object({
@@ -63,14 +63,14 @@ interface Candidate {
   applied_job?: {
     _id: string;
     name: string;
-    description: {
-      time: string;
-      country: string;
-      location: string;
-      expInYears: string;
-      salary: string;
-      jobId: string;
-    };
+    description?:string; 
+      time?: string;
+      country?: string;
+      location?: string;
+      expInYears?: string;
+      salary?: string;
+      jobId?: string;
+      title?:string;
   };
 }
 
@@ -487,9 +487,7 @@ const AssessmentManagement = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Toaster position="bottom-right" />
-      
+    <div className="container mx-auto p-6 space-y-6">      
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div className="text-center md:text-left">
@@ -761,7 +759,7 @@ const AssessmentManagement = () => {
                                   return (
                                     <SelectItem key={job._id} value={job._id}>
                                       <div className="flex items-center justify-between w-full">
-                                        <span>{job.name}</span>
+                                        <span>{job.title}</span>
                                         <Badge variant="secondary" className="ml-2 text-xs">
                                           {candidateCount} candidates
                                         </Badge>
@@ -806,7 +804,7 @@ const AssessmentManagement = () => {
                               <div className="flex items-center gap-2">
                                 <CheckCircle2 className="w-4 h-4 text-green-600" />
                                 <span className="text-sm text-green-700 dark:text-green-300">
-                                  Auto-selected candidates for: {getUniqueJobs().find(j => j._id === selectedJobForAutoSelect)?.name}
+                                  Auto-selected candidates for: {getUniqueJobs().find(j => j._id === selectedJobForAutoSelect)?.title}
                                 </span>
                               </div>
                             </div>
@@ -858,7 +856,7 @@ const AssessmentManagement = () => {
                                         {candidate.applied_job && (
                                           <div className="flex items-center gap-2 mt-1">
                                             <Badge variant="outline" className="text-xs">
-                                              {candidate.applied_job.name}
+                                              {candidate.applied_job.title}
                                             </Badge>
                                             {isJobMatch && (
                                               <Badge variant="default" className="text-xs bg-blue-600">

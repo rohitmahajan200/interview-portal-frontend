@@ -1579,9 +1579,7 @@ const AssessmentReview = () => {
                   <option value="">Select Stage</option>
                   <option value="hr">HR</option>
                   <option value="assessment">Assessment</option>
-                  <option value="tech">Technical</option>
                   <option value="manager">Manager Review</option>
-                  <option value="feedback">Final Feedback</option>
                 </select>
               </div>
 

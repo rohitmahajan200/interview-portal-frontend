@@ -18,12 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Users,
-  Clock,
-  Video,
-  TrendingUp,
-} from "lucide-react";
+import { Users, Clock, Video, TrendingUp } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import { useSelector } from "react-redux";
@@ -33,246 +28,14 @@ import type { RootState } from "@/app/store";
 import ManagerStage from "./ManagerStage";
 import ManagerAllCandidates from "./ManagerAllCandidates";
 
-interface CandidateDocument {
-  _id: string;
-  document_type: string;
-  document_url: string;
-  isVerified: boolean;
-  uploaded_at?: string; // Optional for consistency with other components
-}
-interface InterviewType {
-  _id: string;
-  title?: string;
-  status: string;
-  scheduled_at?: string;
-  type?: string;
-  platform?: string;
-  meeting_link?: string;
-  canJoinMeeting?: boolean;
-  interviewers?: Array<{
-    _id: string;
-    name: string;
-  }>;
-  remarks?: Array<{
-    provider: {
-      name: string;
-    };
-    remark: string;
-    created_at: string;
-  }>;
-}
+import type { 
+  ManagerCandidate, 
+  DetailedCandidate, 
+  CandidateDocument,
+  InterviewType 
+} from "@/types/candidate";
 
-
-interface ManagerCandidate {
-  _id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  date_of_birth: string;
-  gender: "male" | "female" | "other";
-  address: string;
-  current_stage: string;
-  status: string;
-  glory?: { [role: string]: {
-    graderId?: string;
-    graderName?: string;
-    graderRole: 'hr' | 'manager' | 'invigilator' | 'admin';
-    grades: { [parameter: string]: string };
-    gradedAt: string;
-  }};
-  applied_job?: {
-    _id: string;
-    name: string;
-    description?: {
-      time?: string;
-      country?: string;
-      location?: string;
-      expInYears?: string;
-      salary?: string;
-      jobId?: string;
-    };
-    gradingParameters: string[];
-  };
-  profile_photo_url?: {
-    url: string;
-    publicId: string;
-    _id: string;
-  };
-  portfolio_url?: string | null;
-  documents?: CandidateDocument[];
-  hired_docs?: CandidateDocument[];
-  assessments?: Array<{
-    _id: string;
-    assigned_by: {
-      _id: string;
-      name: string;
-      role: string;
-    };
-    due_at: string;
-    status: string;
-  }>;
-  hrQuestionnaire?: string[];
-  interviews?: InterviewType[];
-  default_hr_responses?: Array<{
-    question_text: string;
-    response: string;
-    input_type: string;
-    _id: string;
-  }>;
-  stage_history?: string[];
-  internal_feedback?: Array<{
-    feedback_by: {
-      _id: string;
-      name: string;
-      role: string;
-    };
-    feedback: string;
-    _id: string;
-    feedback_at: string;
-  }>;
-  shortlisted: boolean;
-  email_verified: boolean;
-  flagged_for_deletion: boolean;
-  assigned_manager: boolean;
-  registration_date: string;
-  createdAt: string;
-  updatedAt: string;
-  last_login?: string;
-  __v: number;
-  progress_metrics?: {
-    stages_completed: number;
-    total_assessments: number;
-    completed_interviews: number;
-    pending_interviews: number;
-    documents_uploaded: number;
-    feedback_count: number;
-    hr_questionnaire_completed: boolean;
-    current_stage_duration: number;
-  };
-}
-
-interface DetailedCandidate {
-  _id: string;
-  name: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  date_of_birth: string;
-  gender: "male" | "female" | "other";
-  address: string;
-  current_stage: string;
-  status: string;
-  applied_job?: {
-    _id: string;
-    name: string;
-    description?: {
-      time?: string;
-      country?: string;
-      location?: string;
-      expInYears?: string;
-      salary?: string;
-      jobId?: string;
-    };
-    gradingParameters: string[];
-  };
-  
-  profile_photo_url?: {
-    url: string;
-    publicId: string;
-    _id: string;
-  };
-  portfolio_url?: string | null;
-  documents: CandidateDocument[];
-  hired_docs: CandidateDocument[];
-  hrQuestionnaire: Array<{
-    _id: string;
-    assigned_by: {
-      _id: string;
-      name: string;
-      role: string;
-    };
-    due_at: string;
-    status: string;
-  }>;
-  stage_history: Array<{
-    _id: string;
-    from_stage?: string;
-    to_stage: string;
-    changed_by?: string;
-    action: string;
-    remarks: string;
-    changed_at: string;
-  }>;
-  interviews: Array<{
-    _id: string;
-    title?: string;
-    status: string;
-    scheduled_at?: string;
-    type?: string;
-    platform?: string;
-    meeting_link?: string;
-    canJoinMeeting?: boolean;
-    interviewers?: Array<{
-      _id: string;
-      name: string;
-    }>;
-    remarks?: Array<{
-      provider: {
-        name: string;
-      };
-      remark: string;
-      created_at: string;
-    }>;
-  }>;
-  assessments?: Array<{
-    _id: string;
-    assigned_by: {
-      _id: string;
-      name: string;
-      role: string;
-    };
-    due_at: string;
-    status: string;
-  }>;
-  default_hr_responses?: Array<{
-    question_text: string;
-    response: string;
-    input_type: string;
-    _id: string;
-  }>;
-  internal_feedback?: Array<{
-    feedback_by: {
-      _id: string;
-      name: string;
-      role: string;
-    };
-    feedback: string;
-    _id: string;
-    feedback_at: string;
-  }>;
-  shortlisted: boolean;
-  email_verified: boolean;
-  flagged_for_deletion: boolean;
-  assigned_manager: boolean;
-  registration_date: string;
-  createdAt: string;
-  updatedAt: string;
-  last_login?: string;
-  __v: number;
-  progress_metrics?: {
-    stages_completed: number;
-    total_assessments: number;
-    completed_interviews: number;
-    pending_interviews: number;
-    documents_uploaded: number;
-    feedback_count: number;
-    hr_questionnaire_completed: boolean;
-    current_stage_duration: number;
-  };
-}
-
+// Remove all the local interface definitions and replace with:
 interface ManagerStats {
   total_candidates: number;
   active_candidates: number;
@@ -295,17 +58,19 @@ const ManagerDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<string>("manager-stage");
-  
+
   // New states for detailed candidate data
-  const [detailedCandidates, setDetailedCandidates] = useState<Record<string, DetailedCandidate>>({});
+  const [detailedCandidates, setDetailedCandidates] = useState<
+    Record<string, DetailedCandidate>
+  >({});
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
-  
+
   // Filter states for tracking view
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [gloryFilter, setGloryFilter] = useState<string>("all");
-  
+
   const [stats, setStats] = useState<ManagerStats>({
     total_candidates: 0,
     active_candidates: 0,
@@ -332,112 +97,172 @@ const ManagerDashboard: React.FC = () => {
 
   // Calculate progress metrics for each candidate
   const calculateProgressMetrics = (candidate: ManagerCandidate) => {
-    const stageOrder = ["registered", "hr", "assessment", "tech", "manager", "feedback"];
+    const stageOrder = [
+      "registered",
+      "hr",
+      "assessment",
+      "tech",
+      "manager",
+      "feedback",
+    ];
     const currentStageIndex = stageOrder.indexOf(candidate.current_stage);
-    
+
     const registrationDate = new Date(candidate.registration_date);
     const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 3600 * 24));
-    
+    const daysDiff = Math.floor(
+      (now.getTime() - registrationDate.getTime()) / (1000 * 3600 * 24)
+    );
+
     return {
       stages_completed: Math.max(0, currentStageIndex),
       total_assessments: candidate.assessments?.length || 0,
-      completed_interviews: candidate.interviews?.filter(i => i.status === 'completed').length || 0,
-      pending_interviews: candidate.interviews?.filter(i => i.status === 'scheduled').length || 0,
-      documents_uploaded: Array.isArray(candidate.documents) ? candidate.documents.length : 0,
+      completed_interviews:
+        candidate.interviews?.filter((i) => i.status === "completed").length ||
+        0,
+      pending_interviews:
+        candidate.interviews?.filter((i) => i.status === "scheduled").length ||
+        0,
+      documents_uploaded: Array.isArray(candidate.documents)
+        ? candidate.documents.length
+        : 0,
       feedback_count: candidate.internal_feedback?.length || 0,
-      hr_questionnaire_completed: Array.isArray(candidate.hrQuestionnaire) ? candidate.hrQuestionnaire.length > 0 : false,
-      current_stage_duration: daysDiff
+      hr_questionnaire_completed: Array.isArray(candidate.hrQuestionnaire)
+        ? candidate.hrQuestionnaire.length > 0
+        : false,
+      current_stage_duration: daysDiff,
     };
   };
 
   // Data fetching - Updated to use common endpoint with client-side filtering
-const fetchData = useCallback(async (): Promise<void> => {
-  try {
-    setLoading(true);
-    const [candidatesRes, statsRes] = await Promise.all([
-      api.get<{ success: boolean; data: ManagerCandidate[] }>("/org/candidates"),
-      api.get<{ success: boolean; data: { statistics: ManagerStats } }>("/org/dashboard/stats"),
-    ]);
+  const fetchData = useCallback(async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const [candidatesRes, statsRes] = await Promise.all([
+        api.get<{ success: boolean; data: ManagerCandidate[] }>(
+          "/org/candidates"
+        ),
+        api.get<{ success: boolean; data: { statistics: ManagerStats } }>(
+          "/org/dashboard/stats"
+        ),
+      ]);
 
-    const allCandidatesData = candidatesRes.data.data || [];
-    
-    // ✅ Force completely new object references with timestamp
-    const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
-      ...candidate,
-      documents: normalizeDocuments(candidate.documents),
-      hired_docs: normalizeDocuments(candidate.hired_docs),
-      progress_metrics: calculateProgressMetrics(candidate),
-      // ✅ Force new reference with timestamp
-      _renderKey: `${candidate._id}-${Date.now()}`,
-      // ✅ Deep clone glory to ensure new reference
-      glory: candidate.glory ? JSON.parse(JSON.stringify(candidate.glory)) : undefined
-    }));
+      const allCandidatesData = candidatesRes.data.data || [];
 
-    const managerStageCandidates = candidatesWithMetrics.filter(
-      candidate => candidate.current_stage === "manager"
-    );
-    
-    // ✅ Force completely new array references
-    setCandidates([...managerStageCandidates]);
-    setAllCandidates([...candidatesWithMetrics]);
-    
-    // ✅ Clear detailed candidates to force fresh data
-    setDetailedCandidates({});
-    
-    if (statsRes.data.success) {
-      setStats(statsRes.data.data.statistics);
+      // ✅ Force completely new object references with timestamp
+      const candidatesWithMetrics = allCandidatesData.map((candidate) => ({
+        ...candidate,
+        // Fix: Ensure applied_job.description is always an object type
+        applied_job: candidate.applied_job
+          ? {
+              ...candidate.applied_job,
+              description:
+                typeof candidate.applied_job.description === "string"
+                  ? {} // Convert string to empty object
+                  : candidate.applied_job.description || {},
+            }
+          : undefined,
+        documents: normalizeDocuments(candidate.documents),
+        hired_docs: normalizeDocuments(candidate.hired_docs),
+        progress_metrics: calculateProgressMetrics({
+          ...candidate,
+          applied_job: candidate.applied_job
+            ? {
+                ...candidate.applied_job,
+                description:
+                  typeof candidate.applied_job.description === "string"
+                    ? {}
+                    : candidate.applied_job.description || {},
+              }
+            : undefined,
+        } as ManagerCandidate),
+        _renderKey: `${candidate._id}-${Date.now()}`,
+        glory: candidate.glory
+          ? JSON.parse(JSON.stringify(candidate.glory))
+          : undefined,
+      }));
+
+      const managerStageCandidates = candidatesWithMetrics.filter(
+        (candidate) => candidate.current_stage === "manager"
+      );
+
+      // ✅ Force completely new array references
+      setCandidates([...managerStageCandidates]);
+      setAllCandidates([...candidatesWithMetrics]);
+
+      // ✅ Clear detailed candidates to force fresh data
+      setDetailedCandidates({});
+
+      if (statsRes.data.success) {
+        setStats(statsRes.data.data.statistics);
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast.error("Failed to load dashboard");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to fetch data:", error);
-    toast.error("Failed to load dashboard");
-  } finally {
-    setLoading(false);
-  }
-}, []);
-
+  }, []);
 
   // Effects
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Fetch detailed candidate information
   const fetchCandidateDetails = async (candidateId: string): Promise<void> => {
     if (detailedCandidates[candidateId] || loadingDetails.has(candidateId)) {
-      return; // Already loaded or loading
+      return;
     }
 
     try {
-      setLoadingDetails(prev => new Set([...prev, candidateId]));
-      
-      const response = await api.get<{ success: boolean; data: DetailedCandidate }>(`/org/candidates/${candidateId}`);
-      
+      setLoadingDetails((prev) => new Set([...prev, candidateId]));
+
+      const response = await api.get<{
+        success: boolean;
+        data: DetailedCandidate;
+      }>(`/org/candidates/${candidateId}`);
+
       if (response.data.success) {
-        // Create a compatible ManagerCandidate object for calculateProgressMetrics
-  const managerCandidateForMetrics: ManagerCandidate = {
-    ...response.data.data,
-    documents: normalizeDocuments(response.data.data.documents),   // ✅ normalize
-    hired_docs: normalizeDocuments(response.data.data.hired_docs), // ✅ normalize
-    hrQuestionnaire: response.data.data.hrQuestionnaire?.map((q) => q._id) || [],
-    stage_history: response.data.data.stage_history?.map((s) => s._id) || [],
-    interviews: response.data.data.interviews || [],
-  };
-  setDetailedCandidates((prev) => ({
-    ...prev,
-    [candidateId]: {
-      ...response.data.data,
-      documents: normalizeDocuments(response.data.data.documents),   // ✅ normalize
-      hired_docs: normalizeDocuments(response.data.data.hired_docs), // ✅ normalize
-      progress_metrics: calculateProgressMetrics(managerCandidateForMetrics),
-    },
-  }));
+        // Fix: Ensure applied_job.description is always an object
+        const candidateData = response.data.data;
+        const normalizedCandidate: DetailedCandidate = {
+          ...candidateData,
+          applied_job: candidateData.applied_job
+            ? {
+                ...candidateData.applied_job,
+                description:
+                  typeof candidateData.applied_job.description === "string"
+                    ? {} // Convert string to empty object
+                    : candidateData.applied_job.description || {},
+              }
+            : undefined,
+          documents: normalizeDocuments(candidateData.documents),
+          hired_docs: normalizeDocuments(candidateData.hired_docs),
+        };
+
+        // Create compatible ManagerCandidate for metrics calculation
+        const managerCandidateForMetrics: ManagerCandidate = {
+          ...normalizedCandidate,
+          hrQuestionnaire:
+            candidateData.hrQuestionnaire?.map((q) => q._id) || [],
+          stage_history: candidateData.stage_history?.map((s) => s._id) || [],
+          interviews: candidateData.interviews || [],
+        };
+
+        setDetailedCandidates((prev) => ({
+          ...prev,
+          [candidateId]: {
+            ...normalizedCandidate,
+            progress_metrics: calculateProgressMetrics(
+              managerCandidateForMetrics
+            ),
+          },
+        }));
       }
     } catch (error) {
       console.error("Failed to fetch candidate details:", error);
       toast.error("Failed to load candidate details");
     } finally {
-      setLoadingDetails(prev => {
+      setLoadingDetails((prev) => {
         const newSet = new Set(prev);
         newSet.delete(candidateId);
         return newSet;
@@ -461,15 +286,20 @@ const fetchData = useCallback(async (): Promise<void> => {
     }
   };
   // Normalize docs to always include isVerified
-  const normalizeDocuments = (
-    docs: any[] = []
-  ): Array<{ _id: string; document_type: string; document_url: string; isVerified: boolean }> => {
+  // Fix the normalize function to handle both naming conventions
+  const normalizeDocuments = (docs: any[] = []): CandidateDocument[] => {
     return docs.map((doc) => ({
-      ...doc,
+      _id: doc._id,
+      documenttype: doc.documenttype || doc.document_type || "",
+      documenturl: doc.documenturl || doc.document_url || "",
       isVerified: doc.isVerified !== undefined ? doc.isVerified : false,
+      uploadedat: doc.uploadedat || doc.uploaded_at,
+      filename: doc.filename,
+      filepath: doc.filepath,
+      mimetype: doc.mimetype,
+      size: doc.size,
     }));
   };
-
 
   // Action handler
   const handleQuickAction = async (): Promise<void> => {
@@ -500,8 +330,8 @@ const fetchData = useCallback(async (): Promise<void> => {
             newStage: "feedback",
             remarks: actionData.feedback || "Hold for hiring",
             internal_feedback: {
-              feedback: actionData.feedback || "Candidate put on hold"
-            }
+              feedback: actionData.feedback || "Candidate put on hold",
+            },
           };
           method = "patch";
           break;
@@ -512,8 +342,8 @@ const fetchData = useCallback(async (): Promise<void> => {
             newStage: "feedback",
             remarks: actionData.feedback || "Approved by manager",
             internal_feedback: {
-              feedback: actionData.feedback || "Candidate approved for hiring"
-            }
+              feedback: actionData.feedback || "Candidate approved for hiring",
+            },
           };
           method = "patch";
           break;
@@ -530,10 +360,12 @@ const fetchData = useCallback(async (): Promise<void> => {
           endpoint = `/org/candidates/${candidate._id}/stage`;
           payload = {
             newStage: actionData.stage,
-            remarks: actionData.feedback || `Stage changed to ${actionData.stage}`,
+            remarks:
+              actionData.feedback || `Stage changed to ${actionData.stage}`,
             internal_feedback: {
-              feedback: actionData.feedback || `Stage updated to ${actionData.stage}`
-            }
+              feedback:
+                actionData.feedback || `Stage updated to ${actionData.stage}`,
+            },
           };
           method = "patch";
           break;
@@ -543,10 +375,10 @@ const fetchData = useCallback(async (): Promise<void> => {
       toast.success(`${type} completed successfully`);
       closeActionModal();
       await fetchData();
-      
+
       // Clear detailed data for this candidate to force refetch
       if (detailedCandidates[actionModal.candidate._id]) {
-        setDetailedCandidates(prev => {
+        setDetailedCandidates((prev) => {
           const newDetails = { ...prev };
           delete newDetails[actionModal.candidate!._id];
           return newDetails;
@@ -555,7 +387,9 @@ const fetchData = useCallback(async (): Promise<void> => {
     } catch (error: unknown) {
       console.error(`Failed to ${actionModal.type}:`, error);
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || `Failed to ${actionModal.type}`);
+      toast.error(
+        apiError.response?.data?.message || `Failed to ${actionModal.type}`
+      );
     } finally {
       setActionModal((prev) => ({ ...prev, loading: false }));
     }
@@ -582,7 +416,7 @@ const fetchData = useCallback(async (): Promise<void> => {
   // Updated toggle function to fetch details when expanding
   const toggleCardExpansion = async (candidateId: string): Promise<void> => {
     const newExpanded = new Set(expandedCards);
-    
+
     if (newExpanded.has(candidateId)) {
       newExpanded.delete(candidateId);
     } else {
@@ -590,7 +424,7 @@ const fetchData = useCallback(async (): Promise<void> => {
       // Fetch detailed data when expanding
       await fetchCandidateDetails(candidateId);
     }
-    
+
     setExpandedCards(newExpanded);
   };
 
@@ -640,7 +474,10 @@ const fetchData = useCallback(async (): Promise<void> => {
     const birthDate = new Date(dateString);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
     return age;
@@ -664,7 +501,6 @@ const fetchData = useCallback(async (): Promise<void> => {
             ? "Admin view - Manage candidates and track their progress across all stages"
             : "Review, manage, and track candidates throughout their journey"}
         </p>
-
       </div>
 
       {/* Tabs for different views */}
@@ -691,7 +527,7 @@ const fetchData = useCallback(async (): Promise<void> => {
             formatDateTime={formatDateTime}
             formatDate={formatDate}
             formatAge={formatAge}
-            fetchCandidates={fetchData} 
+            fetchCandidates={fetchData}
           />
         </TabsContent>
 
@@ -722,15 +558,17 @@ const fetchData = useCallback(async (): Promise<void> => {
       </Tabs>
 
       {/* No Candidates Found */}
-      {((activeTab === "manager-stage" && candidates.length === 0) || 
+      {((activeTab === "manager-stage" && candidates.length === 0) ||
         (activeTab === "tracking" && allCandidates.length === 0)) && (
         <Card>
           <CardContent className="text-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">No candidates found</p>
+            <p className="text-lg font-medium text-muted-foreground">
+              No candidates found
+            </p>
             <p className="text-sm text-muted-foreground">
-              {activeTab === "manager-stage" 
-                ? "No candidates in manager stage" 
+              {activeTab === "manager-stage"
+                ? "No candidates in manager stage"
                 : "No candidates available"}
             </p>
           </CardContent>
@@ -738,7 +576,10 @@ const fetchData = useCallback(async (): Promise<void> => {
       )}
 
       {/* Quick Action Modal */}
-      <Dialog open={actionModal.open} onOpenChange={() => !actionModal.loading && closeActionModal()}>
+      <Dialog
+        open={actionModal.open}
+        onOpenChange={() => !actionModal.loading && closeActionModal()}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -755,7 +596,9 @@ const fetchData = useCallback(async (): Promise<void> => {
             {actionModal.candidate && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                 <Avatar>
-                  <AvatarImage src={actionModal.candidate.profile_photo_url?.url} />
+                  <AvatarImage
+                    src={actionModal.candidate.profile_photo_url?.url}
+                  />
                   <AvatarFallback>
                     {actionModal.candidate.first_name[0]}
                     {actionModal.candidate.last_name?.[0]}
@@ -763,7 +606,8 @@ const fetchData = useCallback(async (): Promise<void> => {
                 </Avatar>
                 <div>
                   <div className="font-medium">
-                    {actionModal.candidate.first_name} {actionModal.candidate.last_name}
+                    {actionModal.candidate.first_name}{" "}
+                    {actionModal.candidate.last_name}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {actionModal.candidate.applied_job?.name}
@@ -778,7 +622,9 @@ const fetchData = useCallback(async (): Promise<void> => {
                 <label className="text-sm font-medium">New Stage</label>
                 <Select
                   value={actionData.stage}
-                  onValueChange={(value) => setActionData((prev) => ({ ...prev, stage: value }))}
+                  onValueChange={(value) =>
+                    setActionData((prev) => ({ ...prev, stage: value }))
+                  }
                 >
                   <SelectTrigger className="w-full mt-1">
                     <SelectValue placeholder="Select stage" />
@@ -803,7 +649,12 @@ const fetchData = useCallback(async (): Promise<void> => {
               </label>
               <Textarea
                 value={actionData.feedback}
-                onChange={(e) => setActionData((prev) => ({ ...prev, feedback: e.target.value }))}
+                onChange={(e) =>
+                  setActionData((prev) => ({
+                    ...prev,
+                    feedback: e.target.value,
+                  }))
+                }
                 placeholder={
                   actionModal.type === "feedback"
                     ? "Your detailed feedback..."
@@ -822,15 +673,21 @@ const fetchData = useCallback(async (): Promise<void> => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeActionModal} disabled={actionModal.loading}>
+            <Button
+              variant="outline"
+              onClick={closeActionModal}
+              disabled={actionModal.loading}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleQuickAction}
               disabled={
                 actionModal.loading ||
-                (actionModal.type === "feedback" && !actionData.feedback.trim()) ||
-                (actionModal.type === "reject" && !actionData.feedback.trim()) ||
+                (actionModal.type === "feedback" &&
+                  !actionData.feedback.trim()) ||
+                (actionModal.type === "reject" &&
+                  !actionData.feedback.trim()) ||
                 (actionModal.type === "stage" && !actionData.stage)
               }
               className={

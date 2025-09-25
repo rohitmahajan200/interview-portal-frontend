@@ -24,7 +24,6 @@ const roleColor = (role: string) => ({
   hr:          'bg-purple-100 text-purple-800',
   manager:     'bg-blue-100 text-blue-800',
   invigilator: 'bg-green-100 text-green-800',
-  admin:       'bg-orange-100 text-orange-800',
 }[role] ?? 'bg-gray-100 text-gray-800');
 
 const gradeColor = (g: string) => ({

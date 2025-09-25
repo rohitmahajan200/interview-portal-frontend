@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { useDispatch } from "react-redux";
 import { setUser } from "@/features/Org/Auth/orgAuthSlice";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { Building } from "lucide-react";
 
 type Step = "enteremail" | "verifyOtp";
@@ -68,8 +68,7 @@ const OrgOTPLoginForm: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
-      <Toaster position="top-center" reverseOrder={false} />
+    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">  
       <div className="w-full max-w-sm">
         <Card className="shadow-lg rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <CardHeader className="space-y-3 text-center">

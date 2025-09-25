@@ -24,6 +24,15 @@ const FILE_TYPE_MAPPINGS = {
   snapshots: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 };
 
+// 🔐 ENHANCED: Size limits as per requirements
+const SIZE_LIMITS = {
+  profiles: 1 * 1024 * 1024,   // 1MB for photos
+  documents: 1 * 1024 * 1024,  // 1MB for PDFs  
+  audio: 5 * 1024 * 1024,      // 5MB for audio files
+  snapshots: 1 * 1024 * 1024,  // 1MB for snapshots
+  general: 1 * 1024 * 1024     // 1MB default
+};
+
 // Auto-detect folder based on file type
 const detectFolderFromFile = (file: File): string => {
   for (const [folder, types] of Object.entries(FILE_TYPE_MAPPINGS)) {
@@ -59,7 +68,7 @@ export const uploadFileToBackend = async (
   
   // Auto-detect folder if not provided
   const folder = options.folder || detectFolderFromFile(file);
-  const maxSize = options.maxSize || 1 * 1024 * 1024; // Default 1MB
+  const maxSize = options.maxSize || SIZE_LIMITS[folder as keyof typeof SIZE_LIMITS] || SIZE_LIMITS.general;
 
   console.log(`📤 [UPLOAD] Starting upload: ${file.name} (${formatFileSize(file.size)}) → ${folder}/`);
 
@@ -78,9 +87,6 @@ export const uploadFileToBackend = async (
 
   try {
     const response = await api.post("/candidates/upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
       timeout: 30000, // 30 second timeout
     });
 
@@ -135,7 +141,7 @@ export const uploadDocument = async (file: File): Promise<FileUploadResult> => {
 export const uploadAudio = async (file: File): Promise<FileUploadResult> => {
   return uploadFileToBackend(file, { 
     folder: 'audio',
-    maxSize: 10 * 1024 * 1024, // 10MB for audio
+    maxSize: 5 * 1024 * 1024, // 5MB for audio
     allowedTypes: FILE_TYPE_MAPPINGS.audio
   });
 };

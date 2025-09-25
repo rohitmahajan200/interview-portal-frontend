@@ -99,14 +99,14 @@ interface Candidate {
   applied_job: {
     _id: string;
     name: string;
-    description: {
+    description:string;
       time: string;
       country: string;
       location: string;
       expInYears: string;
       salary: string;
       jobId: string;
-    };
+      title?:string;
   };
   documents?: Array<{
     _id: string;
@@ -852,7 +852,7 @@ const HRQuestionnaireBuilder = () => {
                                   return (
                                     <SelectItem key={job._id} value={job._id}>
                                       <div className="flex items-center justify-between w-full">
-                                        <span>{job.name}</span>
+                                        <span>{job.title}</span>
                                         <Badge
                                           variant="secondary"
                                           className="ml-2 text-xs"
@@ -979,7 +979,7 @@ const HRQuestionnaireBuilder = () => {
                                               variant="outline"
                                               className="text-xs"
                                             >
-                                              {candidate.applied_job.name}
+                                              {candidate.applied_job.title}
                                             </Badge>
                                             {isJobMatch && (
                                               <Badge

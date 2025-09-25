@@ -35,7 +35,10 @@ interface Interview {
     last_name: string;
     email: string;
     current_stage: string;
-    applied_job?: { name: string };
+    applied_job?: { 
+      name: string;
+      title:string;
+     };
   };
   interview_type: string;
   interviewers: Array<{ _id: string; name: string; role: string }>;
@@ -203,7 +206,7 @@ const InterviewScheduling = () => {
         interview,
         candidateName: `${interview.candidate.first_name} ${interview.candidate.last_name}`,
         candidateStage: interview.candidate.current_stage,
-        candidateJob: interview.candidate.applied_job?.name || 'No Job',
+        candidateJob: interview.candidate.applied_job?.title || 'No Job',
         interviewerNames: interview.interviewers.map(i => i.name)
       }
     }));
@@ -328,7 +331,7 @@ const InterviewScheduling = () => {
                     {selectedInterview.candidate.current_stage}
                   </span>
                 </p>
-                <p><strong>Applied Job:</strong> {selectedInterview.candidate.applied_job?.name || 'N/A'}</p>
+                <p><strong>Applied Job:</strong> {selectedInterview.candidate.applied_job?.title || 'N/A'}</p>
               </div>
 
               {/* Panel */}

@@ -100,7 +100,10 @@ interface CandidateListItem {
       url: string;
       publicId: string;
     };
-    applied_job: string;
+    applied_job:{
+      name:string;
+      title:string;
+    };
   };
   submitted_at: string;
   questionnaire_status: string;
@@ -140,13 +143,13 @@ interface CandidateDetail {
     applied_job: {
       _id: string;
       name: string;
-      description: {
+      description:string;
         time: string;
         country: string;
         location: string;
         expInYears: string;
         salary: string;
-      };
+        title:string;
       gradingParameters?: string[];
     };
   };
@@ -1063,7 +1066,7 @@ const CandidateReview = () => {
                             </p>
                             {/* Mobile: Show job here */}
                             <p className="text-xs text-muted-foreground dark:text-muted-foreground truncate sm:hidden">
-                              {item.candidate.applied_job}
+                              {item.candidate.applied_job.title}
                             </p>
                           </div>
                         </div>
@@ -1072,7 +1075,7 @@ const CandidateReview = () => {
                         <div className="flex items-center gap-2">
                           <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground dark:text-muted-foreground" />
                           <span className="font-medium text-xs sm:text-sm text-foreground dark:text-foreground truncate">
-                            {item.candidate.applied_job}
+                            {item.candidate.applied_job.title}
                           </span>
                         </div>
                       </TableCell>
@@ -1177,7 +1180,7 @@ const CandidateReview = () => {
                               <div className="flex items-center gap-2 justify-center sm:justify-start">
                                 <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground dark:text-muted-foreground" />
                                 <span className="truncate text-foreground dark:text-foreground">
-                                  {selectedCandidate.candidate.applied_job.name}
+                                  {selectedCandidate.candidate.applied_job?.title}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 justify-center sm:justify-start">
@@ -1196,11 +1199,11 @@ const CandidateReview = () => {
                             <div className="text-xs sm:text-sm space-y-1">
                               <p className="text-foreground dark:text-foreground">
                                 <span className="font-medium">Location:</span>{" "}
-                                {selectedCandidate.candidate.applied_job.description.location}
+                                {selectedCandidate.candidate.applied_job?.location}
                               </p>
                               <p className="text-foreground dark:text-foreground">
                                 <span className="font-medium">Experience:</span>{" "}
-                                {selectedCandidate.candidate.applied_job.description.expInYears}
+                                {selectedCandidate.candidate.applied_job?.expInYears}
                               </p>
                             </div>
                           </div>

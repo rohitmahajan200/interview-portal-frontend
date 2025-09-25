@@ -36,11 +36,25 @@ import {
   ClockIcon,
   Eye,
   Award,
+  Building,
+  Users,
+  Share2,
+  ExternalLink,
+  Globe,
+  Linkedin,
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
 } from "lucide-react";
 import { StageCircle } from "../ui/StageCircle";
 import toast from "react-hot-toast";
 import HRCallingDetailsDisplay from "../HRCallingDetailsDisplay";
 import GloryDisplay from "../GloryDisplay";
+import type { 
+  ManagerCandidate, 
+  DetailedCandidate 
+} from "../../types/candidate";
 
 const ManagerAllCandidates = ({
   allCandidates,
@@ -66,13 +80,16 @@ const ManagerAllCandidates = ({
   // State for managing collapsed sections
   const [collapsedSections, setCollapsedSections] = useState({});
   const [copiedDocId, setCopiedDocId] = useState(null);
-  
+
   // Fixed TypeScript typing for roles
   const [roles, setRoles] = useState<string[]>(() => {
     const uniqueRoles = new Set<string>();
     allCandidates.forEach((candidate) => {
-      if (candidate.applied_job?.name && typeof candidate.applied_job.name === 'string') {
-        uniqueRoles.add(candidate.applied_job.name);
+      if (
+        candidate.applied_job?.title &&
+        typeof candidate.applied_job.title === "string"
+      ) {
+        uniqueRoles.add(candidate.applied_job.title);
       }
     });
     return Array.from(uniqueRoles);
@@ -89,7 +106,10 @@ const ManagerAllCandidates = ({
 
   // Enhanced resume viewing handler with better feedback
   const handleViewResume = (candidate) => {
-    const allDocs = candidate.documents || [];
+    const allDocs = [
+      ...(candidate.documents || []),
+      ...(candidate.hired_docs || []),
+    ];
 
     const resumeDoc = allDocs.find(
       (doc) => doc.documenttype?.toLowerCase() === "resume"
@@ -105,7 +125,10 @@ const ManagerAllCandidates = ({
 
   // Check if resume exists for styling
   const hasResume = (candidate) => {
-    const allDocs = candidate.documents || [];
+    const allDocs = [
+      ...(candidate.documents || []),
+      ...(candidate.hired_docs || []),
+    ];
     return allDocs.some((doc) => doc.documenttype?.toLowerCase() === "resume");
   };
 
@@ -148,7 +171,7 @@ const ManagerAllCandidates = ({
       candidate.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidate.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       candidate.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.applied_job?.name
+      candidate.applied_job?.title
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase());
 
@@ -162,7 +185,7 @@ const ManagerAllCandidates = ({
       candidate.glory?.manager?.grades?.Overall == gloryFilter;
 
     const matchRole =
-      roleFilter === "all" || candidate.applied_job?.name == roleFilter;
+      roleFilter === "all" || candidate.applied_job?.title == roleFilter;
 
     return (
       matchesSearch && matchesStatus && matchesStage && matchGlory && matchRole
@@ -212,21 +235,52 @@ const ManagerAllCandidates = ({
                 </h5>
                 <div className="space-y-1 text-sm">
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">Age:</span>{" "}
-                    <span className="text-gray-700 dark:text-gray-300">{formatAge(candidate.date_of_birth)} years</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      Age:
+                    </span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {formatAge(candidate.date_of_birth)} years
+                    </span>
                   </div>
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">Gender:</span>{" "}
-                    <span className="text-gray-700 dark:text-gray-300">{candidate.gender}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      Gender:
+                    </span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {candidate.gender}
+                    </span>
                   </div>
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">Address:</span>{" "}
-                    <span className="text-gray-700 dark:text-gray-300">{candidate.address}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      Address:
+                    </span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {candidate.address}
+                    </span>
                   </div>
                   <div className="whitespace-normal break-words">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">Registered:</span>{" "}
-                    <span className="text-gray-700 dark:text-gray-300">{formatDate(candidate.registration_date)}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      Registered:
+                    </span>{" "}
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {formatDate(candidate.registration_date)}
+                    </span>
                   </div>
+                  {candidateData.portfolio_url && (
+                    <div className="whitespace-normal break-words">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Portfolio:
+                      </span>{" "}
+                      <a
+                        href={candidateData.portfolio_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                      >
+                        View Portfolio <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -341,7 +395,7 @@ const ManagerAllCandidates = ({
     );
   };
 
-  // Component for HR Assessment & Technical Assessment Results
+  // Component for Assessment Results & Scores
   const AssessmentResultsSection = ({ detailedCandidate }) => {
     if (!detailedCandidate) return null;
 
@@ -557,14 +611,277 @@ const ManagerAllCandidates = ({
     );
   };
 
-  // Component for Documents
+  // NEW: Component for Hired Documents & Professional Details
+  const HiredDocumentDetailsSection = ({ candidateData }) => {
+    const socialMediaHandles = candidateData?.social_media_handles || {};
+    const organizations = candidateData?.organizations || [];
+    const companyReferences = candidateData?.company_references || [];
+    const hiredDocsPresent = candidateData?.hired_docs_present || false;
+
+    const isCardCollapsed = isCollapsed(candidateData._id, "hiredDetails");
+
+    // Check if we have any data to show
+    const hasSocialMedia = Object.keys(socialMediaHandles).length > 0;
+    const hasOrganizations = organizations.length > 0;
+    const hasCompanyRefs = companyReferences.length > 0;
+
+    // Only show if candidate has hired documents or any of the related fields
+    if (
+      !hiredDocsPresent &&
+      !hasSocialMedia &&
+      !hasOrganizations &&
+      !hasCompanyRefs
+    ) {
+      return null;
+    }
+
+    // Get platform icon
+    const getPlatformIcon = (platform) => {
+      switch (platform.toLowerCase()) {
+        case "linkedin":
+          return <Linkedin className="h-3 w-3" />;
+        case "facebook":
+          return <Facebook className="h-3 w-3" />;
+        case "instagram":
+          return <Instagram className="h-3 w-3" />;
+        case "twitter":
+          return <Twitter className="h-3 w-3" />;
+        case "youtube":
+          return <Youtube className="h-3 w-3" />;
+        default:
+          return <Globe className="h-3 w-3" />;
+      }
+    };
+
+    return (
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              Professional Details
+              <div className="flex gap-2 ml-2">
+                {hasSocialMedia && (
+                  <Badge variant="outline" className="text-xs">
+                    {Object.keys(socialMediaHandles).length} Social
+                  </Badge>
+                )}
+                {hasOrganizations && (
+                  <Badge variant="outline" className="text-xs">
+                    {organizations.length} Orgs
+                  </Badge>
+                )}
+                {hasCompanyRefs && (
+                  <Badge variant="outline" className="text-xs">
+                    {companyReferences.length} Refs
+                  </Badge>
+                )}
+              </div>
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleCollapse(candidateData._id, "hiredDetails")}
+              className="text-xs"
+            >
+              {isCardCollapsed ? "Show" : "Hide"}
+              {isCardCollapsed ? (
+                <ChevronDown className="h-3 w-3 ml-1" />
+              ) : (
+                <ChevronUp className="h-3 w-3 ml-1" />
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        {!isCardCollapsed && (
+          <CardContent className="pt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Social Media Handles */}
+              {hasSocialMedia && (
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                  <h5 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                    <Share2 className="h-4 w-4" />
+                    Social Media Handles
+                  </h5>
+                  <div className="space-y-2">
+                    {Object.entries(socialMediaHandles).map(
+                      ([platform, handle]) => {
+                        // ✅ Type assertion to string (safe since we know socialMediaHandles contains strings)
+                        const handleValue = handle as string;
+
+                        return (
+                          <div
+                            key={platform}
+                            className="bg-white dark:bg-gray-800 p-2 rounded border border-purple-200 dark:border-purple-700"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              {getPlatformIcon(platform)}
+                              <div className="text-xs font-medium text-purple-800 dark:text-purple-200 capitalize">
+                                {platform}
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-700 dark:text-gray-300 break-all">
+                              {handleValue &&
+                              typeof handleValue === "string" &&
+                              handleValue.startsWith("http") ? (
+                                <a
+                                  href={handleValue}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                                >
+                                  View Profile{" "}
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              ) : (
+                                <span>{handleValue}</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Organizations */}
+              {hasOrganizations && (
+                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                  <h5 className="font-medium text-sm mb-2 text-green-700 dark:text-green-300 flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Previous Organizations ({organizations.length})
+                  </h5>
+                  <div className="space-y-2">
+                    {organizations.map((org, index) => (
+                      <div
+                        key={index}
+                        className="bg-white dark:bg-gray-800 p-2 rounded border border-green-200 dark:border-green-700"
+                      >
+                        <div className="text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+                          {org.name}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {org.appointment_letter && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(org.appointment_letter, "_blank");
+                                toast.success("Opening appointment letter...");
+                              }}
+                              title="Click to view appointment letter"
+                            >
+                              <div className="flex items-center gap-1">
+                                📄 Appointment
+                                <ExternalLink className="h-3 w-3" />
+                              </div>
+                            </Badge>
+                          )}
+                          {org.relieving_letter && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(org.relieving_letter, "_blank");
+                                toast.success("Opening relieving letter...");
+                              }}
+                              title="Click to view relieving letter"
+                            >
+                              <div className="flex items-center gap-1">
+                                📋 Relieving
+                                <ExternalLink className="h-3 w-3" />
+                              </div>
+                            </Badge>
+                          )}
+                          {!org.appointment_letter && !org.relieving_letter && (
+                            <span className="text-xs text-gray-500 italic">
+                              No documents
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Company References */}
+              {hasCompanyRefs && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                  <h5 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Company References ({companyReferences.length})
+                  </h5>
+                  <div className="space-y-2">
+                    {companyReferences.map((ref, index) => (
+                      <div
+                        key={index}
+                        className="bg-white dark:bg-gray-800 p-2 rounded border border-blue-200 dark:border-blue-700"
+                      >
+                        <div className="text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">
+                          {ref.company_name}
+                        </div>
+                        <div className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="break-all">{ref.email}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span>{ref.phone}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Hired Documents Status Summary */}
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-medium">
+                    Hired Documents Status
+                  </span>
+                </div>
+                <Badge
+                  variant={hiredDocsPresent ? "default" : "secondary"}
+                  className="text-xs"
+                >
+                  {hiredDocsPresent ? "✓ Complete" : "⏳ Pending"}
+                </Badge>
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                {hiredDocsPresent
+                  ? "All hiring documentation has been submitted and processed."
+                  : "Waiting for candidate to submit hiring documentation."}
+              </div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+    );
+  };
+
+  // ENHANCED: Component for Documents with better separation
   const DocumentsSection = ({ candidateData }) => {
-    const allDocuments = [
-      ...(candidateData?.documents || []),
-      ...(candidateData?.hired_docs || []),
-    ];
+    const regularDocs = candidateData?.documents || [];
+    const hiredDocs = candidateData?.hired_docs || [];
+    const hiredDocsPresent = candidateData?.hired_docs_present || false;
+
     const isCardCollapsed = isCollapsed(candidateData._id, "documents");
 
+    // Show section if there are any documents or if hired docs are expected
+    const hasAnyDocs = regularDocs.length > 0 || hiredDocs.length > 0;
+    if (!hasAnyDocs && !hiredDocsPresent) return null;
+
+    const allDocuments = [...regularDocs, ...hiredDocs];
     if (allDocuments.length === 0) return null;
 
     return (
@@ -572,10 +889,10 @@ const ManagerAllCandidates = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               Documents
               <Badge variant="secondary" className="text-xs ml-2">
-                {allDocuments.length} Files
+                {allDocuments.length} Total
               </Badge>
             </CardTitle>
             <Button
@@ -595,6 +912,7 @@ const ManagerAllCandidates = ({
         </CardHeader>
         {!isCardCollapsed && (
           <CardContent className="pt-2">
+            {/* All Documents in Single Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {allDocuments.map((doc) => {
                 const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(
@@ -602,51 +920,31 @@ const ManagerAllCandidates = ({
                 );
                 const isPDF = /\.pdf$/i.test(doc.documenturl);
 
-                const isHiredDoc = candidateData?.hired_docs?.some(
-                  (hiredDoc) => hiredDoc._id === doc._id
-                );
-
                 return (
                   <div
                     key={doc._id}
                     className="group relative border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800 cursor-pointer"
                     onClick={() => window.open(doc.documenturl, "_blank")}
                   >
-                    {/* Document Type Badge */}
-                    <div className="absolute top-2 left-2 z-20">
-                      {doc.documenttype !== "resume" && (
-                        <Badge
-                          variant={isHiredDoc ? "default" : "secondary"}
-                          className="text-xs shadow-sm"
-                        >
-                          {isHiredDoc ? "Hired Doc" : "Regular Doc"}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Verification Status Badge */}
+                    {/* Only Verification Status Badge - No Type Badge */}
                     <div className="absolute top-2 right-2 z-20">
-                      {doc.documenttype !== "resume" && (
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-medium shadow-sm ${
-                            doc.isVerified
-                              ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/50"
-                              : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1">
-                            {doc.isVerified ? (
-                              <Check className="w-3 h-3" />
-                            ) : (
-                              <ClockIcon className="w-3 h-3" />
-                            )}
-                            <span>
-                              {doc.isVerified ? "Verified" : "Pending"}
-                            </span>
-                          </div>
-                        </Badge>
-                      )}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-medium shadow-sm ${
+                          doc.isVerified
+                            ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/50"
+                            : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1">
+                          {doc.isVerified ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <ClockIcon className="w-3 h-3" />
+                          )}
+                          <span>{doc.isVerified ? "Verified" : "Pending"}</span>
+                        </div>
+                      </Badge>
                     </div>
 
                     {/* Action Buttons */}
@@ -682,7 +980,7 @@ const ManagerAllCandidates = ({
                       </div>
                     </div>
 
-                    {/* Document Preview */}
+                    {/* Document Preview - Unified styling */}
                     <div className="h-32 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                       {isImage ? (
                         <img
@@ -691,13 +989,15 @@ const ManagerAllCandidates = ({
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : isPDF ? (
-    <div className="flex flex-col items-center justify-center text-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-red-900/20 dark:to-red-800/20 w-full h-full">
-    <FileText className="w-8 h-8 mb-1" />
-    <span className="text-xs text-center px-2 whitespace-normal break-words">
-      {doc.documenttype}
-    </span>
-    <span className="text-xs text-blue-500 mt-1">PDF Document</span>
-  </div>
+                        <div className="flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 w-full h-full">
+                          <FileText className="w-8 h-8 mb-1" />
+                          <span className="text-xs text-center px-2 whitespace-normal break-words">
+                            {doc.documenttype}
+                          </span>
+                          <span className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                            PDF Document
+                          </span>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center text-gray-500 dark:text-gray-400">
                           <FileText className="w-8 h-8 mb-1" />
@@ -725,6 +1025,14 @@ const ManagerAllCandidates = ({
                 );
               })}
             </div>
+
+            {/* Empty State */}
+            {allDocuments.length === 0 && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No documents available</p>
+              </div>
+            )}
           </CardContent>
         )}
       </Card>
@@ -826,11 +1134,7 @@ const ManagerAllCandidates = ({
                     All
                   </SelectItem>
                   {roles.map((role) => (
-                    <SelectItem
-                      key={role}
-                      value={role}
-                      className="text-xs"
-                    >
+                    <SelectItem key={role} value={role} className="text-xs">
                       {role}
                     </SelectItem>
                   ))}
@@ -1087,7 +1391,7 @@ const ManagerAllCandidates = ({
 
                       {/* Job Info */}
                       <div className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 break-words">
-                        {candidate.applied_job?.name || "No job specified"}
+                        {candidate.applied_job?.title || "No job specified"}
                       </div>
                     </div>
                   </div>
@@ -1171,20 +1475,25 @@ const ManagerAllCandidates = ({
                       {/* Documents Section */}
                       <DocumentsSection candidateData={candidateData} />
 
+                      {/* NEW: Hired Document Details Section */}
+                      <HiredDocumentDetailsSection
+                        candidateData={candidateData}
+                      />
+
                       <GloryDisplay glory={candidate.glory} />
 
                       {/* Stage History & Internal Feedback - Mobile Optimized */}
                       <div className="grid grid-cols-1 gap-3 sm:gap-4">
                         <Card>
                           <CardHeader className="pb-2 px-3 sm:px-6 py-3 sm:py-4">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm sm:text-base">
+                            <div className="flex items-start justify-between gap-2">
+                              <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 text-sm sm:text-base min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                   <ArrowRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                                   <span>Stage History & Feedback</span>
                                 </div>
                                 {/* Badge counts - Mobile Stack */}
-                                <div className="flex gap-1.5 sm:gap-2">
+                                <div className="flex gap-1.5 sm:gap-2 flex-wrap">
                                   {detailedCandidate?.stage_history &&
                                     detailedCandidate.stage_history.length >
                                       0 && (
@@ -1218,7 +1527,7 @@ const ManagerAllCandidates = ({
                                     "stageHistoryFeedback"
                                   )
                                 }
-                                className="text-xs self-start sm:self-center"
+                                className="text-xs shrink-0 h-8 px-2 min-w-[60px]"
                               >
                                 {isCollapsed(
                                   candidate._id,

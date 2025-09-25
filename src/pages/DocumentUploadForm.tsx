@@ -32,7 +32,7 @@ import {
   IndianRupee,
   Share2,
 } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import api from "@/lib/api";
 
 interface DocumentUploadFormProps {
@@ -240,11 +240,7 @@ const uploadFileToServer = async (
   formData.append("file", file);
   formData.append("documenttype", documentType);
 
-  const response = await api.post("/candidates/documents", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const response = await api.post("/candidates/documents", formData);
 
   if (!response.data.success) {
     throw new Error(response.data.message || "Upload failed");
@@ -569,115 +565,103 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // In your DocumentUploadForm component, update the handleSubmit function:
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateFiles()) {
-      toast.error(
-        "Please complete all required fields and upload all required documents"
-      );
-      return;
+  if (!validateFiles()) {
+    toast.error("Please complete all required fields and upload all required documents");
+    return;
+  }
+
+  if (Object.values(uploadingStates).some((state) => state)) {
+    toast.error("Please wait for all uploads to complete");
+    return;
+  }
+
+  setIsSubmitting(true);
+
+  try {
+    // 🔧 FIX 1: Send documents to hired_docs field specifically
+    const hiredDocuments = Object.values(uploadedDocuments).length > 0
+      ? Object.values(uploadedDocuments).map((doc) => ({
+          documenttype: doc.documenttype,
+          documenturl: doc.documenturl,
+          filename: doc.filename,
+          filepath: doc.filepath,
+          mimetype: doc.mimetype,
+          size: doc.size,
+          isVerified: doc.isVerified || false,
+        }))
+      : [];
+
+    // 🔧 FIX 2: Fix organization data structure
+    const validOrganizations = organizations
+      .filter((org) => org.name.trim()) // Only organizations with names
+      .map((org) => ({
+        name: org.name.trim(),
+        appointment_letter: org.appointment_letter || undefined,
+        relieving_letter: org.relieving_letter || undefined,
+      }));
+
+    // 🔧 FIX 3: Fix company references - don't set undefined, keep empty strings
+    const validCompanyReferences = companyReferences
+      .filter((ref) => 
+        ref.company_name.trim() || ref.email.trim() || ref.phone.trim()
+      )
+      .map((ref) => ({
+        company_name: ref.company_name.trim(),  
+        email: ref.email.trim(),               
+        phone: ref.phone.trim(),               
+      }));
+
+    // 🔧 FIX 4: RENAME to avoid block scope conflict - use different variable name
+    const processedSocialMediaHandles = Object.fromEntries(
+      Object.entries(socialMediaHandles)  // Using state variable socialMediaHandles
+        .filter(([key, value]) => value?.trim()) // Only include non-empty values
+        .map(([key, value]) => [key, value.trim()])
+    );
+
+    const payload: any = {
+      // 🔧 FIX 5: Set hired_docs_present to true when submitting
+      hired_docs_present: true,
+    };
+
+    // 🔧 FIX 6: Use hired_docs instead of documents
+    if (hiredDocuments.length > 0) {
+      payload.hired_docs = hiredDocuments; // ✅ Correct field name
     }
 
-    if (Object.values(uploadingStates).some((state) => state)) {
-      toast.error("Please wait for all uploads to complete");
-      return;
+    if (validOrganizations.length > 0) {
+      payload.organizations = validOrganizations;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      // Documents are already uploaded individually, just send the metadata
-      const documents =
-        Object.values(uploadedDocuments).length > 0
-          ? Object.values(uploadedDocuments).map((doc) => ({
-              documenttype: doc.documenttype,
-              documenturl: doc.documenturl,
-              filename: doc.filename,
-              filepath: doc.filepath,
-              mimetype: doc.mimetype,
-              size: doc.size,
-              isVerified: doc.isVerified || false,
-            }))
-          : undefined;
-
-      // Prepare organizations array
-      const validOrganizations = organizations
-        .filter((org) => org.name.trim())
-        .map((org) => ({
-          name: org.name.trim(),
-          appointment_letter: org.appointment_letter || undefined,
-          relieving_letter: org.relieving_letter || undefined,
-        }));
-
-      // Prepare company references
-      const validCompanyReferences = companyReferences
-        .filter(
-          (ref) =>
-            ref.company_name.trim() || ref.email.trim() || ref.phone.trim()
-        )
-        .map((ref) => ({
-          company_name: ref.company_name.trim() || undefined,
-          email: ref.email.trim() || undefined,
-          phone: ref.phone.trim() || undefined,
-        }));
-
-      // Prepare social media handles
-      const validSocialMediaHandles = Object.fromEntries(
-        Object.entries(socialMediaHandles)
-          .filter(([key, value]) => value?.trim())
-          .map(([key, value]) => [key, value.trim()])
-      );
-
-      const payload: any = {};
-
-      // Only include fields that have content
-      if (documents && documents.length > 0) {
-        payload.documents = documents;
-      }
-
-      if (validOrganizations.length > 0) {
-        payload.organizations = validOrganizations;
-      }
-
-      if (validCompanyReferences.length > 0) {
-        payload.companyreferences = validCompanyReferences;
-      }
-
-      if (Object.keys(validSocialMediaHandles).length > 0) {
-        payload.socialmediahandles = validSocialMediaHandles;
-      }
-
-      console.log("📤 Submitting payload:", payload);
-
-      // 🆕 UPDATED: Send as JSON, not FormData
-      const response = await api.post(
-        `/candidates/${candidateId}/hired-docs`,
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json", // ✅ JSON instead of multipart
-          },
-        }
-      );
-
-      if (response.data.success) {
-        toast.success(
-          "All documents submitted successfully! Welcome to the team! 🎉"
-        );
-        onSubmissionComplete();
-      }
-    } catch (error: any) {
-      console.error("Error submitting documents:", error);
-      toast.error(
-        error?.response?.data?.message ||
-          "Failed to submit documents. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
+    if (validCompanyReferences.length > 0) {
+      payload.company_references = validCompanyReferences; // ✅ Use correct field name
     }
-  };
+
+    // 🔧 FIX 7: Use the renamed variable
+    if (Object.keys(processedSocialMediaHandles).length > 0) {
+      payload.social_media_handles = processedSocialMediaHandles; // ✅ Use correct field name
+    }
+
+    const response = await api.post(
+      `/candidates/${candidateId}/hired-docs`,payload);
+
+    if (response.data.success) {
+      toast.success("All documents submitted successfully! Welcome to the team! 🎉");
+      onSubmissionComplete();
+    }
+  } catch (error: any) {
+    console.error("Error submitting documents:", error);
+    toast.error(
+      error?.response?.data?.message ||
+        "Failed to submit documents. Please try again."
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // Rest of your existing render methods remain the same...
   const renderDocumentSection = (
@@ -687,7 +671,6 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
     bgColor: string
   ) => (
     <Card className={`${bgColor} border-2`}>
-      <Toaster position="top-center" reverseOrder={false} />
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           {icon}

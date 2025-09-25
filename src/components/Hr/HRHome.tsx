@@ -172,16 +172,16 @@ type Candidate = {
   };
   applied_job: {
     _id: string;
-    name: string;
-    description: {
-      location: string;
-      country: string;
-      time: string;
-      expInYears: string;
-      salary: string;
-      jobId: string;
-      gradingParameters: string[];
-    };
+    name?: string;
+    description?: string;
+    location: string;
+    country: string;
+    time: string;
+    expInYears: string;
+    salary: string;
+    jobId?: string;
+    gradingParameters?: string[];
+    title?: string;
   };
   current_stage:
     | "registered"
@@ -1152,8 +1152,7 @@ const HRHome = () => {
       toast.error(
         error?.response?.data?.message || "Failed to shortlist candidate"
       );
-    }
-    finally {
+    } finally {
       setLoadingCandidate(false);
     }
   };
@@ -1344,7 +1343,7 @@ const HRHome = () => {
     fetchAllData();
     async function getJobs() {
       const alljobs = await api.get("/org/jobs");
-      setJobRole(alljobs.data.data.map((job: any) => job.name));
+      setJobRole(alljobs.data.data.map((job: any) => job.title));
     }
     getJobs();
   }, []);
@@ -1380,7 +1379,7 @@ const HRHome = () => {
 
     if (roleFilter !== "all") {
       filtered = filtered.filter((candidate) =>
-        candidate.applied_job.name
+        candidate.applied_job.title
           .toLowerCase()
           .includes(roleFilter.toLowerCase())
       );
@@ -1573,7 +1572,16 @@ const HRHome = () => {
                 <TableRow>
                   <TableHead>Candidate</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>{isCompact ? <span className="flex flex-col"><span>{"Current"}</span><span>{"Stage"}</span></span> : "Current Stage"}</TableHead>
+                  <TableHead>
+                    {isCompact ? (
+                      <span className="flex flex-col">
+                        <span>{"Current"}</span>
+                        <span>{"Stage"}</span>
+                      </span>
+                    ) : (
+                      "Current Stage"
+                    )}
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Glory</TableHead>
                 </TableRow>
@@ -1600,7 +1608,8 @@ const HRHome = () => {
                             {candidate.first_name} {candidate.last_name}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {candidate.gender} • {getAge(candidate.date_of_birth)} yrs
+                            {candidate.gender} •{" "}
+                            {getAge(candidate.date_of_birth)} yrs
                           </div>
                         </div>
                       </div>
@@ -1621,7 +1630,9 @@ const HRHome = () => {
                       <Badge className={getStageColor(candidate.current_stage)}>
                         {isCompact
                           ? candidate.current_stage[0].toUpperCase() // Initial only
-                          : candidate.current_stage.replace("_", " ").toUpperCase()}
+                          : candidate.current_stage
+                              .replace("_", " ")
+                              .toUpperCase()}
                       </Badge>
                     </TableCell>
 
@@ -1642,8 +1653,6 @@ const HRHome = () => {
             </Table>
           </div>
 
-
-
           {filteredCandidates.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">
@@ -1660,7 +1669,7 @@ const HRHome = () => {
           <DialogHeader>
             <div className="space-y-3">
               <DialogTitle>Candidate Details</DialogTitle>
-              
+
               {selectedCandidate && (
                 <div className="flex flex-col gap-2">
                   {/* Primary Actions Row */}
@@ -1712,7 +1721,10 @@ const HRHome = () => {
                           size="sm"
                           className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 min-w-[100px]"
                         >
-                          ⭐ <span className="hidden sm:inline ml-1">Shortlist</span>
+                          ⭐{" "}
+                          <span className="hidden sm:inline ml-1">
+                            Shortlist
+                          </span>
                         </Button>
                       )}
 
@@ -1741,7 +1753,10 @@ const HRHome = () => {
                       size="sm"
                       className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 min-w-[120px]"
                     >
-                      🔄 <span className="hidden sm:inline ml-1">Update Stage</span>
+                      🔄{" "}
+                      <span className="hidden sm:inline ml-1">
+                        Update Stage
+                      </span>
                     </Button>
                   </div>
 
@@ -1753,7 +1768,9 @@ const HRHome = () => {
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 flex-1 min-w-[140px]"
                     >
                       <Calendar className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Schedule Interview</span>
+                      <span className="hidden sm:inline">
+                        Schedule Interview
+                      </span>
                       <span className="sm:hidden">Interview</span>
                     </Button>
 
@@ -1833,7 +1850,7 @@ const HRHome = () => {
                           <p className="text-lg sm:text-xs font-sm dark:text-purple-400 mb-2">
                             <strong>
                               Applied For -{" "}
-                              {selectedCandidate.applied_job?.name}
+                              {selectedCandidate.applied_job?.title}
                             </strong>
                           </p>
                           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -1933,47 +1950,27 @@ const HRHome = () => {
                           </div>
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          {selectedCandidate.applied_job?.description
-                            ?.location && (
+                          {selectedCandidate.applied_job?.location && (
                             <div>
-                              📍{" "}
-                              {
-                                selectedCandidate.applied_job.description
-                                  .location
-                              }
+                              📍 {selectedCandidate.applied_job?.location}
                             </div>
                           )}
-                          {selectedCandidate.applied_job?.description
-                            ?.country && (
+                          {selectedCandidate.applied_job?.country && (
                             <div>
-                              🌍{" "}
-                              {
-                                selectedCandidate.applied_job.description
-                                  .country
-                              }
+                              🌍 {selectedCandidate.applied_job.country}
                             </div>
                           )}
-                          {selectedCandidate.applied_job?.description?.time && (
+                          {selectedCandidate.applied_job?.time && (
+                            <div>⏰ {selectedCandidate.applied_job.time}</div>
+                          )}
+                          {selectedCandidate.applied_job?.expInYears && (
                             <div>
-                              ⏰{" "}
-                              {selectedCandidate.applied_job.description.time}
+                              💼 {selectedCandidate.applied_job.expInYears}Years
                             </div>
                           )}
-                          {selectedCandidate.applied_job?.description
-                            ?.expInYears && (
-                            <div>
-                              💼{" "}
-                              {
-                                selectedCandidate.applied_job.description
-                                  .expInYears
-                              }
-                            </div>
-                          )}
-                          {selectedCandidate.applied_job?.description
-                            ?.salary && (
+                          {selectedCandidate.applied_job?.salary && (
                             <div className="sm:col-span-2">
-                              💰{" "}
-                              {selectedCandidate.applied_job.description.salary}
+                              💰 {selectedCandidate.applied_job.salary}
                             </div>
                           )}
                         </div>
@@ -2611,7 +2608,9 @@ const HRHome = () => {
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">Due date:</span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Due date:
+                              </span>
                               <div className="font-medium text-gray-900 dark:text-gray-100">
                                 {formatDate(assessment.due_at)}
                               </div>

@@ -73,13 +73,13 @@ type Candidate = {
   applied_job: {
     _id: string;
     name: string;
-    description: {
+    description:string;
       location: string;
       country: string;
       time: string;
       expInYears: string;
       salary: string;
-    };
+      title:string;
   };
   current_stage:
     | "registered"
@@ -659,7 +659,7 @@ const AdminHome = () => {
                             <p className="text-lg sm:text-xs font-sm dark:text-purple-400 mb-2">
                               <strong>
                                 Applied For -{" "}
-                                {selectedCandidate.applied_job?.name}
+                                {selectedCandidate.applied_job?.title}
                               </strong>
                             </p>
                             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -761,50 +761,41 @@ const AdminHome = () => {
                             </div>
                           )}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            {selectedCandidate.applied_job?.description
-                              ?.location && (
+                            {selectedCandidate.applied_job?.location && (
                               <div>
                                 📍{" "}
                                 {
-                                  selectedCandidate.applied_job.description
-                                    .location
+                                  selectedCandidate.applied_job.location
                                 }
                               </div>
                             )}
-                            {selectedCandidate.applied_job?.description
-                              ?.country && (
+                            {selectedCandidate.applied_job?.country && (
                               <div>
                                 🌍{" "}
                                 {
-                                  selectedCandidate.applied_job.description
-                                    .country
+                                  selectedCandidate.applied_job.country
                                 }
                               </div>
                             )}
-                            {selectedCandidate.applied_job?.description
-                              ?.time && (
+                            {selectedCandidate.applied_job?.time && (
                               <div>
                                 ⏰{" "}
-                                {selectedCandidate.applied_job.description.time}
+                                {selectedCandidate.applied_job.time}
                               </div>
                             )}
-                            {selectedCandidate.applied_job?.description
-                              ?.expInYears && (
+                            {selectedCandidate.applied_job?.expInYears && (
                               <div>
                                 💼{" "}
                                 {
-                                  selectedCandidate.applied_job.description
-                                    .expInYears
-                                }
+                                  selectedCandidate.applied_job.expInYears
+                                } Years
                               </div>
                             )}
-                            {selectedCandidate.applied_job?.description
-                              ?.salary && (
+                            {selectedCandidate.applied_job?.salary && (
                               <div className="sm:col-span-2">
                                 💰{" "}
                                 {
-                                  selectedCandidate.applied_job.description
-                                    .salary
+                                  selectedCandidate.applied_job.salary
                                 }
                               </div>
                             )}

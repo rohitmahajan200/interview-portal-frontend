@@ -9,14 +9,17 @@ interface Candidate {
   email: string;
   current_stage: string;
   applied_job: {
-    name: string;
-    description: {
-      location: string;
-      country: string;
-      time: string;
-      expInYears: string;
-      salary: string;
-    };
+    _id: string;
+    name?: string;
+    description?: string;
+    location: string;
+    country: string;
+    time: string;
+    expInYears: string;
+    salary: string;
+    jobId?: string;
+    gradingParameters?: string[];
+    title?: string;
   };
   status: string;
 }

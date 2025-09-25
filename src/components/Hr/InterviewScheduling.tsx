@@ -125,6 +125,7 @@ interface Interview {
     current_stage: string;
     applied_job?: {
       name: string;
+      title:string;
     };
   };
   interview_type: string;
@@ -170,6 +171,7 @@ interface Candidate {
   applied_job: {
     _id: string;
     name: string;
+    title:string;
   };
   status: string;
 }
@@ -262,7 +264,7 @@ const InterviewCalendar = () => {
         interview,
         candidateName: `${interview.candidate.first_name} ${interview.candidate.last_name}`,
         candidateStage: interview.candidate.current_stage,
-        candidateJob: interview.candidate.applied_job?.name || 'No Job',
+        candidateJob: interview.candidate.applied_job?.title || 'No Job',
         interviewerNames: interview.interviewers.map(i => i.name)
       }
     }));
@@ -712,7 +714,7 @@ const InterviewCalendar = () => {
                             {selected.current_stage}
                           </span>
                           <span className="text-xs text-gray-400 max-w-[80px] sm:max-w-none truncate">
-                            {selected.applied_job?.name || 'No Job'}
+                            {selected.applied_job?.title || 'No Job'}
                           </span>
                         </>
                       ) : null;
@@ -768,7 +770,7 @@ const InterviewCalendar = () => {
                           {candidate.current_stage}
                         </span>
                         <span className="text-xs text-gray-600 max-w-[60px] sm:max-w-[80px] truncate">
-                          {candidate.applied_job?.name || 'No Job'}
+                          {candidate.applied_job?.title || 'No Job'}
                         </span>
                       </div>
                     </div>
@@ -1016,7 +1018,7 @@ const InterviewCalendar = () => {
                 <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
                 <p className="break-all"><strong>Email:</strong> {selectedInterview.candidate.email}</p>
                 <p><strong>Stage:</strong> {selectedInterview.candidate.current_stage}</p>
-                <p><strong>Job:</strong> {selectedInterview.candidate.applied_job?.name || 'N/A'}</p>
+                <p><strong>Job:</strong> {selectedInterview.candidate.applied_job?.title || 'N/A'}</p>
               </div>
             </div>
 

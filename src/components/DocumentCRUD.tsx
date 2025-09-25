@@ -9,9 +9,6 @@ import toast from "react-hot-toast";
 import api from '@/lib/api';
 import { useDispatch } from 'react-redux';
 
-// 🆕 FIXED: Don't define local types that conflict with existing ones
-// Instead, work with the existing types and handle missing properties gracefully
-
 // 🆕 ADDED: Error type for better error handling
 interface ApiError {
   response?: {
@@ -26,7 +23,6 @@ export default function DocumentCRUD() {
   // 🆕 FIXED: Remove type casting to avoid conflicts
   const user = useAppSelector((state) => state.auth.user);
   const documents = user?.documents || [];
-  const profilePhoto = user?.profile_photo_url.url;
   
   const dispatch = useDispatch();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -35,11 +31,6 @@ export default function DocumentCRUD() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingType, setEditingType] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
-
-  // Profile photo states
-  const [selectedProfilePhoto, setSelectedProfilePhoto] = useState<File | null>(null);
-  const [profilePhotoInputKey, setProfilePhotoInputKey] = useState<number>(0);
-  const [uploadingProfilePhoto, setUploadingProfilePhoto] = useState<boolean>(false);
 
   // Better error handling and type safety
   const refreshUser = async (): Promise<void> => {
@@ -102,51 +93,6 @@ export default function DocumentCRUD() {
     }
   };
 
-  // Profile photo upload
-  const handleProfilePhotoUpload = async (): Promise<void> => {
-    if (!selectedProfilePhoto) {
-       toast.error('Please select a profile photo');
-       return;
-    }
-
-    // Validate file type
-    if (!selectedProfilePhoto.type.startsWith('image/')) {
-       toast.error('Please select an image file');
-       return;
-    }
-
-    // Validate file size (5MB max)
-    const validationError = validateFile(selectedProfilePhoto, 5);
-    if (validationError) {
-       toast.error(validationError);
-       return;
-    }
-
-    setUploadingProfilePhoto(true);
-    try {
-      const formData = new FormData();
-      formData.append('profilephoto', selectedProfilePhoto);
-
-      const response = await api.post('/candidates/profile-photo', formData);
-
-      if (response.data?.success) {
-        toast.success('Profile photo updated successfully!', { duration: 2000 });
-        setSelectedProfilePhoto(null);
-        setProfilePhotoInputKey(prev => prev + 1);
-        await refreshUser();
-      } else {
-        throw new Error(response.data?.message || 'Profile photo upload failed');
-      }
-    } catch (err: unknown) {
-      console.error("Profile photo upload fail=>", err);
-      const error = err as ApiError;
-      const errorMessage = error?.response?.data?.message || error?.message || 'Profile photo upload failed';
-      toast.error(errorMessage, { duration: 2000 });
-    } finally {
-      setUploadingProfilePhoto(false);
-    }
-  };
-
   const handleUpdate = async (id: string): Promise<void> => {
     if (!editingType.trim()) {
        toast.error('Document type cannot be empty');
@@ -194,21 +140,6 @@ export default function DocumentCRUD() {
     }
   };
 
-  // Helper to get profile photo URL
-  const getProfilePhotoUrl = (): string | null => {
-    if (!profilePhoto) return null;
-    
-    if (typeof profilePhoto === 'string') {
-      return profilePhoto;
-    }
-    
-    if (typeof profilePhoto === 'object' && profilePhoto !== null && 'url' in profilePhoto) {
-      return (profilePhoto as { url: string }).url;
-    }
-    
-    return null;
-  };
-
   // Helper to format file size
   const formatFileSize = (bytes: number | undefined): string => {
     if (!bytes) return 'Unknown size';
@@ -228,64 +159,9 @@ export default function DocumentCRUD() {
     return '⏳ Pending';
   };
 
-  const profilePhotoUrl = getProfilePhotoUrl();
-
   return (
-    <div className="max-w-md md:max-w-2xl p-4 md:p-6 space-y-4 text-foreground bg-background m-10">
+    <div className="max-w-md md:max-w-2xl p-2 md:p-4 space-y-2 text-foreground bg-background m-10">
       <div className="grid gap-4">
-        
-        {/* Profile Photo Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Photo</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            {/* Current Profile Photo */}
-            {profilePhotoUrl && (
-              <div className="flex items-center space-x-4">
-                <img 
-                  src={profilePhotoUrl} 
-                  alt="Profile" 
-                  className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-                <div className="text-sm text-gray-600">
-                  <div>Current profile photo</div>
-                  {typeof profilePhoto === 'object' && profilePhoto && 'filename' in profilePhoto && (profilePhoto as any).filename && (
-                    <div>File: {(profilePhoto as any).filename}</div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Profile Photo Upload */}
-            <div className="space-y-2">
-              <Input
-                key={profilePhotoInputKey}
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp"
-                onChange={(e) => setSelectedProfilePhoto(e.target.files?.[0] || null)}
-                disabled={uploadingProfilePhoto}
-              />
-              {selectedProfilePhoto && (
-                <div className="text-sm text-gray-600">
-                  Selected: {selectedProfilePhoto.name} ({formatFileSize(selectedProfilePhoto.size)})
-                </div>
-              )}
-              <Button 
-                onClick={handleProfilePhotoUpload} 
-                disabled={!selectedProfilePhoto || uploadingProfilePhoto}
-                className="w-full"
-              >
-                {uploadingProfilePhoto ? 'Uploading...' : 'Update Profile Photo'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Document Upload Section */}
         <Card>
           <CardHeader>
