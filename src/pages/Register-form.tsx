@@ -10,6 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -723,7 +730,7 @@ case "checkbox": {
             </CardHeader>
             <CardContent>
               <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 justify-center">
                   {/* All your existing form fields remain the same */}
                   <div>
                     <Label htmlFor="first_name">First Name<span className="text-destructive">*</span></Label>
@@ -801,22 +808,24 @@ case "checkbox": {
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="gender">Gender<span className="text-destructive">*</span></Label>
-                    <select
-                      {...register("gender", { required: true })}
-                      id="gender"
-                      className="w-full border rounded-md px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                    </select>
-                    {errors.gender && (
-                      <p className="text-destructive text-sm mt-1">
-                        Selection is required
-                      </p>
-                    )}
+                  <div className="md:col-span-1">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Controller
+                      name="gender"
+                      control={control}
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select Gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
                   <div className="md:col-span-2">

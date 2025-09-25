@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import api from "@/lib/api";
 
 // Email verification page UI
@@ -34,49 +35,51 @@ export const EmailVerification = () => {
     }
   };
 
-
   return (
-    <div className="flex min-h-svh w-full items-center justify-center bg-gray-50 px-4 sm:px-6 md:px-10 py-12">
+    <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 sm:px-6 md:px-10 py-12">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-lg">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 space-y-6">
+        <Card className="shadow-lg rounded-2xl border p-8 space-y-6">
           
           {/* Header section */}
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-semibold">Email Verification Required</h2>
-            <p className="text-sm text-gray-500">
+          <CardHeader className="text-center space-y-2 p-0">
+            <CardTitle className="text-2xl font-semibold">Email Verification Required</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
               Please verify your email address to continue
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          {/* Instructional text */}
-          <div className="text-sm text-gray-700 space-y-4 text-center">
-            <p>We have sent a verification link to your registered email address.</p>
-            <p>Please check your inbox and click the verification link to activate your account.</p>
-            <p>After verification, return here and log in again.</p>
-          </div>
+          <CardContent className="space-y-6 p-0">
+            {/* Instructional text */}
+            <div className="text-sm text-muted-foreground space-y-4 text-center">
+              <p>We have sent a verification link to your registered email address.</p>
+              <p>Please check your inbox and click the verification link to activate your account.</p>
+              <p>After verification, return here and log in again.</p>
+            </div>
 
-          {/* Resend verification button */}
-          {email && (
+            {/* Resend verification button */}
+            {email && (
+              <Button
+                type="button"
+                className="w-full text-sm py-2"
+                onClick={handleResend}
+                disabled={loading}
+              >
+                {loading ? "Sending..." : "Resend Verification Email"}
+              </Button>
+            )}
+
+            {/* Back to login button */}
             <Button
               type="button"
               className="w-full text-sm py-2"
-              onClick={handleResend}
-              disabled={loading}
+              variant="outline"
+              onClick={() => navigate("/login")}
             >
-              {loading ? "Sending..." : "Resend Verification Email"}
+              Back to Login
             </Button>
-          )}
-
-          {/* Back to login button */}
-          <Button
-            type="button"
-            className="w-full text-sm py-2"
-            variant="outline"
-            onClick={() => navigate("/login")}
-          >
-            Back to Login
-          </Button>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

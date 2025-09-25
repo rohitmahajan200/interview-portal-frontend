@@ -1501,7 +1501,7 @@ const JobManagement = () => {
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                      <div className="space-y-1">
                         {formData.customQuestions.map((question, index) => (
                           <div key={index} className="flex items-start gap-2 p-2 bg-muted rounded">
                             <span className="text-xs flex-1">{question}</span>
@@ -1967,7 +1967,7 @@ const JobManagement = () => {
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                      <div className="space-y-1">
                         {formData.customQuestions.map((question, index) => (
                           <div key={index} className="flex items-start gap-2 p-2 bg-muted rounded">
                             <span className="text-xs flex-1">{question}</span>
