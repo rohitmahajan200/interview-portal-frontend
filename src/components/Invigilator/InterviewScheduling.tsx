@@ -5,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg } from '@fullcalendar/core';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Users, MapPin, Video, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -276,82 +276,90 @@ const InterviewScheduling = () => {
 
       {/* Interview Details Dialog */}
       <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
-        <DialogContent className="max-w-3xl md:max-w-[80vw] w-full h-auto max-h-[85vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="sticky top-0 bg-white dark:bg-neutral-900 z-10 pb-2">
-            <DialogTitle className="flex items-center gap-2 text-lg md:text-xl">
-              <Calendar className="h-5 w-5" />
-              Interview Details
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl md:max-w-[80vw] w-full h-auto max-h-[85vh] flex flex-col overflow-y-auto bg-background dark:bg-background border-border dark:border-border">
 
           {selectedInterview && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-sm md:text-base">
               {/* Instruction banner only if remark required */}
               {!isAdmin && needsRemarkForUser(selectedInterview) && (
-                <div className="md:col-span-2 mb-2 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-xs md:text-sm font-medium">
+                <div className="md:col-span-2 mb-2 p-3 rounded-lg border border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs md:text-sm font-medium">
                   ⚠️ Please provide your remark and grade for this interview. This is required because the interview has already been conducted and your input is pending.
                 </div>
               )}
 
               {/* Interview Information */}
               <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base text-foreground dark:text-foreground">
                   <Calendar className="h-4 w-4" />
                   Interview Information
                 </h4>
-                <p><strong>Title:</strong> {selectedInterview.title}</p>
-                <p><strong>Type:</strong>
-                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Title:</strong> {selectedInterview.title}
+                </p>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Type:</strong>
+                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
                     {selectedInterview.interview_type.replace('_', ' ').toUpperCase()}
                   </span>
                 </p>
-                <p><strong>Status:</strong>
-                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Status:</strong>
+                  <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
                     {selectedInterview.status}
                   </span>
                 </p>
-                <p><strong>Date:</strong> {new Date(selectedInterview.scheduled_at).toLocaleDateString()}</p>
-                <p><strong>Time:</strong> {new Date(selectedInterview.scheduled_at).toLocaleTimeString()} - {new Date(selectedInterview.end_time).toLocaleTimeString()}</p>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Date:</strong> {new Date(selectedInterview.scheduled_at).toLocaleDateString()}
+                </p>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Time:</strong> {new Date(selectedInterview.scheduled_at).toLocaleTimeString()} - {new Date(selectedInterview.end_time).toLocaleTimeString()}
+                </p>
               </div>
 
               {/* Candidate Information */}
               <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base text-foreground dark:text-foreground">
                   <Users className="h-4 w-4" />
                   Candidate Information
                 </h4>
-                <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
-                <p><strong>Email:</strong>
-                  <a href={`mailto:${selectedInterview.candidate.email}`} className="ml-1 text-blue-600 hover:underline break-all">
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}
+                </p>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Email:</strong>
+                  <a href={`mailto:${selectedInterview.candidate.email}`} className="ml-1 text-blue-600 dark:text-blue-400 hover:underline break-all">
                     {selectedInterview.candidate.email}
                   </a>
                 </p>
-                <p><strong>Stage:</strong>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Stage:</strong>
                   <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${getStageColor(selectedInterview.candidate.current_stage)}`}>
                     {selectedInterview.candidate.current_stage}
                   </span>
                 </p>
-                <p><strong>Applied Job:</strong> {selectedInterview.candidate.applied_job?.title || 'N/A'}</p>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Applied Job:</strong> {selectedInterview.candidate.applied_job?.title || 'N/A'}
+                </p>
               </div>
 
               {/* Panel */}
               <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base text-foreground dark:text-foreground">
                   <Users className="h-4 w-4" />
                   Interview Panel
                 </h4>
                 {selectedInterview.interviewers.map(interviewer => (
                   <div key={interviewer._id} className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>{interviewer.name}</span>
-                    <span className="text-xs text-gray-500">({interviewer.role})</span>
+                    <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
+                    <span className="text-foreground dark:text-foreground">{interviewer.name}</span>
+                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">({interviewer.role})</span>
                   </div>
                 ))}
               </div>
 
               {/* Meeting Details */}
               <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base">
+                <h4 className="font-semibold flex items-center gap-2 text-sm md:text-base text-foreground dark:text-foreground">
                   {selectedInterview.type === 'online' ? (
                     <Video className="h-4 w-4" />
                   ) : (
@@ -360,30 +368,36 @@ const InterviewScheduling = () => {
                   Meeting Details
                 </h4>
 
-                <p><strong>Format:</strong> {selectedInterview.type === 'online' ? "Online" : "In-Person"}</p>
+                <p className="text-foreground dark:text-foreground">
+                  <strong>Format:</strong> {selectedInterview.type === 'online' ? "Online" : "In-Person"}
+                </p>
 
                 {selectedInterview.type === 'online' ? (
                   <>
-                    <p><strong>Platform:</strong> {selectedInterview.platform || 'Not specified'}</p>
+                    <p className="text-foreground dark:text-foreground">
+                      <strong>Platform:</strong> {selectedInterview.platform || 'Not specified'}
+                    </p>
                     {selectedInterview.meeting_link && (
                       <a
                         href={selectedInterview.meeting_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block p-2 bg-blue-50 text-blue-700 rounded border text-xs break-all"
+                        className="block p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-700 text-xs break-all hover:bg-blue-100 dark:hover:bg-blue-900/30"
                       >
                         🔗 {selectedInterview.meeting_link}
                       </a>
                     )}
                   </>
                 ) : (
-                  <p><strong>Address:</strong> {selectedInterview.address}</p>
+                  <p className="text-foreground dark:text-foreground">
+                    <strong>Address:</strong> {selectedInterview.address}
+                  </p>
                 )}
 
                 {selectedInterview.description && (
                   <div>
-                    <p><strong>Notes:</strong></p>
-                    <div className="mt-1 p-2 bg-gray-50 rounded text-xs">
+                    <p className="text-foreground dark:text-foreground"><strong>Notes:</strong></p>
+                    <div className="mt-1 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs text-foreground dark:text-foreground border border-border dark:border-border">
                       {selectedInterview.description}
                     </div>
                   </div>
@@ -394,34 +408,42 @@ const InterviewScheduling = () => {
               {selectedInterview && !isAdmin && (
                 <div className="md:col-span-2 space-y-3">
                   {myRemark ? (
-                    <div className="p-3 border rounded-lg bg-muted/30">
-                      <h4 className="font-semibold mb-1">📝 Your Submitted Remark</h4>
+                    <div className="p-3 border border-border dark:border-border rounded-lg bg-muted/30 dark:bg-muted/20">
+                      <h4 className="font-semibold mb-1 text-foreground dark:text-foreground">📝 Your Submitted Remark</h4>
                       <div className="text-sm">
-                        <p className="mb-2"><strong>Grade:</strong> {myRemark.grade}</p>
-                        <p className="whitespace-pre-wrap">{myRemark.remark}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
+                        <p className="mb-2 text-foreground dark:text-foreground">
+                          <strong>Grade:</strong> {myRemark.grade}
+                        </p>
+                        <p className="whitespace-pre-wrap text-foreground dark:text-foreground">{myRemark.remark}</p>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
                           Submitted at {new Date(myRemark.created_at).toLocaleString()}
                         </p>
                       </div>
                     </div>
                   ) : needsRemarkForUser(selectedInterview) ? (
-                    <div className="p-3 border rounded-lg bg-muted/30">
-                      <h4 className="font-semibold mb-2">📝 Your Remark (required)</h4>
+                    <div className="p-3 border border-border dark:border-border rounded-lg bg-muted/30 dark:bg-muted/20">
+                      <h4 className="font-semibold mb-2 text-foreground dark:text-foreground">📝 Your Remark (required)</h4>
                       <Textarea
                         value={remarkText}
                         onChange={(e) => setRemarkText(e.target.value)}
                         placeholder="Share your observations…"
                         rows={3}
-                        className="text-sm"
+                        className="text-sm bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
                       />
                       <div className="mt-3">
                         <Select value={remarkGrade} onValueChange={(v) => setRemarkGrade(v as Grade)}>
-                          <SelectTrigger className="w-full text-sm">
+                          <SelectTrigger className="w-full text-sm bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground">
                             <SelectValue placeholder="Select grade" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background dark:bg-background border-border dark:border-border">
                             {gradeOptions.map((g) => (
-                              <SelectItem key={g} value={g}>{g}</SelectItem>
+                              <SelectItem 
+                                key={g} 
+                                value={g}
+                                className="text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
+                              >
+                                {g}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -429,14 +451,13 @@ const InterviewScheduling = () => {
                       <div className="flex justify-end mt-3">
                         <Button size="sm" onClick={handleSubmitRemark}>Submit</Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        You’re seeing this because the interview has already started and you haven’t added your remark yet.
+                      <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
+                        You're seeing this because the interview has already started and you haven't added your remark yet.
                       </p>
                     </div>
                   ) : null}
                 </div>
               )}
-
             </div>
           )}
         </DialogContent>

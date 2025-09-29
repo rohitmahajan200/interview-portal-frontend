@@ -1,59 +1,39 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/OrgDashboard.tsx
+import React, { useEffect } from 'react';
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentRole } from "@/features/Org/View/adminViewSlice";
-import { useNavigate } from "react-router-dom";
 import type { RootState } from "@/app/store";
 
 // Import dashboard components
 import Admin from '@/components/Admin/Admin';
 import Hr from '@/components/Hr/Hr';
 import Invigilator from '@/components/Invigilator/Invigilator';
+import Manager from '@/components/Manager/Manager';
 import api from '@/lib/api';
 import { setUser } from '@/features/Candidate/auth/authSlice';
-import Manager from '@/components/Manager/Manager';
-import Spinner from '@/components/ui/spinner';
 
 const OrgDashboard = () => {
-  const [isLoading, setIsLoading] = useState(true);
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  
   
   useEffect(() => {
     const fetchOrgUser = async () => {
       try {
         const response = await api.get("/org/me");
-        
         if (response.data.user) {
           dispatch(setUser(response.data.user));
-        } else {
-          navigate("/org/login");
         }
       } catch (error) {
         console.error("Failed to fetch org user:", error);
-        navigate("/org/login");
-      } finally {
-        setIsLoading(false);
+        // Don't navigate here - ProtectedRoute handles this
       }
     };
 
     fetchOrgUser();
-  }, [dispatch, navigate]);
-
+  }, [dispatch]);
   
   const orgUser = useSelector((state: RootState) => state.orgAuth.user);
   const currentRole = useSelector((state: RootState) => state.adminView.currentRole);
-  
-   if (isLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center space-y-4">
-            <Spinner></Spinner>
-          </div>
-        </div>
-      );
-    }
   
   // If user is not admin, show only their role dashboard
   if (orgUser && orgUser.role !== "ADMIN") {
@@ -76,8 +56,6 @@ const OrgDashboard = () => {
       </div>
     );
   }
-
-     
   
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col">
@@ -87,10 +65,6 @@ const OrgDashboard = () => {
         className="w-full h-full flex flex-col"
       >
         <div className="flex h-full flex-col">
-          {/* Fixed Tab Header - Height: 64px */}
-
-
-          {/* Main Content Area - Remaining Height with Scroll */}
           <div className="flex-1 w-full h-[calc(100vh-4rem)] overflow-hidden">
             <TabsContent value="ADMIN" className="w-full h-full m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden">
               <Admin />

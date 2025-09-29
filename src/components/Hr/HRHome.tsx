@@ -324,6 +324,9 @@ const HRHome = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null
   );
+  // Add this state if you don't have it already
+  const [shortlistingCandidateId, setShortlistingCandidateId] = useState<string | null>(null);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCandidate, setLoadingCandidate] = useState(false);
   const [stageFilter, setStageFilter] = useState<string>("all");
@@ -1135,27 +1138,24 @@ const HRHome = () => {
   };
 
   const shortlistCandidate = async (candidateId: string, reason?: string) => {
-    try {
-      setLoadingCandidate(true);
-      const response = await api.patch(
-        `/org/candidates/${candidateId}/shortlist`,
-        {
-          shortlist_reason: reason,
-        }
-      );
+  try {
+    setShortlistingCandidateId(candidateId); // Set specific candidate being shortlisted
+    
+    const response = await api.patch(`/org/candidates/${candidateId}/shortlist`, {
+      shortlistreason: reason,
+    });
 
-      if (response.data.success) {
-        toast.success("Candidate shortlisted successfully");
-        fetchAllData();
-      }
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || "Failed to shortlist candidate"
-      );
-    } finally {
-      setLoadingCandidate(false);
+    if (response.data.success) {
+      toast.success("Candidate shortlisted successfully! 🎉");
+      fetchCandidateDetails(candidateId)
     }
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || "Failed to shortlist candidate");
+  } finally {
+    setShortlistingCandidateId(null); // Clear loading state
+  }
   };
+
 
   const fetchCandidateDetails = async (candidateId: string) => {
     try {
@@ -1707,26 +1707,29 @@ const HRHome = () => {
                       </Button>
                     )}
 
-                    {!selectedCandidate.shortlisted &&
-                      selectedCandidate.status !== "rejected" &&
-                      selectedCandidate.current_stage === "registered" && (
-                        <Button
-                          onClick={() =>
-                            shortlistCandidate(
-                              selectedCandidate._id,
-                              "Shortlisted from candidate review"
-                            )
-                          }
-                          variant="default"
-                          size="sm"
-                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 min-w-[100px]"
-                        >
-                          ⭐{" "}
-                          <span className="hidden sm:inline ml-1">
-                            Shortlist
-                          </span>
-                        </Button>
-                      )}
+                    {!selectedCandidate.shortlisted && selectedCandidate.status !== "rejected" && (
+                      <Button 
+                        onClick={() => shortlistCandidate(selectedCandidate._id, "Shortlisted from candidate review")}
+                        variant="default"
+                        size="sm"
+                        disabled={shortlistingCandidateId === selectedCandidate._id}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg flex-1 min-w-[100px] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {shortlistingCandidateId === selectedCandidate._id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            <span className="hidden sm:inline ml-1">Shortlisting...</span>
+                            <span className="sm:hidden">Wait...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="hidden sm:inline ml-1">Shortlist</span>
+                            <span className="sm:hidden">✓</span>
+                          </>
+                        )}
+                      </Button>
+                    )}
+
 
                     {selectedCandidate.status !== "rejected" && (
                       <Button
@@ -1871,14 +1874,14 @@ const HRHome = () => {
                             </Badge>
                           </div>
                           <div className="inline-flex items-center gap-2">
-                            <div className="text-xs text-gray-600">
+                            <div className="text-xs text-gray-600 dark:text-gray-200">
                               <strong>Status:</strong>{" "}
                               <span
                                 className={`inline-flex items-center gap-1 px-1 ${
                                   selectedCandidate.status.toLowerCase() ===
                                   "hired"
                                     ? "text-green-700"
-                                    : "text-gray-700"
+                                    : "text-yellow-700"
                                 }`}
                               >
                                 {selectedCandidate.status.toUpperCase()}
@@ -1949,7 +1952,12 @@ const HRHome = () => {
                             </p>
                           </div>
                         )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
+                          {selectedCandidate.applied_job?.title && (
+                            <div className="sm:col-span-2 font-semibold text-sm text-gray-800 dark:text-gray-200">
+                              📌 {selectedCandidate.applied_job.title}
+                            </div>
+                          )}
                           {selectedCandidate.applied_job?.location && (
                             <div>
                               📍 {selectedCandidate.applied_job?.location}
@@ -2563,7 +2571,7 @@ const HRHome = () => {
                 )}
 
               {/* Assessments Status */}
-              <Card>
+              {selectedCandidate.current_stage == "assessment" && <Card>
                 <CardHeader>
                   <CardTitle>Technical Assessments</CardTitle>
                 </CardHeader>
@@ -2634,7 +2642,7 @@ const HRHome = () => {
                     </div>
                   )}
                 </CardContent>
-              </Card>
+              </Card>}
 
               <Card>
                 <CardHeader>
@@ -3046,77 +3054,70 @@ const HRHome = () => {
         }
         getGradingParameters={getGradingParameters}
       />
-
       {/* HR Questionnaire Assignment Dialog */}
       <Dialog
         open={assignHRQuestionnaireOpen}
         onOpenChange={setAssignHRQuestionnaireOpen}
       >
-        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Assign HR Questionnaire</DialogTitle>
-            <DialogDescription>
-              Assign HR questionnaire to {targetCandidateForHR?.first_name}{" "}
-              {targetCandidateForHR?.last_name}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
-              {/* Show Selected Candidate */}
+          {/* Main Content - NO SCROLL */}
+          <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4 flex flex-col overflow-hidden">
+            <div className="flex flex-col h-full space-y-4 sm:space-y-6 overflow-hidden">
+              
+              {/* Compact Candidate Info - Fixed Height */}
               {targetCandidateForHR && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <Label className="text-sm font-medium mb-2 block">
+                <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <Label className="text-xs font-medium block mb-1">
                     Assigning HR questionnaire to:
                   </Label>
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage
-                        src={targetCandidateForHR.profile_photo_url?.url}
-                      />
-                      <AvatarFallback>
-                        {targetCandidateForHR.first_name[0]}
-                        {targetCandidateForHR.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">
-                        {targetCandidateForHR.first_name}{" "}
-                        {targetCandidateForHR.last_name}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarImage src={targetCandidateForHR.profile_photo_url?.url} />
+                        <AvatarFallback>
+                          {targetCandidateForHR.first_name[0]}
+                          {targetCandidateForHR.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="leading-tight min-w-0 flex-1">
+                        <div className="font-medium text-sm text-foreground dark:text-foreground truncate">
+                          {targetCandidateForHR.first_name} {targetCandidateForHR.last_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
+                          {targetCandidateForHR.email}
+                        </div>
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
+                          {targetCandidateForHR.applied_job.title}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {targetCandidateForHR.email}
-                      </div>
-                      <Badge
-                        className={getStageColor(
-                          targetCandidateForHR.current_stage
-                        )}
-                        variant="outline"
-                      >
-                        {targetCandidateForHR.current_stage?.toUpperCase()}
-                      </Badge>
                     </div>
+                    <Badge
+                      className={getStageColor(targetCandidateForHR.current_stage)}
+                      variant="outline"
+                    >
+                      {targetCandidateForHR.current_stage?.toUpperCase()}
+                    </Badge>
                   </div>
                 </div>
               )}
 
+              {/* Form Content - Fills remaining space */}
               <form
-                onSubmit={hrQuestionnaireForm.handleSubmit(
-                  onHRQuestionnaireSubmit
-                )}
-                className="space-y-6"
+                onSubmit={hrQuestionnaireForm.handleSubmit(onHRQuestionnaireSubmit)}
+                className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden"
               >
-                {/* Questions Selection */}
-                <div className="space-y-3">
-                  <Label>Select HR Questions</Label>
+                
+                {/* Questions Selection - Takes remaining space */}
+                <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-hidden">
 
-                  {/* Tag Selection */}
+                  {/* Compact Tag Selection - Fixed Height */}
                   {getUniqueHRTags().length > 0 && (
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <Label className="text-sm font-medium mb-2 block">
+                    <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">
                         Quick Select by Tags:
                       </Label>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1 sm:gap-2">
                         {getUniqueHRTags().map((tag) => (
                           <Controller
                             key={tag}
@@ -3127,26 +3128,15 @@ const HRHome = () => {
                               return (
                                 <Button
                                   type="button"
-                                  variant={
-                                    isTagSelected ? "default" : "outline"
-                                  }
+                                  variant={isTagSelected ? "default" : "outline"}
                                   size="sm"
-                                  onClick={() =>
-                                    toggleHRTagSelection(tag, field)
-                                  }
-                                  className="text-xs"
+                                  onClick={() => toggleHRTagSelection(tag, field)}
+                                  className="text-xs h-7 px-2"
                                 >
                                   {isTagSelected && "✓ "}
                                   {tag}
-                                  <Badge
-                                    variant="secondary"
-                                    className="ml-1 text-xs"
-                                  >
-                                    {
-                                      hrQuestions.filter((q) =>
-                                        q.tags?.includes(tag)
-                                      ).length
-                                    }
+                                  <Badge variant="secondary" className="ml-1 text-xs h-4">
+                                    {hrQuestions.filter((q) => q.tags?.includes(tag)).length}
                                   </Badge>
                                 </Button>
                               );
@@ -3157,17 +3147,19 @@ const HRHome = () => {
                     </div>
                   )}
 
-                  {/* Individual Questions */}
+                  {/* Questions List - Only this scrolls, takes remaining space */}
                   <Controller
                     name="assigned_questions"
                     control={hrQuestionnaireForm.control}
                     render={({ field }) => (
-                      <div className="border rounded-lg">
-                        <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                          <span className="text-sm font-medium">
-                            Select HR Questions:
+                      <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                        
+                        {/* Header - Fixed */}
+                        <div className="flex-shrink-0 flex justify-between items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800">
+                          <span className="text-xs sm:text-sm font-medium">
+                            Select Questions:
                           </span>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1 sm:gap-2">
                             <Button
                               type="button"
                               variant="ghost"
@@ -3176,9 +3168,9 @@ const HRHome = () => {
                                 field.onChange(hrQuestions.map((q) => q._id));
                                 setSelectedHRTags(new Set(getUniqueHRTags()));
                               }}
-                              className="text-xs"
+                              className="text-xs h-7 px-2"
                             >
-                              Select All
+                              All
                             </Button>
                             <Button
                               type="button"
@@ -3188,61 +3180,52 @@ const HRHome = () => {
                                 field.onChange([]);
                                 setSelectedHRTags(new Set());
                               }}
-                              className="text-xs"
+                              className="text-xs h-7 px-2"
                             >
-                              Clear All
+                              Clear
                             </Button>
                           </div>
                         </div>
 
-                        <div className="max-h-64 overflow-y-auto">
-                          <div className="p-4 space-y-3">
+                        {/* ONLY SCROLLABLE AREA - Questions List */}
+                        <div className="flex-1 min-h-0 overflow-y-auto">
+                          <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                             {hrQuestions.map((question) => {
-                              const isChecked =
-                                field.value?.includes(question._id) || false;
+                              const isChecked = field.value?.includes(question._id) || false;
                               return (
-                                <div
-                                  key={question._id}
-                                  className="flex items-start space-x-3"
-                                >
+                                <div key={question._id} className="flex items-start space-x-3">
                                   <Checkbox
                                     checked={isChecked}
                                     onCheckedChange={(checked) => {
                                       const currentValue = field.value || [];
                                       if (checked) {
-                                        field.onChange([
-                                          ...currentValue,
-                                          question._id,
-                                        ]);
+                                        field.onChange([...currentValue, question._id]);
                                       } else {
                                         field.onChange(
-                                          currentValue.filter(
-                                            (id: string) => id !== question._id
-                                          )
+                                          currentValue.filter((id: string) => id !== question._id)
                                         );
                                       }
                                     }}
+                                    className="mt-0.5 flex-shrink-0"
                                   />
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground line-clamp-2">
                                       {question.question}
                                     </p>
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
+                                      <Badge variant="outline" className="text-xs h-4">
                                         {question.input_type.toUpperCase()}
                                       </Badge>
-                                      {question.tags?.map((tag) => (
-                                        <Badge
-                                          key={tag}
-                                          variant="secondary"
-                                          className="text-xs"
-                                        >
+                                      {question.tags?.slice(0, 2).map((tag) => (
+                                        <Badge key={tag} variant="secondary" className="text-xs h-4">
                                           {tag}
                                         </Badge>
                                       ))}
+                                      {question.tags?.length > 2 && (
+                                        <span className="text-xs text-muted-foreground self-center">
+                                          +{question.tags.length - 2}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -3251,18 +3234,20 @@ const HRHome = () => {
                           </div>
                         </div>
 
-                        <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                          Selected: {field.value?.length || 0} of{" "}
-                          {hrQuestions.length} questions
+                        {/* Footer - Fixed */}
+                        <div className="flex-shrink-0 p-2 sm:p-3 border-t border-border dark:border-border bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground dark:text-muted-foreground">
+                          Selected: {field.value?.length || 0} of {hrQuestions.length} questions
                         </div>
                       </div>
                     )}
                   />
                 </div>
 
-                {/* Days to Complete */}
-                <div className="space-y-2">
-                  <Label htmlFor="hr_days_to_complete">Days to Complete</Label>
+                {/* Days to Complete - Fixed at bottom */}
+                <div className="flex-shrink-0 flex items-center gap-3">
+                  <Label htmlFor="hr_days_to_complete" className="text-sm font-medium whitespace-nowrap">
+                    Days to Complete:
+                  </Label>
                   <Input
                     type="number"
                     {...hrQuestionnaireForm.register("days_to_complete", {
@@ -3270,34 +3255,38 @@ const HRHome = () => {
                     })}
                     min={1}
                     max={30}
-                    className="w-32"
+                    className="w-20 h-8"
                     defaultValue={7}
                   />
                 </div>
               </form>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={closeHRQuestionnaireDialog}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={hrQuestionnaireForm.handleSubmit(
-                onHRQuestionnaireSubmit
-              )}
-              disabled={submittingHR}
-            >
-              {submittingHR && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              )}
-              Assign HR Questionnaire
-            </Button>
-          </DialogFooter>
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border dark:border-border bg-background">
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeHRQuestionnaireDialog}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={hrQuestionnaireForm.handleSubmit(onHRQuestionnaireSubmit)}
+                disabled={submittingHR}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                {submittingHR && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                )}
+                <span className="sm:hidden">Assign</span>
+                <span className="hidden sm:inline">Assign HR Questionnaire</span>
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -3306,113 +3295,90 @@ const HRHome = () => {
         open={assignAssessmentOpen}
         onOpenChange={setAssignAssessmentOpen}
       >
-        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Assign Assessment</DialogTitle>
-            <DialogDescription>
-              {targetCandidateForAssessment ? (
-                <>
-                  Assign assessment to {targetCandidateForAssessment.first_name}{" "}
-                  {targetCandidateForAssessment.last_name}
-                </>
-              ) : (
-                "Select candidates and assign questions to create assessments"
-              )}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
-              <form
-                onSubmit={assessmentForm.handleSubmit(onAssessmentSubmit)}
-                className="space-y-6"
-              >
-                {/* Pre-selected Candidate Display */}
-                {targetCandidateForAssessment && (
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Label className="text-sm font-medium mb-2 block text-blue-800">
-                      Assigning assessment to:
-                    </Label>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage
-                          src={
-                            targetCandidateForAssessment.profile_photo_url?.url
-                          }
-                        />
+          {/* Main Content - NO SCROLL */}
+          <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4 flex flex-col overflow-hidden">
+            <div className="flex flex-col h-full space-y-4 sm:space-y-6 overflow-hidden">
+              
+              {/* Compact Candidate Info - Fixed Height */}
+              {targetCandidateForAssessment && (
+                <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <Label className="text-xs font-medium block mb-1">
+                    Assigning assessment to:
+                  </Label>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarImage src={targetCandidateForAssessment.profile_photo_url?.url} />
                         <AvatarFallback>
                           {targetCandidateForAssessment.first_name[0]}
                           {targetCandidateForAssessment.last_name[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="font-medium text-blue-900">
-                          {targetCandidateForAssessment.first_name}{" "}
-                          {targetCandidateForAssessment.last_name}
+                      <div className="leading-tight min-w-0 flex-1">
+                        <div className="font-medium text-sm text-foreground dark:text-foreground truncate">
+                          {targetCandidateForAssessment.first_name} {targetCandidateForAssessment.last_name}
                         </div>
-                        <div className="text-sm text-blue-700">
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
                           {targetCandidateForAssessment.email}
                         </div>
-                        <Badge
-                          className={getStageColor(
-                            targetCandidateForAssessment.current_stage
-                          )}
-                          variant="outline"
-                        >
-                          {targetCandidateForAssessment.current_stage?.toUpperCase()}
-                        </Badge>
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
+                          {targetCandidateForAssessment.applied_job?.title}
+                        </div>  
                       </div>
                     </div>
+                    <Badge
+                      className={getStageColor(targetCandidateForAssessment.current_stage)}
+                      variant="outline"
+                    >
+                      {targetCandidateForAssessment.current_stage?.toUpperCase()}
+                    </Badge>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Questions Selection - FILTERED for specific types only */}
-                <div className="space-y-3">
-                  <Label>
+              {/* Form Content - Fills remaining space */}
+              <form
+                onSubmit={assessmentForm.handleSubmit(onAssessmentSubmit)}
+                className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden"
+              >
+                
+                {/* Questions Selection - Takes remaining space */}
+                <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-hidden">
+                  <Label className="text-sm font-medium flex-shrink-0">
                     Select Questions
-                    <span className="text-sm text-muted-foreground ml-2">
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground ml-2">
                       (Showing only: MCQ, Coding, Essay types)
                     </span>
                   </Label>
 
-                  {/* Tag Selection */}
+                  {/* Compact Tag Selection - Always Visible on All Screens */}
                   {getUniqueTechnicalTags().length > 0 && (
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <Label className="text-sm font-medium mb-2 block">
+                    <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">
                         Quick Select by Tags:
                       </Label>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1 sm:gap-2">
                         {getUniqueTechnicalTags().map((tag) => (
                           <Controller
                             key={tag}
                             name="assessments.0.questions"
                             control={assessmentForm.control}
                             render={({ field }) => {
-                              const isTagSelected =
-                                selectedAssessmentTags.has(tag);
+                              const isTagSelected = selectedAssessmentTags.has(tag);
                               return (
                                 <Button
                                   type="button"
-                                  variant={
-                                    isTagSelected ? "default" : "outline"
-                                  }
+                                  variant={isTagSelected ? "default" : "outline"}
                                   size="sm"
-                                  onClick={() =>
-                                    toggleAssessmentTagSelection(tag, field)
-                                  }
-                                  className="text-xs"
+                                  onClick={() => toggleAssessmentTagSelection(tag, field)}
+                                  className="text-xs h-6 px-2 sm:h-7"
                                 >
                                   {isTagSelected && "✓ "}
                                   {tag}
-                                  <Badge
-                                    variant="secondary"
-                                    className="ml-1 text-xs"
-                                  >
-                                    {
-                                      getFilteredTechnicalQuestions().filter(
-                                        (q) => q.tags?.includes(tag)
-                                      ).length
-                                    }
+                                  <Badge variant="secondary" className="ml-1 text-xs h-3 sm:h-4 px-1">
+                                    {getFilteredTechnicalQuestions().filter((q) => q.tags?.includes(tag)).length}
                                   </Badge>
                                 </Button>
                               );
@@ -3423,35 +3389,34 @@ const HRHome = () => {
                     </div>
                   )}
 
-                  {/* Individual Questions - FILTERED for allowed types */}
+                  {/* Questions List - Only this scrolls, takes remaining space */}
                   <Controller
                     name="assessments.0.questions"
                     control={assessmentForm.control}
                     render={({ field }) => {
                       const filteredQuestions = getFilteredTechnicalQuestions();
-
+                      
                       return (
-                        <div className="border rounded-lg">
-                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                            <span className="text-sm font-medium">
-                              Select Questions (Filtered for allowed types):
+                        <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                          
+                          {/* Header - Always Visible with Mobile-Friendly Buttons */}
+                          <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
+                            <span className="text-xs sm:text-sm font-medium">
+                              Select Questions <span className="hidden sm:inline">(Filtered for allowed types)</span>
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  field.onChange(
-                                    filteredQuestions.map((q) => q._id)
-                                  );
-                                  setSelectedAssessmentTags(
-                                    new Set(getUniqueTechnicalTags())
-                                  );
+                                  field.onChange(filteredQuestions.map((q) => q._id));
+                                  setSelectedAssessmentTags(new Set(getUniqueTechnicalTags()));
                                 }}
-                                className="text-xs"
+                                className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
                               >
-                                Select All
+                                <span className="sm:hidden">All</span>
+                                <span className="hidden sm:inline">Select All</span>
                               </Button>
                               <Button
                                 type="button"
@@ -3461,72 +3426,53 @@ const HRHome = () => {
                                   field.onChange([]);
                                   setSelectedAssessmentTags(new Set());
                                 }}
-                                className="text-xs"
+                                className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
                               >
-                                Clear All
+                                Clear
                               </Button>
                             </div>
                           </div>
 
-                          <div className="max-h-64 overflow-y-auto">
-                            <div className="p-4 space-y-3">
+                          {/* ONLY SCROLLABLE AREA - Questions List */}
+                          <div className="flex-1 min-h-0 overflow-y-auto">
+                            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                               {filteredQuestions.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-4">
-                                  No questions found for allowed types (MCQ,
-                                  Coding, Essay)
+                                <p className="text-center text-muted-foreground dark:text-muted-foreground py-4 text-xs sm:text-sm">
+                                  No questions found for allowed types (MCQ, Coding, Essay)
                                 </p>
                               ) : (
                                 filteredQuestions.map((question) => {
-                                  const isChecked =
-                                    field.value?.includes(question._id) ||
-                                    false;
+                                  const isChecked = field.value?.includes(question._id) || false;
 
                                   return (
-                                    <div
-                                      key={question._id}
-                                      className="flex items-start space-x-3"
-                                    >
+                                    <div key={question._id} className="flex items-start space-x-3">
                                       <Checkbox
                                         checked={isChecked}
                                         onCheckedChange={(checked) => {
-                                          const currentValue =
-                                            field.value || [];
+                                          const currentValue = field.value || [];
                                           if (checked) {
-                                            field.onChange([
-                                              ...currentValue,
-                                              question._id,
-                                            ]);
+                                            field.onChange([...currentValue, question._id]);
                                           } else {
                                             field.onChange(
-                                              currentValue.filter(
-                                                (id: string) =>
-                                                  id !== question._id
-                                              )
+                                              currentValue.filter((id: string) => id !== question._id)
                                             );
                                           }
                                         }}
+                                        className="mt-0.5 flex-shrink-0"
                                       />
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground line-clamp-2">
                                           {question.text}
                                         </p>
                                         <div className="flex flex-wrap gap-1 mt-1">
                                           <Badge
                                             variant="outline"
-                                            className={`text-xs ${getQuestionTypeColor(
-                                              question.type
-                                            )}`}
+                                            className={`text-xs h-4 ${getQuestionTypeColor(question.type)}`}
                                           >
-                                            {getQuestionTypeDisplay(
-                                              question.type
-                                            )}
+                                            {getQuestionTypeDisplay(question.type)}
                                           </Badge>
-
                                           {question.max_score && (
-                                            <Badge
-                                              variant="secondary"
-                                              className="text-xs"
-                                            >
+                                            <Badge variant="secondary" className="text-xs h-4">
                                               {question.max_score} pts
                                             </Badge>
                                           )}
@@ -3539,10 +3485,10 @@ const HRHome = () => {
                             </div>
                           </div>
 
-                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                            Selected: {field.value?.length || 0} of{" "}
-                            {filteredQuestions.length} questions
-                            <span className="ml-2 text-blue-600">
+                          {/* Footer - Always Visible */}
+                          <div className="flex-shrink-0 p-2 sm:p-3 border-t border-border dark:border-border bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground dark:text-muted-foreground">
+                            Selected: {field.value?.length || 0} of {filteredQuestions.length} questions
+                            <span className="ml-2 text-blue-600 dark:text-blue-400 hidden sm:inline">
                               (Filtered: MCQ, Coding, Essay only)
                             </span>
                           </div>
@@ -3552,146 +3498,150 @@ const HRHome = () => {
                   />
                 </div>
 
-                {/* Assessment Configuration with Uniform 4-Field Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Assessment Configuration - Fixed at bottom */}
+                <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
                   {/* SEB Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
+                    <Label htmlFor="is_seb" className="text-sm font-medium">
+                      <span className="hidden sm:inline">Safe Exam Browser (SEB)</span>
+                      <span className="sm:hidden">SEB Required</span>
+                    </Label>
                     <Controller
                       name="assessments.0.is_seb"
                       control={assessmentForm.control}
                       render={({ field }) => (
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
+                        <div className="flex items-center space-x-2 p-3 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             id="is_seb"
                           />
-                          <Label
-                            htmlFor="is_seb"
-                            className="text-sm font-normal"
-                          >
+                          <Label htmlFor="is_seb" className="text-sm font-normal">
                             Required
                           </Label>
                         </div>
                       )}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Secure browser requirement
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                      <span className="hidden sm:inline">Secure browser requirement</span>
+                      <span className="sm:hidden">Secure browser</span>
                     </p>
                   </div>
 
                   {/* Exam Duration Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="exam_duration">
-                      Exam Duration (Required)
+                    <Label htmlFor="exam_duration" className="text-sm font-medium">
+                      <span className="hidden sm:inline">Exam Duration (Required)</span>
+                      <span className="sm:hidden">Duration (min)</span>
                     </Label>
                     <Input
                       type="number"
-                      {...assessmentForm.register(
-                        "assessments.0.exam_duration",
-                        { valueAsNumber: true }
-                      )}
+                      {...assessmentForm.register("assessments.0.exam_duration", {
+                        valueAsNumber: true,
+                      })}
                       min={1}
                       max={600}
                       placeholder="60"
-                      className="w-full"
+                      className="w-full h-8"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       {assessmentForm.watch("assessments.0.exam_duration")
-                        ? `${Math.floor(
-                            (assessmentForm.watch(
-                              "assessments.0.exam_duration"
-                            ) || 60) / 60
-                          )}h ${
-                            (assessmentForm.watch(
-                              "assessments.0.exam_duration"
-                            ) || 60) % 60
+                        ? `${Math.floor((assessmentForm.watch("assessments.0.exam_duration") || 60) / 60)}h ${
+                            (assessmentForm.watch("assessments.0.exam_duration") || 60) % 60
                           }m`
                         : "Time in minutes"}
                     </p>
-                    {assessmentForm.formState.errors.assessments?.[0]
-                      ?.exam_duration && (
+                    {assessmentForm.formState.errors.assessments?.[0]?.exam_duration && (
                       <p className="text-red-600 text-sm">
-                        {
-                          assessmentForm.formState.errors.assessments[0]
-                            .exam_duration.message
-                        }
+                        {assessmentForm.formState.errors.assessments[0].exam_duration.message}
                       </p>
                     )}
                   </div>
 
                   {/* Total Marks Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="total_marks">Total Marks</Label>
+                    <Label htmlFor="total_marks" className="text-sm font-medium">
+                      Total Marks
+                    </Label>
                     <Input
                       id="total_marks"
                       type="number"
                       value={totalMarks}
                       readOnly
-                      className="w-full bg-gray-50"
+                      className="w-full h-8 bg-gray-50 dark:bg-gray-800"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Sum of selected questions
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                      <span className="hidden sm:inline">Sum of selected questions</span>
+                      <span className="sm:hidden">Sum of selected</span>
                     </p>
                   </div>
 
                   {/* Days to Complete Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="days_to_complete">Days to Complete</Label>
+                    <Label htmlFor="days_to_complete" className="text-sm font-medium">
+                      <span className="hidden sm:inline">Days to Complete</span>
+                      <span className="sm:hidden">Days</span>
+                    </Label>
                     <Input
                       type="number"
-                      {...assessmentForm.register(
-                        "assessments.0.days_to_complete",
-                        { valueAsNumber: true }
-                      )}
+                      {...assessmentForm.register("assessments.0.days_to_complete", {
+                        valueAsNumber: true,
+                      })}
                       min={1}
                       max={30}
-                      className="w-full"
+                      className="w-full h-8"
                       defaultValue={7}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {assessmentForm.watch("assessments.0.days_to_complete")
-                        ? `Due: ${new Date(
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                      {assessmentForm.watch("assessments.0.days_to_complete") ? (
+                        <span className="hidden sm:inline">
+                          Due: {new Date(
                             Date.now() +
-                              (assessmentForm.watch(
-                                "assessments.0.days_to_complete"
-                              ) || 7) *
-                                24 *
-                                60 *
-                                60 *
-                                1000
+                              (assessmentForm.watch("assessments.0.days_to_complete") || 7) *
+                                24 * 60 * 60 * 1000
                           ).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
-                          })}`
-                        : "Deadline calculation"}
+                          })}
+                        </span>
+                      ) : (
+                        <span className="hidden sm:inline">Deadline calculation</span>
+                      )}
+                      <span className="sm:hidden">
+                        {assessmentForm.watch("assessments.0.days_to_complete") || 7} days
+                      </span>
                     </p>
                   </div>
                 </div>
               </form>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={closeAssessmentDialog}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={assessmentForm.handleSubmit(onAssessmentSubmit)}
-              disabled={submittingAssessment}
-            >
-              {submittingAssessment && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              )}
-              Assign Assessment
-            </Button>
-          </DialogFooter>
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border dark:border-border bg-background">
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeAssessmentDialog}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={assessmentForm.handleSubmit(onAssessmentSubmit)}
+                disabled={submittingAssessment}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                {submittingAssessment && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                )}
+                <span className="sm:hidden">Assign</span>
+                <span className="hidden sm:inline">Assign Assessment</span>
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -3982,12 +3932,12 @@ const HRHome = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-blue-600">
+            <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
               💬 Add Feedback
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm text-gray-700 dark:text-gray-300">
               Provide feedback for this candidate's performance and evaluation.
             </DialogDescription>
           </DialogHeader>
@@ -3995,25 +3945,18 @@ const HRHome = () => {
           {candidateForFeedback && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10">
-                    <AvatarImage
-                      src={candidateForFeedback.profile_photo_url?.url}
-                    />
+                    <AvatarImage src={candidateForFeedback.profile_photo_url?.url} />
                     <AvatarFallback>
                       {candidateForFeedback.first_name?.[0]}
                       {candidateForFeedback.last_name?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">
-                      {candidateForFeedback.first_name}{" "}
-                      {candidateForFeedback.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {candidateForFeedback.email}
-                    </p>
+                    <p className="font-medium">{candidateForFeedback.first_name}{" "}{candidateForFeedback.last_name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{candidateForFeedback.email}</p>
                   </div>
                 </div>
               </div>
@@ -4021,25 +3964,15 @@ const HRHome = () => {
               {/* Feedback Type Selection */}
               <div className="space-y-2">
                 <Label htmlFor="feedback-type">Feedback Type</Label>
-                <Select
-                  value={feedbackType}
-                  onValueChange={setFeedbackType}
-                  disabled={submittingFeedback}
-                >
-                  <SelectTrigger>
+                <Select value={feedbackType} onValueChange={setFeedbackType} disabled={submittingFeedback}>
+                  <SelectTrigger className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                     <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="manager_review">
-                      Manager Review
-                    </SelectItem>
-                    <SelectItem value="interview_feedback">
-                      Interview Feedback
-                    </SelectItem>
-                    <SelectItem value="technical_review">
-                      Technical Review
-                    </SelectItem>
+                    <SelectItem value="manager_review">Manager Review</SelectItem>
+                    <SelectItem value="interview_feedback">Interview Feedback</SelectItem>
+                    <SelectItem value="technical_review">Technical Review</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -4054,12 +3987,13 @@ const HRHome = () => {
                   onChange={(e) => setFeedbackContent(e.target.value)}
                   disabled={submittingFeedback}
                   rows={6}
+                  className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-700"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="mt-4 flex justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -4069,11 +4003,12 @@ const HRHome = () => {
                 setFeedbackType("general");
               }}
               disabled={submittingFeedback}
+              className="border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200"
             >
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
               onClick={submitFeedback}
               disabled={submittingFeedback || !feedbackContent.trim()}
             >
@@ -4089,6 +4024,7 @@ const HRHome = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

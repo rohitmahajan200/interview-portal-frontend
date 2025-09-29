@@ -193,16 +193,16 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
   if (loading) {
     return (
       <div className="flex items-center py-4">
-        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        <span className="text-xs">Loading...</span>
+        <Loader2 className="h-4 w-4 animate-spin mr-2 text-muted-foreground dark:text-muted-foreground" />
+        <span className="text-xs text-foreground dark:text-foreground">Loading...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-2 bg-red-50 border border-red-200 rounded text-xs">
-        <span className="text-red-700">Error: {error}</span>
+      <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-xs">
+        <span className="text-red-700 dark:text-red-300">Error: {error}</span>
         <Button size="sm" variant="ghost" onClick={loadCallingDetails} className="ml-2">
           <RefreshCw className="h-3 w-3" />
         </Button>
@@ -212,9 +212,9 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
 
   if (!hasData && isManager) {
     return (
-      <div className="p-3 text-center bg-gray-50 rounded">
-        <Phone className="h-5 w-5 text-gray-400 mx-auto mb-1" />
-        <p className="text-xs text-gray-500">No calling details available</p>
+      <div className="p-3 text-center bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+        <Phone className="h-5 w-5 text-gray-400 dark:text-gray-500 mx-auto mb-1" />
+        <p className="text-xs text-gray-500 dark:text-gray-400">No calling details available</p>
       </div>
     );
   }
@@ -224,10 +224,10 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-blue-600" />
-          <span className="text-sm font-medium">HR Calling Details</span>
+          <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <span className="text-sm font-medium text-foreground dark:text-foreground">HR Calling Details</span>
           {candidateName && (
-            <span className="text-xs text-gray-500">- {candidateName}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">- {candidateName}</span>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -235,12 +235,12 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => setHrCallingCollapsed(!hrCallingCollapsed)}
-            className="text-xs p-1"
+            className="text-xs p-1 text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
           >
             {hrCallingCollapsed ? "Show" : "Hide"}
             {hrCallingCollapsed ? <ChevronDown className="h-3 w-3 ml-1" /> : <ChevronUp className="h-3 w-3 ml-1" />}
           </Button>
-          <Button size="sm" variant="ghost" onClick={loadCallingDetails} className="p-1">
+          <Button size="sm" variant="ghost" onClick={loadCallingDetails} className="p-1 hover:bg-muted dark:hover:bg-muted">
             <RefreshCw className="h-3 w-3" />
           </Button>
         </div>
@@ -259,7 +259,7 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
                         value={pair.key}
                         onChange={(e) => updateKey(pair.id, e.target.value)}
                         placeholder="Field"
-                        className="text-xs h-8"
+                        className="text-xs h-8 bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
                       />
                     </div>
                     <div className="col-span-7">
@@ -267,7 +267,7 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
                         value={pair.value}
                         onChange={(e) => updateValue(pair.id, e.target.value)}
                         placeholder="Details"
-                        className="text-xs h-8"
+                        className="text-xs h-8 bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
                       />
                     </div>
                     <div className="col-span-1">
@@ -275,7 +275,7 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
                         variant="ghost"
                         size="sm"
                         onClick={() => deletePair(pair.id)}
-                        className="h-6 w-6 p-0 text-red-500"
+                        className="h-6 w-6 p-0 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -289,7 +289,7 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
                   value={newKey}
                   onChange={(e) => setNewKey(e.target.value)}
                   placeholder="New field name"
-                  className="text-xs h-8"
+                  className="text-xs h-8 bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
                 />
                 <Button onClick={addNewPair} disabled={!newKey.trim()} size="sm" className="h-8">
                   <Plus className="h-3 w-3 mr-1" />
@@ -298,12 +298,12 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Remarks</label>
+                <label className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1 block">Remarks</label>
                 <Textarea
                   value={hrRemarks}
                   onChange={(e) => setHrRemarks(e.target.value)}
                   placeholder="Enter remarks..."
-                  className="text-xs"
+                  className="text-xs bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
                   rows={2}
                 />
               </div>
@@ -330,21 +330,21 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
             <div className="space-y-2">
               <div className="grid grid-cols-1 gap-2">
                 {callingDetails.map((detail, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
-                    <span className="font-medium text-gray-600">{detail.key}:</span>
-                    <span className="text-gray-900">{detail.value}</span>
+                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs border border-gray-200 dark:border-gray-700">
+                    <span className="font-medium text-gray-600 dark:text-gray-300">{detail.key}:</span>
+                    <span className="text-gray-900 dark:text-gray-100">{detail.value}</span>
                   </div>
                 ))}
               </div>
 
               {hrRemarks && (
-                <div className="p-2 bg-blue-50 rounded">
-                  <div className="text-xs font-medium text-blue-700 mb-1">HR Remarks:</div>
-                  <div className="text-xs text-gray-700">"{hrRemarks}"</div>
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
+                  <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">HR Remarks:</div>
+                  <div className="text-xs text-gray-700 dark:text-gray-300">"{hrRemarks}"</div>
                 </div>
               )}
 
-              <div className="flex justify-between items-center text-xs text-gray-500 pt-1 border-t">
+              <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-200 dark:border-gray-700">
                 <span>Total: {callingDetails.length} fields</span>
                 {hrRemarks && <Badge variant="secondary" className="text-xs">Remarks ✓</Badge>}
               </div>

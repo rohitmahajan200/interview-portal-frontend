@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -53,7 +52,6 @@ const AdminNotifications = () => {
         );
       }
     } catch (error: any) {
-    
       toast.error("Failed to load notifications");
     } finally {
       dispatch(setLoading(false));
@@ -119,81 +117,80 @@ const AdminNotifications = () => {
     }
   };
 
-const NotificationCard = ({ notification }: { notification: any }) => (
-  <Card className={`mb-3 sm:mb-4 ${
-    !notification.read 
-      ? "bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" 
-      : "dark:bg-card dark:border-gray-700"
-  } hover:shadow-md dark:hover:shadow-gray-900/25 transition-shadow`}>
-    <CardContent className="p-3 sm:p-4 md:p-5">
-      <div className="flex flex-col space-y-3 sm:space-y-4">
-        
-        {/* Header Row - Mobile Optimized */}
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-1.5">
-              {getRoleIcon(notification.recipient.role)}
-              <Badge variant="outline" className="text-xs px-2 py-0.5 dark:border-gray-600 dark:text-foreground">
-                {notification.recipient.role}
+  const NotificationCard = ({ notification }: { notification: any }) => (
+    <Card className={`mb-3 sm:mb-4 ${
+      !notification.read 
+        ? "bg-blue-50/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" 
+        : "dark:bg-card dark:border-gray-700"
+    } hover:shadow-md dark:hover:shadow-gray-900/25 transition-shadow`}>
+      <CardContent className="p-3 sm:p-4 md:p-5">
+        <div className="flex flex-col space-y-3 sm:space-y-4">
+          
+          {/* Header Row - Mobile Optimized */}
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1.5">
+                {getRoleIcon(notification.recipient.role)}
+                <Badge variant="outline" className="text-xs px-2 py-0.5 dark:border-gray-600 dark:text-foreground">
+                  {notification.recipient.role}
+                </Badge>
+              </div>
+              <Badge
+                className={`${getNotificationTypeColor(notification.type)} text-xs px-2 py-0.5 whitespace-nowrap`}
+              >
+                {notification.type.replace(/_/g, ' ')}
               </Badge>
             </div>
-            <Badge
-              className={`${getNotificationTypeColor(notification.type)} text-xs px-2 py-0.5 whitespace-nowrap`}
-            >
-              {notification.type.replace(/_/g, ' ')}
-            </Badge>
           </div>
-        </div>
 
-        {/* Recipient Info - Mobile Optimized */}
-        <div className="flex items-start gap-2 sm:gap-3">
-          <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-sm sm:text-base text-foreground break-words">
-              {notification.recipient.name}
-            </div>
-            <div className="text-xs sm:text-sm text-muted-foreground break-all">
-              {notification.recipient.email}
+          {/* Recipient Info - Mobile Optimized */}
+          <div className="flex items-start gap-2 sm:gap-3">
+            <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-sm sm:text-base text-foreground break-words">
+                {notification.recipient.name}
+              </div>
+              <div className="text-xs sm:text-sm text-muted-foreground break-all">
+                {notification.recipient.email}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Message - Mobile Optimized */}
-        <div className="text-sm sm:text-base text-foreground">
-          <p className="break-words leading-relaxed">{notification.message}</p>
-          {notification.visible_at && (
-            <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-muted/50 dark:bg-gray-800/50 rounded-md">
-              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 flex-wrap">
-                <Clock className="h-3 w-3 shrink-0" />
-                <span>Visible:</span>
-                <span className="font-medium">
-                  {format(new Date(notification.visible_at), "MMM dd, HH:mm")}
-                </span>
-              </p>
-            </div>
-          )}
-        </div>
+          {/* Message - Mobile Optimized */}
+          <div className="text-sm sm:text-base text-foreground">
+            <p className="break-words leading-relaxed">{notification.message}</p>
+            {notification.visible_at && (
+              <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-muted/50 dark:bg-gray-800/50 rounded-md">
+                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 flex-wrap">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span>Visible:</span>
+                  <span className="font-medium">
+                    {format(new Date(notification.visible_at), "MMM dd, HH:mm")}
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
 
-        {/* Timestamp - Mobile Optimized */}
-        <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 text-xs sm:text-sm text-muted-foreground pt-2 sm:pt-3 border-t dark:border-gray-700">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3 shrink-0" />
-            <span className="break-words">
-              {format(new Date(notification.createdAt), "MMM dd, yyyy")}
+          {/* Timestamp - Mobile Optimized */}
+          <div className="flex flex-col space-y-1 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 text-xs sm:text-sm text-muted-foreground pt-2 sm:pt-3 border-t dark:border-gray-700">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span className="break-words">
+                {format(new Date(notification.createdAt), "MMM dd, yyyy")}
+              </span>
             </span>
-          </span>
-          <span className="text-xs sm:text-sm font-medium">
-            {format(new Date(notification.createdAt), "HH:mm")}
-          </span>
+            <span className="text-xs sm:text-sm font-medium">
+              {format(new Date(notification.createdAt), "HH:mm")}
+            </span>
+          </div>
         </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 dark:bg-background min-h-screen">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 dark:bg-background">
       {/* Mobile-Optimized Header */}
       <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
@@ -332,9 +329,9 @@ const NotificationCard = ({ notification }: { notification: any }) => (
             </div>
           ) : (
             <>
-              {/* Desktop Table View */}
+              {/* Desktop Table View - NO SCROLL */}
               <div className="hidden lg:block">
-                <ScrollArea className="h-[500px] xl:h-[600px] rounded-md border dark:border-gray-700">
+                <div className="rounded-md border dark:border-gray-700">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent dark:border-gray-700">
@@ -375,7 +372,7 @@ const NotificationCard = ({ notification }: { notification: any }) => (
                           </TableCell>
                           <TableCell>
                             <div className="text-sm max-w-md">
-                              <p className="truncate text-foreground" title={notification.message}>
+                              <p className="text-foreground" title={notification.message}>
                                 {notification.message}
                               </p>
                               {notification.visible_at && (
@@ -408,24 +405,22 @@ const NotificationCard = ({ notification }: { notification: any }) => (
                       ))}
                     </TableBody>
                   </Table>
-                </ScrollArea>
+                </div>
               </div>
 
-              {/* Mobile Card View */}
+              {/* Mobile Card View - NO SCROLL */}
               <div className="lg:hidden">
                 <div className="mb-4 text-sm text-muted-foreground">
                   Showing {getFilteredNotifications().length} notification{getFilteredNotifications().length !== 1 ? 's' : ''}
                 </div>
-                <ScrollArea className="h-[400px] sm:h-[500px] pr-4">
-                  <div className="space-y-3">
-                    {getFilteredNotifications().map((notification) => (
-                      <NotificationCard 
-                        key={notification._id} 
-                        notification={notification} 
-                      />
-                    ))}
-                  </div>
-                </ScrollArea>
+                <div className="space-y-3">
+                  {getFilteredNotifications().map((notification) => (
+                    <NotificationCard 
+                      key={notification._id} 
+                      notification={notification} 
+                    />
+                  ))}
+                </div>
               </div>
             </>
           )}

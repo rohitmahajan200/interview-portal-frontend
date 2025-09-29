@@ -580,7 +580,7 @@ const HrQuestionsManagement = () => {
                   </div>
 
                   {/* Tag Mode Toggle */}
-                  <Card className="p-4 bg-blue-50/50 border-blue-200">
+                  <Card className="p-4 bg-background">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <Label className="text-base font-medium">Tag Management</Label>

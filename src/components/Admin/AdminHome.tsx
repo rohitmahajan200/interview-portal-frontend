@@ -680,14 +680,14 @@ const AdminHome = () => {
                               </Badge>
                             </div>
                             <div className="inline-flex items-center gap-2">
-                              <div className="text-xs text-gray-600">
+                              <div className="text-xs text-gray-100">
                                 <strong>Status:</strong>{" "}
                                 <span
                                   className={`inline-flex items-center gap-1 px-1 ${
                                     selectedCandidate.status.toLowerCase() ===
                                     "hired"
                                       ? "text-green-700"
-                                      : "text-gray-700"
+                                      : "text-yellow-700"
                                   }`}
                                 >
                                   {selectedCandidate.status.toUpperCase()}
@@ -760,7 +760,12 @@ const AdminHome = () => {
                               </p>
                             </div>
                           )}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
+                            {selectedCandidate.applied_job?.title && (
+                            <div className="sm:col-span-2 font-semibold text-sm text-gray-800 dark:text-gray-200">
+                              📌 {selectedCandidate.applied_job.title}
+                            </div>
+                          )}
                             {selectedCandidate.applied_job?.location && (
                               <div>
                                 📍{" "}
