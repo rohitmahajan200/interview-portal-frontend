@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -42,6 +41,7 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
+  MessageSquare,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
@@ -52,6 +52,7 @@ import GloryDialog from "../GloryDialog";
 
 import { useGlory } from "@/hooks/useGlory";
 import GloryDisplay from "../GloryDisplay";
+import { differenceInYears } from "date-fns";
 
 interface InterviewRemark {
   _id: string;
@@ -251,6 +252,7 @@ const InvigilatorHome = () => {
     loadingGlory,
     gradeOptions,
     currentUser,
+    openGloryDialog,
     closeGloryDialog,
     handleGloryGradeChange,
     submitGloryGrades,
@@ -1204,85 +1206,68 @@ const InvigilatorHome = () => {
         </CardContent>
       </Card>
 
-      {/* Assignment Dialog - Updated with uniform 4-field layout and reactive total marks */}
-      <Dialog
-        open={assignmentDialogOpen}
-        onOpenChange={setAssignmentDialogOpen}
-      >
-        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Assign Assessment</DialogTitle>
-            <DialogDescription>
-              {targetCandidate ? (
-                <>
-                  Assign assessment to {targetCandidate.first_name}{" "}
-                  {targetCandidate.last_name}
-                </>
-              ) : (
-                "Select candidates and assign questions to create assessments"
-              )}
-            </DialogDescription>
-          </DialogHeader>
+      {/* Assignment Dialog */}
+      <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
+        <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
-              <form
-                onSubmit={assignmentForm.handleSubmit(onAssignmentSubmit)}
-                className="space-y-6"
-              >
-                {/* Pre-selected Candidate Display */}
-                {targetCandidate && (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <Label className="text-sm font-medium mb-2 block text-blue-800 dark:text-blue-200">
-                      Assigning assessment to:
-                    </Label>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage
-                          src={targetCandidate.profile_photo_url?.url}
-                        />
+          {/* Main Content - NO SCROLL */}
+          <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4 flex flex-col overflow-hidden">
+            <div className="flex flex-col h-full space-y-4 sm:space-y-6 overflow-hidden">
+
+              {/* Compact Candidate Info - Fixed Height */}
+              {targetCandidate && (
+                <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <Label className="text-xs font-medium block mb-1">
+                    Assigning assessment to:
+                  </Label>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarImage src={targetCandidate.profile_photo_url?.url} />
                         <AvatarFallback>
                           {targetCandidate.first_name[0]}
                           {targetCandidate.last_name[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="font-medium text-blue-900 dark:text-blue-100">
-                          {targetCandidate.first_name}{" "}
-                          {targetCandidate.last_name}
+                      <div className="leading-tight min-w-0 flex-1">
+                        <div className="font-medium text-sm text-foreground dark:text-foreground truncate">
+                          {targetCandidate.first_name} {targetCandidate.last_name}
                         </div>
-                        <div className="text-sm text-blue-700 dark:text-blue-300">
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
                           {targetCandidate.email}
                         </div>
-                        <Badge
-                          className={getStageColor(
-                            targetCandidate.current_stage
-                          )}
-                          variant="outline"
-                        >
-                          {targetCandidate.current_stage?.toUpperCase()}
-                        </Badge>
+                        <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
+                          {targetCandidate.applied_job?.title}
+                        </div>
                       </div>
                     </div>
+                    <Badge
+                      className={getStageColor(targetCandidate.current_stage)}
+                      variant="outline"
+                    >
+                      {targetCandidate.current_stage?.toUpperCase()}
+                    </Badge>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Questions Selection - FILTERED for specific types only */}
-                <div className="space-y-3">
-                  <Label>
-                    Select Questions
-                    <span className="text-sm text-muted-foreground ml-2">
+              {/* Form Content - Fills remaining space */}
+              <form onSubmit={assignmentForm.handleSubmit(onAssignmentSubmit)} className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden">
+                
+                {/* Questions Selection - Takes remaining space */}
+                <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-hidden">
+                  <Label className="text-sm font-medium flex-shrink-0">
+                    Select Questions 
+                    <span className="text-sm text-muted-foreground dark:text-muted-foreground ml-2">
                       (Showing only: MCQ, Coding, Essay types)
                     </span>
                   </Label>
-
-                  {/* Tag Selection */}
+                  
+                  {/* Compact Tag Selection - Always Visible on All Screens */}
                   {getUniqueTags().length > 0 && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <Label className="text-sm font-medium mb-2 block text-gray-900 dark:text-gray-100">
-                        Quick Select by Tags:
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">Quick Select by Tags:</Label>
+                      <div className="flex flex-wrap gap-1 sm:gap-2">
                         {getUniqueTags().map((tag) => (
                           <Controller
                             key={tag}
@@ -1293,24 +1278,14 @@ const InvigilatorHome = () => {
                               return (
                                 <Button
                                   type="button"
-                                  variant={
-                                    isTagSelected ? "default" : "outline"
-                                  }
+                                  variant={isTagSelected ? "default" : "outline"}
                                   size="sm"
                                   onClick={() => toggleTagSelection(tag, field)}
-                                  className="text-xs"
+                                  className="text-xs h-6 px-2 sm:h-7"
                                 >
-                                  {isTagSelected && "✓ "}
-                                  {tag}
-                                  <Badge
-                                    variant="secondary"
-                                    className="ml-1 text-xs"
-                                  >
-                                    {
-                                      getFilteredQuestions().filter((q) =>
-                                        q.tags?.includes(tag)
-                                      ).length
-                                    }
+                                  {isTagSelected && "✓ "}{tag}
+                                  <Badge variant="secondary" className="ml-1 text-xs h-4">
+                                    {getFilteredQuestions().filter((q) => q.tags?.includes(tag)).length}
                                   </Badge>
                                 </Button>
                               );
@@ -1321,33 +1296,35 @@ const InvigilatorHome = () => {
                     </div>
                   )}
 
-                  {/* Individual Questions - FILTERED for allowed types */}
+                  {/* Questions List - Only this scrolls, takes remaining space */}
                   <Controller
                     name="assessments.0.questions"
                     control={assignmentForm.control}
                     render={({ field }) => {
                       const filteredQuestions = getFilteredQuestions();
-
+                      
                       return (
-                        <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
-                          <div className="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              Select Questions (Filtered for allowed types):
+                        <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                          
+                          {/* Header - Always Visible with Mobile-Friendly Buttons */}
+                          <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
+                            <span className="text-xs sm:text-sm font-medium">
+                              Select Questions 
+                              <span className="hidden sm:inline">(Filtered for allowed types)</span>
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  field.onChange(
-                                    filteredQuestions.map((q) => q._id)
-                                  );
+                                  field.onChange(filteredQuestions.map(q => q._id));
                                   setSelectedTags(new Set(getUniqueTags()));
                                 }}
-                                className="text-xs"
+                                className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
                               >
-                                Select All
+                                <span className="sm:hidden">All</span>
+                                <span className="hidden sm:inline">Select All</span>
                               </Button>
                               <Button
                                 type="button"
@@ -1357,72 +1334,51 @@ const InvigilatorHome = () => {
                                   field.onChange([]);
                                   setSelectedTags(new Set());
                                 }}
-                                className="text-xs"
+                                className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
                               >
-                                Clear All
+                                Clear
                               </Button>
                             </div>
                           </div>
 
-                          <div className="max-h-64 overflow-y-auto">
-                            <div className="p-4 space-y-3">
+                          {/* ONLY SCROLLABLE AREA - Questions List */}
+                          <div className="flex-1 min-h-0 overflow-y-auto">
+                            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                               {filteredQuestions.length === 0 ? (
-                                <p className="text-center text-muted-foreground py-4">
-                                  No questions found for allowed types (MCQ,
-                                  Coding, Essay)
+                                <p className="text-center text-muted-foreground dark:text-muted-foreground py-4 text-xs sm:text-sm">
+                                  No questions found for allowed types (MCQ, Coding, Essay)
                                 </p>
                               ) : (
                                 filteredQuestions.map((question) => {
-                                  const isChecked =
-                                    field.value?.includes(question._id) ||
-                                    false;
+                                  const isChecked = field.value?.includes(question._id) || false;
 
                                   return (
-                                    <div
-                                      key={question._id}
-                                      className="flex items-start space-x-3"
-                                    >
+                                    <div key={question._id} className="flex items-start space-x-3">
                                       <Checkbox
                                         checked={isChecked}
                                         onCheckedChange={(checked) => {
-                                          const currentValue =
-                                            field.value || [];
+                                          const currentValue = field.value || [];
                                           if (checked) {
-                                            field.onChange([
-                                              ...currentValue,
-                                              question._id,
-                                            ]);
+                                            field.onChange([...currentValue, question._id]);
                                           } else {
-                                            field.onChange(
-                                              currentValue.filter(
-                                                (id: string) =>
-                                                  id !== question._id
-                                              )
-                                            );
+                                            field.onChange(currentValue.filter((id: string) => id !== question._id));
                                           }
                                         }}
+                                        className="mt-0.5 flex-shrink-0"
                                       />
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground line-clamp-2">
                                           {question.text}
                                         </p>
                                         <div className="flex flex-wrap gap-1 mt-1">
                                           <Badge
                                             variant="outline"
-                                            className={`text-xs ${getQuestionTypeColor(
-                                              question.type
-                                            )}`}
+                                            className={`text-xs h-4 ${getQuestionTypeColor(question.type)}`}
                                           >
-                                            {getQuestionTypeDisplay(
-                                              question.type
-                                            )}
+                                            {getQuestionTypeDisplay(question.type)}
                                           </Badge>
-
                                           {question.max_score && (
-                                            <Badge
-                                              variant="secondary"
-                                              className="text-xs"
-                                            >
+                                            <Badge variant="secondary" className="text-xs h-4">
                                               {question.max_score} pts
                                             </Badge>
                                           )}
@@ -1435,9 +1391,9 @@ const InvigilatorHome = () => {
                             </div>
                           </div>
 
-                          <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground">
-                            Selected: {field.value?.length || 0} of{" "}
-                            {filteredQuestions.length} questions
+                          {/* Footer - Fixed */}
+                          <div className="flex-shrink-0 p-2 sm:p-3 border-t border-border dark:border-border bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground dark:text-muted-foreground">
+                            Selected: {field.value?.length || 0} of {filteredQuestions.length} questions
                             <span className="ml-2 text-blue-600 dark:text-blue-400">
                               (Filtered: MCQ, Coding, Essay only)
                             </span>
@@ -1448,161 +1404,227 @@ const InvigilatorHome = () => {
                   />
                 </div>
 
-                {/* FIXED: Assessment Configuration with Uniform 4-Field Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {/* Assessment Configuration - Fixed at bottom */}
+                <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* SEB Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
+                    <Label htmlFor="is_seb" className="text-sm font-medium">Safe Exam Browser (SEB)</Label>
                     <Controller
                       name="assessments.0.is_seb"
                       control={assignmentForm.control}
                       render={({ field }) => (
-                        <div className="flex items-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                        <div className="flex items-center space-x-2 p-2 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             id="is_seb"
                           />
-                          <Label
-                            htmlFor="is_seb"
-                            className="text-sm font-normal text-gray-900 dark:text-gray-100"
-                          >
+                          <Label htmlFor="is_seb" className="text-sm font-normal">
                             Required
                           </Label>
                         </div>
                       )}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       Secure browser requirement
                     </p>
                   </div>
 
                   {/* Exam Duration Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="exam_duration">
+                    <Label htmlFor="exam_duration" className="text-sm font-medium">
                       Exam Duration (Required)
                     </Label>
                     <Input
                       type="number"
-                      {...assignmentForm.register(
-                        "assessments.0.exam_duration",
-                        { valueAsNumber: true }
-                      )}
+                      {...assignmentForm.register("assessments.0.exam_duration", { valueAsNumber: true })}
                       min={1}
                       max={600}
                       placeholder="60"
-                      className="w-full"
+                      className="w-full h-8"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       {assignmentForm.watch("assessments.0.exam_duration")
-                        ? `${Math.floor(
-                            (assignmentForm.watch(
-                              "assessments.0.exam_duration"
-                            ) || 60) / 60
-                          )}h ${
-                            (assignmentForm.watch(
-                              "assessments.0.exam_duration"
-                            ) || 60) % 60
-                          }m`
-                        : "Time in minutes"}
+                        ? `${Math.floor((assignmentForm.watch("assessments.0.exam_duration") || 60) / 60)}h ${(assignmentForm.watch("assessments.0.exam_duration") || 60) % 60}m`
+                        : "Time in minutes"
+                      }
                     </p>
-                    {assignmentForm.formState.errors.assessments?.[0]
-                      ?.exam_duration && (
-                      <p className="text-red-600 dark:text-red-400 text-sm">
-                        {
-                          assignmentForm.formState.errors.assessments[0]
-                            .exam_duration.message
-                        }
+                    {assignmentForm.formState.errors.assessments?.[0]?.exam_duration && (
+                      <p className="text-red-600 text-sm">
+                        {assignmentForm.formState.errors.assessments[0].exam_duration.message}
                       </p>
                     )}
                   </div>
 
-                  {/* Total Marks Field - FIXED with Uniform Styling */}
+                  {/* Total Marks Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="total_marks">Total Marks</Label>
+                    <Label htmlFor="total_marks" className="text-sm font-medium">Total Marks</Label>
                     <Input
                       id="total_marks"
                       type="number"
                       value={totalMarks}
                       readOnly
-                      className="w-full bg-gray-50 dark:bg-gray-800"
+                      className="w-full h-8 bg-gray-50 dark:bg-gray-800"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       Sum of selected questions
                     </p>
                   </div>
 
                   {/* Days to Complete Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="days_to_complete">Days to Complete</Label>
+                    <Label htmlFor="days_to_complete" className="text-sm font-medium">Days to Complete</Label>
                     <Input
                       type="number"
-                      {...assignmentForm.register(
-                        "assessments.0.days_to_complete",
-                        { valueAsNumber: true }
-                      )}
+                      {...assignmentForm.register("assessments.0.days_to_complete", { valueAsNumber: true })}
                       min={1}
                       max={30}
-                      className="w-full"
+                      className="w-full h-8"
                       defaultValue={7}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       {assignmentForm.watch("assessments.0.days_to_complete")
-                        ? `Due: ${new Date(
-                            Date.now() +
-                              (assignmentForm.watch(
-                                "assessments.0.days_to_complete"
-                              ) || 7) *
-                                24 *
-                                60 *
-                                60 *
-                                1000
-                          ).toLocaleDateString("en-US", {
+                        ? `Due: ${new Date(Date.now() + (assignmentForm.watch("assessments.0.days_to_complete") || 7) * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
                           })}`
-                        : "Deadline calculation"}
+                        : "Deadline calculation"
+                      }
                     </p>
                   </div>
                 </div>
               </form>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="flex-shrink-0 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={closeAssignmentDialog}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={assignmentForm.handleSubmit(onAssignmentSubmit)}
-              disabled={submitting}
-            >
-              {submitting && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              )}
-              Assign Assessment
-            </Button>
-          </DialogFooter>
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border dark:border-border bg-background">
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeAssignmentDialog}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={assignmentForm.handleSubmit(onAssignmentSubmit)}
+                disabled={submitting}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                {submitting && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                )}
+                <span className="sm:hidden">Assign</span>
+                <span className="hidden sm:inline">Assign Assessment</span>
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Candidate Details Dialog with Enhanced Action Buttons */}
+
+      {/* Candidate Details Dialog with Action Buttons on Top */}
       <Dialog open={dialogOpen} onOpenChange={closeViewDialog}>
         <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Candidate Assessment Details</DialogTitle>
+            <div className="space-y-3">
+              <DialogTitle>Candidate Details</DialogTitle>
+              
+              {selectedCandidate && (
+                <div className="flex flex-col gap-2">
+                  {/* Primary Actions Row */}
+                  <div className="flex flex-wrap gap-2">
+                    {/* Assign Assessment Button - Primary Action for Invigilators */}
+                    {selectedCandidate && !selectedCandidate.assessments?.some(assessment => 
+                      assessment.status === "pending" || assessment.status === "started"
+                    ) && (
+                      <Button
+                        onClick={() => handleAssignAssessment(selectedCandidate)}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg flex-1 min-w-[120px]"
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline ml-1">Assign Assessment</span>
+                        <span className="sm:hidden ml-1">Assess</span>
+                      </Button>
+                    )}
+
+                    {/* Update Stage Button */}
+                    <Button
+                      onClick={() => {
+                        setSelectedNewStage("");
+                        setStageUpdateReason("");
+                        setStageUpdateModal(true);
+                      }}
+                      variant="default"
+                      size="sm"
+                      className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg flex-1 min-w-[120px]"
+                    >
+                      <Users className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline ml-1">Update Stage</span>
+                      <span className="sm:hidden ml-1">Stage</span>
+                    </Button>
+
+                    {/* Reject Button - Only if not already rejected */}
+                    {selectedCandidate.status !== "rejected" && (
+                      <Button
+                        onClick={() => {
+                          setCandidateToReject(selectedCandidate);
+                          setRejectionReason("");
+                          setRejectDialogOpen(true);
+                        }}
+                        variant="default"
+                        size="sm"
+                        className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg flex-1 min-w-[100px]"
+                      >
+                        <span className="hidden sm:inline ml-1">Reject</span>
+                        <span className="sm:hidden ml-1">✗</span>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Secondary Actions Row */}
+                  <div className="flex flex-wrap gap-2">
+
+                    {/* Add Feedback Button */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setCandidateForFeedback(selectedCandidate);
+                        setFeedbackContent("");
+                        setFeedbackType("general");
+                        setFeedbackDialogOpen(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 flex-1 min-w-[100px]"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Feedback
+                    </Button>
+
+                    {/* Glory Button */}
+                    <Button
+                      onClick={() => openGloryDialog(selectedCandidate)}
+                      variant="outline"
+                      size="sm"
+                      className="text-purple-600 hover:text-purple-700 border-purple-200 hover:border-purple-300 flex-1 min-w-[90px]"
+                    >
+                      <Users className="h-4 w-4 mr-1" />
+                      Glory
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </DialogHeader>
 
           {selectedCandidate && (
             <div className="space-y-6">
-              {/* Personal Information Card with Action Buttons */}
+              {/* Personal Information Card - Now Clean Without Action Buttons */}
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1610,9 +1632,7 @@ const InvigilatorHome = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        setPersonalInfoCollapsed(!personalCollapsed)
-                      }
+                      onClick={() => setPersonalInfoCollapsed(!personalCollapsed)}
                       className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                     >
                       <span className="text-sm font-medium">
@@ -1627,139 +1647,151 @@ const InvigilatorHome = () => {
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
-                  {/* Profile Info */}
-                  {!personalCollapsed && (
-                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 sm:p-4 rounded-xl w-full lg:w-auto">
-                        <Avatar className="w-40 h-33 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
-                          <AvatarImage
-                            src={selectedCandidate.profile_photo_url?.url}
-                            className="object-cover w-full h-full"
-                          />
-                          <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
-                            {selectedCandidate.first_name?.[0]}
-                            {selectedCandidate.last_name?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
+              <CardContent className="space-y-4">
+                {/* Profile Info */}
+                {!personalCollapsed && (
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 sm:p-4 rounded-xl w-full lg:w-auto">
+                      <Avatar className="w-40 h-37 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                        <AvatarImage
+                          src={selectedCandidate.profile_photo_url?.url}
+                          className="object-cover w-full h-full"
+                        />
+                        <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
+                          {selectedCandidate.first_name?.[0]}
+                          {selectedCandidate.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
 
-                        <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-                          <p className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
-                            <strong>
-                              Applied For -{" "}
-                              {selectedCandidate.applied_job?.title}
-                            </strong>
-                          </p>
-                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                            {selectedCandidate.first_name}{" "}
-                            {selectedCandidate.last_name}
-                          </h3>
-                          <div className="flex justify-center sm:justify-start">
-                            <span className="text-lg sm:text-xs font-sma text-purple-600 dark:text-purple-400 mb-2">
-                              <strong>Current Stage -</strong>
-                            </span>
-                            <Badge
-                              className={getStageColor(
-                                selectedCandidate.current_stage
-                              )}
-                              variant="secondary"
+                      <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+                        <p className="text-lg sm:text-xs font-medium text-purple-600 dark:text-purple-400 mb-2">
+                          <strong>
+                            Applied For - {selectedCandidate.applied_job?.title}
+                          </strong>
+                        </p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                          {selectedCandidate.first_name} {selectedCandidate.last_name}
+                        </h3>
+                        <div className="flex justify-center sm:justify-start items-center gap-2">
+                          <span className="text-lg sm:text-xs font-medium text-purple-600 dark:text-purple-400 mb-2">
+                            <strong>Current Stage -</strong>
+                          </span>
+                          <Badge
+                            className={getStageColor(selectedCandidate.current_stage)}
+                            variant="secondary"
+                          >
+                            {selectedCandidate.current_stage?.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <div className="inline-flex items-center gap-2">
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            <strong className="text-purple-600 dark:text-purple-400">Status:</strong>{" "}
+                            <span
+                              className={`inline-flex items-center gap-1 px-1 ${
+                                selectedCandidate.status.toLowerCase() === "hired"
+                                  ? "text-green-700 dark:text-green-400"
+                                  : "text-yellow-700 dark:text-yellow-300"
+                              }`}
                             >
-                              {selectedCandidate.current_stage?.toUpperCase()}
-                            </Badge>
-                          </div>
-                          <div className="inline-flex items-center gap-2">
-                            <div className="text-xs text-gray-600 dark:text-gray-400">
-                              <strong className="text-purple-600 dark:text-purple-400">
-                                Status:
-                              </strong>{" "}
-                              <span
-                                className={`inline-flex items-center gap-1 px-1 ${
-                                  selectedCandidate.status.toLowerCase() ===
-                                  "hired"
-                                    ? "text-green-700 dark:text-green-400"
-                                    : "text-gray-700 dark:text-gray-300"
-                                }`}
-                              >
-                                {selectedCandidate.status}
-                                {selectedCandidate.status.toLowerCase() ===
-                                  "hired" && <Check className="w-3 h-3" />}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="break-all">
-                              📧 {selectedCandidate.email}
+                              {selectedCandidate.status.toUpperCase()}
+                              {selectedCandidate.status.toLowerCase() === "hired" && (
+                                <Check className="w-3 h-3" />
+                              )}
                             </span>
-                            <span>📱 {selectedCandidate.phone}</span>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Applied Position */}
-                      <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                        {/* Personal Details Grid */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                              REGISTRATION
-                            </p>
-                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                              {formatDate(selectedCandidate.registration_date)}
-                            </p>
-                          </div>
-
-                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                              SHORTLISTED
-                            </p>
-                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                              {selectedCandidate.shortlisted
-                                ? "✅ Yes"
-                                : "❌ No"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Address */}
-                        {selectedCandidate.address && (
-                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 mt-4">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
-                              Address
-                            </p>
-                            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
-                              {selectedCandidate.address}
-                            </p>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
-                          {selectedCandidate.applied_job?.location && (
-                            <div>
-                              📍 {selectedCandidate.applied_job?.location}
-                            </div>
-                          )}
-                          {selectedCandidate.applied_job?.country && (
-                            <div>
-                              🌍 {selectedCandidate.applied_job?.country}
-                            </div>
-                          )}
-                          {selectedCandidate.applied_job?.time && (
-                            <div>⏰ {selectedCandidate.applied_job?.time}</div>
-                          )}
-                          {selectedCandidate.applied_job?.expInYears && (
-                            <div>
-                              💼 {selectedCandidate.applied_job.expInYears}
-                            </div>
-                          )}
-                          {selectedCandidate.applied_job?.salary && (
-                            <div className="sm:col-span-2">
-                              💰 {selectedCandidate.applied_job.salary}
-                            </div>
-                          )}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="break-all">📧 {selectedCandidate.email}</span>
+                          <span>📱 {selectedCandidate.phone}</span>
                         </div>
                       </div>
                     </div>
-                  )}
-                </CardContent>
+
+                    {/* Applied Position */}
+                    <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                      {/* Personal Details Grid */}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        {selectedCandidate.date_of_birth && (
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              DATE OF BIRTH
+                              <sup>
+                                <i className="text-blue-400">
+                                  {differenceInYears(
+                                    new Date(),
+                                    new Date(selectedCandidate.date_of_birth)
+                                  ) + " year"}
+                                </i>
+                              </sup>
+                            </p>
+                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                              {formatDate(selectedCandidate.date_of_birth)}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                            REGISTRATION
+                          </p>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                            {formatDate(selectedCandidate.registration_date)}
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                            SHORTLISTED
+                          </p>
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+                            {selectedCandidate.shortlisted ? "✅ Yes" : "❌ No"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Address */}
+                      {selectedCandidate.address && (
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 mt-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
+                            Address
+                          </p>
+                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
+                            {selectedCandidate.address}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Job Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
+                        {selectedCandidate.applied_job?.title && (
+                          <div className="sm:col-span-2 font-semibold text-sm text-gray-800 dark:text-gray-200">
+                            📌 {selectedCandidate.applied_job.title}
+                          </div>
+                        )}
+                        {selectedCandidate.applied_job?.location && (
+                          <div>📍 {selectedCandidate.applied_job?.location}</div>
+                        )}
+                        {selectedCandidate.applied_job?.country && (
+                          <div>🌍 {selectedCandidate.applied_job.country}</div>
+                        )}
+                        {selectedCandidate.applied_job?.time && (
+                          <div>⏰ {selectedCandidate.applied_job.time}</div>
+                        )}
+                        {selectedCandidate.applied_job?.expInYears && (
+                          <div>💼 {selectedCandidate.applied_job.expInYears}Years</div>
+                        )}
+                        {selectedCandidate.applied_job?.salary && (
+                          <div className="sm:col-span-2">
+                            💰 {selectedCandidate.applied_job.salary}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+
+
               </Card>
 
               {/* Documents - Compact One Line Version */}
@@ -2672,7 +2704,6 @@ const InvigilatorHome = () => {
         </DialogContent>
       </Dialog>
 
-      {/* FIXED: Feedback Dialog */}
       <Dialog
         open={feedbackDialogOpen}
         onOpenChange={(open) => {
@@ -2684,12 +2715,12 @@ const InvigilatorHome = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-background dark:bg-background border-border dark:border-border">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-blue-600">
+            <DialogTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
               💬 Add Feedback
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-muted-foreground dark:text-muted-foreground">
               Provide feedback for this candidate's performance and evaluation.
             </DialogDescription>
           </DialogHeader>
@@ -2697,23 +2728,23 @@ const InvigilatorHome = () => {
           {candidateForFeedback && (
             <div className="space-y-4">
               {/* Candidate Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10">
                     <AvatarImage
                       src={candidateForFeedback.profile_photo_url?.url}
                     />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                       {candidateForFeedback.first_name?.[0]}
                       {candidateForFeedback.last_name?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-foreground dark:text-foreground">
                       {candidateForFeedback.first_name}{" "}
                       {candidateForFeedback.last_name}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                       {candidateForFeedback.email}
                     </p>
                   </div>
@@ -2722,24 +2753,40 @@ const InvigilatorHome = () => {
 
               {/* Feedback Type Selection */}
               <div className="space-y-2">
-                <Label htmlFor="feedback-type">Feedback Type</Label>
+                <Label htmlFor="feedback-type" className="text-foreground dark:text-foreground">
+                  Feedback Type
+                </Label>
                 <Select
                   value={feedbackType}
                   onValueChange={setFeedbackType}
                   disabled={isSubmittingFeedback}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="manager_review">
+                  <SelectContent className="bg-background dark:bg-background border-border dark:border-border">
+                    <SelectItem 
+                      value="general"
+                      className="text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
+                    >
+                      General
+                    </SelectItem>
+                    <SelectItem 
+                      value="manager_review"
+                      className="text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
+                    >
                       Manager Review
                     </SelectItem>
-                    <SelectItem value="interview_feedback">
+                    <SelectItem 
+                      value="interview_feedback"
+                      className="text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
+                    >
                       Interview Feedback
                     </SelectItem>
-                    <SelectItem value="technical_review">
+                    <SelectItem 
+                      value="technical_review"
+                      className="text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
+                    >
                       Technical Review
                     </SelectItem>
                   </SelectContent>
@@ -2748,7 +2795,12 @@ const InvigilatorHome = () => {
 
               {/* Feedback Content */}
               <div className="space-y-2">
-                <Label htmlFor="feedback-content">Feedback Content</Label>
+                <Label 
+                  htmlFor="feedback-content"
+                  className="text-foreground dark:text-foreground"
+                >
+                  Feedback Content
+                </Label>
                 <Textarea
                   id="feedback-content"
                   placeholder="Enter your detailed feedback about the candidate..."
@@ -2756,12 +2808,13 @@ const InvigilatorHome = () => {
                   onChange={(e) => setFeedbackContent(e.target.value)}
                   disabled={isSubmittingFeedback}
                   rows={6}
+                  className="bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -2771,11 +2824,12 @@ const InvigilatorHome = () => {
                 setFeedbackType("general");
               }}
               disabled={isSubmittingFeedback}
+              className="bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-700 text-white dark:text-white"
               onClick={submitFeedback}
               disabled={isSubmittingFeedback || !feedbackContent.trim()}
             >
@@ -2791,6 +2845,7 @@ const InvigilatorHome = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

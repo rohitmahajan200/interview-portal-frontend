@@ -965,11 +965,11 @@ const InterviewCalendar = () => {
     </CardContent>
   </Card>
 
-  {/* Interview Details Dialog - Enhanced mobile responsiveness */}
+  {/* Interview Details Dialog - Enhanced mobile responsiveness with Dark Mode */}
   <Dialog open={!!selectedInterview} onOpenChange={() => setSelectedInterview(null)}>
-    <DialogContent className="w-full h-screen sm:h-[90vh] max-w-full sm:max-w-4xl md:max-w-[70vw] lg:max-w-[90vw] flex flex-col overflow-hidden">
-      <DialogHeader className="p-4 sm:p-6 border-b flex-shrink-0">
-        <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <DialogContent className="w-full h-screen sm:h-[90vh] max-w-full sm:max-w-4xl md:max-w-[70vw] lg:max-w-[90vw] flex flex-col overflow-hidden bg-background dark:bg-background border-border dark:border-border">
+      <DialogHeader className="p-4 sm:p-6 border-b border-border dark:border-border flex-shrink-0">
+        <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-foreground dark:text-foreground">
           <span className="text-lg sm:text-xl">Interview Details</span>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleEditInterview}>
@@ -993,7 +993,7 @@ const InterviewCalendar = () => {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Warning if remark is pending */}
           {!isAdmin && needsRemarkForUser(selectedInterview) && (
-            <div className="mb-4 p-3 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm font-medium">
+            <div className="mb-4 p-3 rounded-lg border border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm font-medium">
               ⚠️ Please provide your remark and grade for this interview. This is required because the interview has already been conducted and your input is pending.
             </div>
           )}
@@ -1001,8 +1001,8 @@ const InterviewCalendar = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Interview Information */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-base sm:text-lg">Interview Information</h4>
-              <div className="space-y-2 text-sm sm:text-base">
+              <h4 className="font-semibold text-base sm:text-lg text-foreground dark:text-foreground">Interview Information</h4>
+              <div className="space-y-2 text-sm sm:text-base text-foreground dark:text-foreground">
                 <p><strong>Title:</strong> {selectedInterview.title}</p>
                 <p><strong>Type:</strong> {selectedInterview.interview_type.replace('_', ' ').toUpperCase()}</p>
                 <p><strong>Status:</strong> {selectedInterview.status}</p>
@@ -1013,8 +1013,8 @@ const InterviewCalendar = () => {
 
             {/* Candidate Information */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-base sm:text-lg">Candidate</h4>
-              <div className="space-y-2 text-sm sm:text-base">
+              <h4 className="font-semibold text-base sm:text-lg text-foreground dark:text-foreground">Candidate</h4>
+              <div className="space-y-2 text-sm sm:text-base text-foreground dark:text-foreground">
                 <p><strong>Name:</strong> {selectedInterview.candidate.first_name} {selectedInterview.candidate.last_name}</p>
                 <p className="break-all"><strong>Email:</strong> {selectedInterview.candidate.email}</p>
                 <p><strong>Stage:</strong> {selectedInterview.candidate.current_stage}</p>
@@ -1024,8 +1024,8 @@ const InterviewCalendar = () => {
 
             {/* Interviewers */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-base sm:text-lg">Interviewers</h4>
-              <div className="space-y-1 text-sm sm:text-base">
+              <h4 className="font-semibold text-base sm:text-lg text-foreground dark:text-foreground">Interviewers</h4>
+              <div className="space-y-1 text-sm sm:text-base text-foreground dark:text-foreground">
                 {selectedInterview.interviewers.map(interviewer => (
                   <p key={interviewer._id}>{interviewer.name} ({interviewer.role})</p>
                 ))}
@@ -1034,8 +1034,8 @@ const InterviewCalendar = () => {
 
             {/* Meeting Details */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-base sm:text-lg">Meeting Details</h4>
-              <div className="space-y-2 text-sm sm:text-base">
+              <h4 className="font-semibold text-base sm:text-lg text-foreground dark:text-foreground">Meeting Details</h4>
+              <div className="space-y-2 text-sm sm:text-base text-foreground dark:text-foreground">
                 <p><strong>Format:</strong> {selectedInterview.type}</p>
                 {selectedInterview.type === 'online' ? (
                   <>
@@ -1045,7 +1045,7 @@ const InterviewCalendar = () => {
                       href={selectedInterview.meeting_link} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="text-blue-600 hover:underline break-all block pl-4"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline break-all block pl-4"
                     >
                       {selectedInterview.meeting_link}
                     </a>
@@ -1063,34 +1063,42 @@ const InterviewCalendar = () => {
             {selectedInterview && !isAdmin && (
               <div className="lg:col-span-2 space-y-3">
                 {myRemark ? (
-                  <div className="p-3 border rounded-lg bg-muted/30">
-                    <h4 className="font-semibold mb-1 text-sm sm:text-base">📝 Your Submitted Remark</h4>
+                  <div className="p-3 border border-border dark:border-border rounded-lg bg-muted/30 dark:bg-muted/20">
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base text-foreground dark:text-foreground">📝 Your Submitted Remark</h4>
                     <div className="text-sm">
-                      <p className="mb-2"><strong>Grade:</strong> {myRemark.grade}</p>
-                      <p className="whitespace-pre-wrap">{myRemark.remark}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="mb-2 text-foreground dark:text-foreground">
+                        <strong>Grade:</strong> {myRemark.grade}
+                      </p>
+                      <p className="whitespace-pre-wrap text-foreground dark:text-foreground">{myRemark.remark}</p>
+                      <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
                         Submitted at {new Date(myRemark.created_at).toLocaleString()}
                       </p>
                     </div>
                   </div>
                 ) : needsRemarkForUser(selectedInterview) ? (
-                  <div className="p-3 border rounded-lg bg-muted/30">
-                    <h4 className="font-semibold mb-2 text-sm sm:text-base">📝 Your Remark (required)</h4>
+                  <div className="p-3 border border-border dark:border-border rounded-lg bg-muted/30 dark:bg-muted/20">
+                    <h4 className="font-semibold mb-2 text-sm sm:text-base text-foreground dark:text-foreground">📝 Your Remark (required)</h4>
                     <Textarea
                       value={remarkText}
                       onChange={(e) => setRemarkText(e.target.value)}
                       placeholder="Share your observations…"
                       rows={3}
-                      className="text-sm"
+                      className="text-sm bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
                     />
                     <div className="mt-3">
                       <Select value={remarkGrade} onValueChange={(v) => setRemarkGrade(v as Grade)}>
-                        <SelectTrigger className="w-full text-sm">
+                        <SelectTrigger className="w-full text-sm bg-background dark:bg-background border-border dark:border-border text-foreground dark:text-foreground">
                           <SelectValue placeholder="Select grade" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-background dark:bg-background border-border dark:border-border">
                           {gradeOptions.map((g) => (
-                            <SelectItem key={g} value={g}>{g}</SelectItem>
+                            <SelectItem 
+                              key={g} 
+                              value={g}
+                              className="text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
+                            >
+                              {g}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -1098,7 +1106,7 @@ const InterviewCalendar = () => {
                     <div className="flex justify-end mt-3">
                       <Button size="sm" onClick={handleSubmitRemark}>Submit</Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
                       You're seeing this because the interview has already started and you haven't added your remark yet.
                     </p>
                   </div>
@@ -1110,6 +1118,7 @@ const InterviewCalendar = () => {
       )}
     </DialogContent>
   </Dialog>
+
 
   {/* FullCalendar with Mobile Optimizations */}
   <div className="overflow-x-auto">

@@ -5,10 +5,6 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,7 +25,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,15 +33,14 @@ import {
   Edit,
   Trash,
   Search,
-  Eye,
   Users,
   Clock,
   CheckCircle,
   X,
-  CheckCircle2,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import CandidateMultiSelect from "../CandidateMultiselect";
 
 // Validation Schemas
 const questionnaireSchema = z.object({
@@ -793,840 +787,719 @@ const HRQuestionnaireBuilder = () => {
           )}
         </CardContent>
       </Card>
-
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={closeDialog}>
-        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>
-              {isEditing ? "Edit Questionnaire" : "Assign New Questionnaire"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditing
-                ? "Update the questionnaire details and questions"
-                : "Select candidates and assign questions to create new questionnaires"}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="">
-              {/* Create Form */}
-              {!isEditing && (
-                <form
-                  onSubmit={createForm.handleSubmit(onCreateSubmit)}
-                  className=""
-                >
-                  {/* Candidates Selection */}
-                  <div className="space-y-3">
-                    <Label>
-                      Select Candidates ({getAvailableCandidates().length}{" "}
-                      available)
-                    </Label>
+          {/* Main Content - NO SCROLL */}
+          <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4 flex flex-col overflow-hidden">
+            <div className="flex flex-col h-full space-y-4 sm:space-y-6 overflow-hidden">
 
-                    {/* Job Auto-Select Section - NEW */}
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Quick Select by Job Applied:
+
+              {/* Form Content - Fills remaining space */}
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+
+                {/* Create Form */}
+                {!isEditing && (
+                  <form
+                    onSubmit={createForm.handleSubmit(onCreateSubmit)}
+                    className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden"
+                  >
+                    
+                    {/* Candidates Selection - Compact Popover */}
+                    <div className="flex-shrink-0 space-y-3">
+                      <Label className="text-sm font-medium">
+                        Select Candidates ({getAvailableCandidates().length} available)
                       </Label>
-                      <div className="flex items-center gap-2">
-                        <Controller
-                          name="candidates"
-                          control={createForm.control}
-                          render={({ field }) => (
-                            <Select
-                              value={selectedJobForAutoSelect}
-                              onValueChange={(jobId) => {
-                                setSelectedJobForAutoSelect(jobId);
-                                selectCandidatesByJob(jobId, field);
-                              }}
-                            >
-                              <SelectTrigger className="w-64">
-                                <SelectValue placeholder="Select a job to auto-select candidates" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getUniqueJobs().map((job) => {
-                                  const candidateCount =
-                                    getAvailableCandidates().filter(
+
+                      {/* Job Auto-Select Section - Fixed Height */}
+                      <div className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-border dark:border-border">
+                        <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">
+                          Quick Select by Job Applied:
+                        </Label>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                          <Controller
+                            name="candidates"
+                            control={createForm.control}
+                            render={({ field }) => (
+                              <Select
+                                value={selectedJobForAutoSelect}
+                                onValueChange={(jobId) => {
+                                  setSelectedJobForAutoSelect(jobId);
+                                  selectCandidatesByJob(jobId, field);
+                                }}
+                              >
+                                <SelectTrigger className="w-full sm:w-64">
+                                  <SelectValue placeholder="Select a job to auto-select candidates" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getUniqueJobs().map((job) => {
+                                    const candidateCount = getAvailableCandidates().filter(
                                       (c) => c.applied_job?._id === job._id
                                     ).length;
-                                  return (
-                                    <SelectItem key={job._id} value={job._id}>
-                                      <div className="flex items-center justify-between w-full">
-                                        <span>{job.title}</span>
-                                        <Badge
-                                          variant="secondary"
-                                          className="ml-2 text-xs"
-                                        >
-                                          {candidateCount} candidates
-                                        </Badge>
-                                      </div>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-
-                        {selectedJobForAutoSelect && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              clearJobSelection();
-                              createForm.setValue("candidates", []);
-                            }}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Clear
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Select a job to automatically choose all candidates who
-                        applied for that position
-                      </p>
-                    </div>
-
-                    {/* Rest of your existing candidate selection */}
-                    <Controller
-                      name="candidates"
-                      control={createForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
-                          {/* Show selected job info if any */}
-                          {selectedJobForAutoSelect && (
-                            <div className="mb-3 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                <span className="text-sm text-green-700 dark:text-green-300">
-                                  Auto-selected candidates for:{" "}
-                                  {
-                                    getUniqueJobs().find(
-                                      (j) => j._id === selectedJobForAutoSelect
-                                    )?.name
-                                  }
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="space-y-3">
-                            {getAvailableCandidates().length === 0 ? (
-                              <p className="text-muted-foreground text-center py-4">
-                                No candidates available for assignment
-                              </p>
-                            ) : (
-                              getAvailableCandidates().map((candidate) => {
-                                const isChecked =
-                                  field.value?.includes(candidate._id) || false;
-                                const isJobMatch =
-                                  selectedJobForAutoSelect &&
-                                  candidate.applied_job?._id ===
-                                    selectedJobForAutoSelect;
-
-                                return (
-                                  <div
-                                    key={candidate._id}
-                                    className={`flex items-start space-x-3 p-2 rounded ${
-                                      isJobMatch
-                                        ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-                                        : ""
-                                    }`}
-                                  >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        if (checked) {
-                                          field.onChange([
-                                            ...currentValue,
-                                            candidate._id,
-                                          ]);
-                                        } else {
-                                          field.onChange(
-                                            currentValue.filter(
-                                              (id: string) =>
-                                                id !== candidate._id
-                                            )
-                                          );
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex items-center space-x-3 flex-1">
-                                      <Avatar className="w-8 h-8">
-                                        <AvatarImage
-                                          src={candidate.profile_photo_url?.url}
-                                        />
-                                        <AvatarFallback>
-                                          {candidate.first_name[0]}
-                                          {candidate.last_name[0]}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="font-medium">
-                                          {candidate.first_name}{" "}
-                                          {candidate.last_name}
-                                        </div>
-                                        <div className="text-sm text-muted-foreground truncate">
-                                          {candidate.email}
-                                        </div>
-                                        {/* Show applied job info */}
-                                        {candidate.applied_job && (
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs"
-                                            >
-                                              {candidate.applied_job.title}
-                                            </Badge>
-                                            {isJobMatch && (
-                                              <Badge
-                                                variant="default"
-                                                className="text-xs bg-blue-600"
-                                              >
-                                                ✓ Job Match
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    />
-                    {createForm.formState.errors.candidates && (
-                      <p className="text-red-600 text-sm">
-                        {createForm.formState.errors.candidates.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Questions Selection for Create */}
-                  <div className="space-y-3">
-                    <Label>Select Questions</Label>
-
-                    {/* Tag Selection */}
-                    {getUniqueTags().length > 0 && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <Label className="text-sm font-medium mb-2 block">
-                          Quick Select by Tags:
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          {getUniqueTags().map((tag) => (
-                            <Controller
-                              key={tag}
-                              name="assigned_questions"
-                              control={createForm.control}
-                              render={({ field }) => {
-                                const isTagSelected = selectedTags.has(tag);
-                                return (
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      isTagSelected ? "default" : "outline"
-                                    }
-                                    size="sm"
-                                    onClick={() =>
-                                      toggleTagSelection(tag, field)
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {isTagSelected && "✓ "}
-                                    {tag}
-                                    <Badge
-                                      variant="secondary"
-                                      className="ml-1 text-xs"
-                                    >
-                                      {
-                                        questions.filter((q) =>
-                                          q.tags?.includes(tag)
-                                        ).length
-                                      }
-                                    </Badge>
-                                  </Button>
-                                );
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Individual Questions */}
-                    <Controller
-                      name="assigned_questions"
-                      control={createForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg">
-                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                            <span className="text-sm font-medium">
-                              Select Questions:
-                            </span>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange(questions.map((q) => q._id));
-                                  setSelectedTags(new Set(getUniqueTags()));
-                                }}
-                                className="text-xs"
-                              >
-                                Select All
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange([]);
-                                  setSelectedTags(new Set());
-                                }}
-                                className="text-xs"
-                              >
-                                Clear All
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="max-h-64 overflow-y-auto">
-                            <div className="p-4 space-y-3">
-                              {questions.map((question) => {
-                                const isChecked =
-                                  field.value?.includes(question._id) || false;
-                                return (
-                                  <div
-                                    key={question._id}
-                                    className="flex items-start space-x-3"
-                                  >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        if (checked) {
-                                          field.onChange([
-                                            ...currentValue,
-                                            question._id,
-                                          ]);
-                                        } else {
-                                          field.onChange(
-                                            currentValue.filter(
-                                              (id: string) =>
-                                                id !== question._id
-                                            )
-                                          );
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium">
-                                        {question.question}
-                                      </p>
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {question.input_type.toUpperCase()}
-                                        </Badge>
-                                        {question.tags?.map((tag) => (
-                                          <Badge
-                                            key={tag}
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
-                                            {tag}
+                                    return (
+                                      <SelectItem key={job._id} value={job._id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <span>{job.title}</span>
+                                          <Badge variant="secondary" className="ml-2 text-xs">
+                                            {candidateCount} candidates
                                           </Badge>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                            Selected: {field.value?.length || 0} of{" "}
-                            {questions.length} questions
-                          </div>
-                        </div>
-                      )}
-                    />
-                    {createForm.formState.errors.assigned_questions && (
-                      <p className="text-red-600 text-sm">
-                        {createForm.formState.errors.assigned_questions.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Days to Complete */}
-                  <div className="space-y-2">
-                    <Label htmlFor="days_to_complete">Days to Complete</Label>
-                    <Input
-                      type="number"
-                      {...createForm.register("days_to_complete", {
-                        valueAsNumber: true,
-                      })}
-                      min={1}
-                      max={30}
-                      className="w-32"
-                    />
-                    {createForm.formState.errors.days_to_complete && (
-                      <p className="text-red-600 text-sm">
-                        {createForm.formState.errors.days_to_complete.message}
-                      </p>
-                    )}
-                  </div>
-                </form>
-              )}
-
-              {/* Edit Form */}
-              {isEditing && (
-                <form
-                  onSubmit={editForm.handleSubmit(onEditSubmit)}
-                  className="space-y-6"
-                >
-                  {/* Candidate Info */}
-                  {editingQuestionnaire && (
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <Label className="text-sm font-medium mb-2 block">
-                        Candidate:
-                      </Label>
-                      <div className="flex items-center space-x-3">
-                        <Avatar>
-                          <AvatarImage
-                            src={
-                              editingQuestionnaire.candidate.profile_photo_url
-                                ?.url
-                            }
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            )}
                           />
-                          <AvatarFallback>
-                            {editingQuestionnaire.candidate.first_name[0]}
-                            {editingQuestionnaire.candidate.last_name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">
-                            {editingQuestionnaire.candidate.first_name}{" "}
-                            {editingQuestionnaire.candidate.last_name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {editingQuestionnaire.candidate.email}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
-                  {/* Questions Selection for Edit */}
-                  <div className="space-y-3">
-                    <Label>Update Questions</Label>
-
-                    {/* Tag Selection Section */}
-                    {getUniqueTags().length > 0 && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <Label className="text-sm font-medium mb-2 block">
-                          Quick Select by Tags:
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          {getUniqueTags().map((tag) => (
-                            <Controller
-                              key={tag}
-                              name="assigned_questions"
-                              control={editForm.control}
-                              render={({ field }) => {
-                                const isTagSelected = selectedTags.has(tag);
-                                return (
-                                  <Button
-                                    type="button"
-                                    variant={
-                                      isTagSelected ? "default" : "outline"
-                                    }
-                                    size="sm"
-                                    onClick={() =>
-                                      toggleTagSelection(tag, field)
-                                    }
-                                    className="text-xs flex-shrink-0"
-                                  >
-                                    {isTagSelected && "✓ "}
-                                    {tag}
-                                    <Badge
-                                      variant="secondary"
-                                      className="ml-1 text-xs"
-                                    >
-                                      {
-                                        questions.filter((q) =>
-                                          q.tags?.includes(tag)
-                                        ).length
-                                      }
-                                    </Badge>
-                                  </Button>
-                                );
+                          {selectedJobForAutoSelect && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                clearJobSelection();
+                                createForm.setValue("candidates", []);
                               }}
-                            />
-                          ))}
+                              className="w-full sm:w-auto"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Clear
+                            </Button>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Click tags to select/deselect all questions with that
-                          tag
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+                          Select a job to automatically choose all candidates who applied for that position
                         </p>
                       </div>
-                    )}
 
-                    {/* Individual Question Selection */}
-                    <Controller
-                      name="assigned_questions"
-                      control={editForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg">
-                          {/* Select All/None Actions - Fixed Header */}
-                          <div className="flex justify-between items-center p-3 border-b bg-white">
-                            <span className="text-sm font-medium">
-                              Individual Questions:
-                            </span>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange(questions.map((q) => q._id));
-                                  setSelectedTags(new Set(getUniqueTags()));
-                                }}
-                                className="text-xs"
-                              >
-                                Select All
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange([]);
-                                  setSelectedTags(new Set());
-                                }}
-                                className="text-xs"
-                              >
-                                Clear All
-                              </Button>
-                            </div>
-                          </div>
+                      {/* Multiselect Candidates Popover */}
+                      <Controller
+                        name="candidates"
+                        control={createForm.control}
+                        render={({ field }) => (
+                          <CandidateMultiSelect
+                            candidates={getAvailableCandidates()}
+                            selectedCandidates={field.value || []}
+                            onSelectionChange={field.onChange}
+                            selectedJobId={selectedJobForAutoSelect}
+                          />
+                        )}
+                      />
+                      {createForm.formState.errors.candidates && (
+                        <p className="text-red-600 text-sm">
+                          {createForm.formState.errors.candidates.message}
+                        </p>
+                      )}
+                    </div>
 
-                          {/* Scrollable Questions List */}
-                          <div className="p-4 max-h-64 overflow-y-auto space-y-3">
-                            {questions.map((question) => {
-                              const isChecked =
-                                field.value?.includes(question._id) || false;
-                              return (
-                                <div
-                                  key={question._id}
-                                  className="flex items-start space-x-3"
-                                >
-                                  <Checkbox
-                                    checked={isChecked}
-                                    onCheckedChange={(checked) => {
-                                      const currentValue = field.value || [];
-                                      if (checked) {
-                                        field.onChange([
-                                          ...currentValue,
-                                          question._id,
-                                        ]);
-                                      } else {
-                                        field.onChange(
-                                          currentValue.filter(
-                                            (id: string) => id !== question._id
-                                          )
-                                        );
-                                        // Update selected tags if this was the last question of a tag
-                                        const newSelectedTags = new Set(
-                                          selectedTags
-                                        );
-                                        question.tags?.forEach((tag) => {
-                                          const otherQuestionsWithTag =
-                                            questions.filter(
-                                              (q) =>
-                                                q._id !== question._id &&
-                                                q.tags?.includes(tag) &&
-                                                currentValue.includes(q._id)
-                                            );
-                                          if (
-                                            otherQuestionsWithTag.length === 0
-                                          ) {
-                                            newSelectedTags.delete(tag);
-                                          }
-                                        });
-                                        setSelectedTags(newSelectedTags);
-                                      }
-                                    }}
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium break-words">
-                                      {question.question}
-                                    </p>
-                                    <div className="flex items-center flex-wrap gap-1 mt-1">
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
-                                        {question.input_type.toUpperCase()}
+                    {/* Questions Selection - Takes remaining space */}
+                    <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-hidden">
+
+                      {/* Tag Selection - Fixed Height */}
+                      {getUniqueTags().length > 0 && (
+                        <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">
+                            Quick Select by Tags:
+                          </Label>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                            {getUniqueTags().map((tag) => (
+                              <Controller
+                                key={tag}
+                                name="assigned_questions"
+                                control={createForm.control}
+                                render={({ field }) => {
+                                  const isTagSelected = selectedTags.has(tag);
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant={isTagSelected ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleTagSelection(tag, field)}
+                                      className="text-xs h-6 px-2 sm:h-7"
+                                    >
+                                      {isTagSelected && "✓ "}
+                                      {tag}
+                                      <Badge variant="secondary" className="ml-1 text-xs h-3 sm:h-4 px-1">
+                                        {questions.filter((q) => q.tags?.includes(tag)).length}
                                       </Badge>
-                                      {question.tags &&
-                                        question.tags.map((tag) => (
-                                          <Badge
-                                            key={tag}
-                                            variant={
-                                              selectedTags.has(tag)
-                                                ? "default"
-                                                : "secondary"
-                                            }
-                                            className="text-xs"
-                                          >
-                                            {tag}
-                                          </Badge>
-                                        ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Selection Summary */}
-                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                            Selected: {field.value?.length || 0} of{" "}
-                            {questions.length} questions
-                            {selectedTags.size > 0 && (
-                              <span className="ml-2">
-                                | Tags: {Array.from(selectedTags).join(", ")}
-                              </span>
-                            )}
+                                    </Button>
+                                  );
+                                }}
+                              />
+                            ))}
                           </div>
                         </div>
                       )}
-                    />
-                    {editForm.formState.errors.assigned_questions && (
-                      <p className="text-red-600 text-sm mt-1">
-                        {editForm.formState.errors.assigned_questions.message}
-                      </p>
+
+                      {/* Questions List - Only this scrolls */}
+                      <Controller
+                        name="assigned_questions"
+                        control={createForm.control}
+                        render={({ field }) => (
+                          <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                            
+                            {/* Header - Fixed */}
+                            <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
+                              <span className="text-xs sm:text-sm font-medium">
+                                Select Questions:
+                              </span>
+                              <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange(questions.map((q) => q._id));
+                                    setSelectedTags(new Set(getUniqueTags()));
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  <span className="sm:hidden">All</span>
+                                  <span className="hidden sm:inline">Select All</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange([]);
+                                    setSelectedTags(new Set());
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* ONLY SCROLLABLE AREA - Questions List */}
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                              <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                                {questions.map((question) => {
+                                  const isChecked = field.value?.includes(question._id) || false;
+                                  return (
+                                    <div key={question._id} className="flex items-start space-x-3">
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => {
+                                          const currentValue = field.value || [];
+                                          if (checked) {
+                                            field.onChange([...currentValue, question._id]);
+                                          } else {
+                                            field.onChange(
+                                              currentValue.filter((id: string) => id !== question._id)
+                                            );
+                                          }
+                                        }}
+                                        className="mt-0.5 flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground line-clamp-2">
+                                          {question.question}
+                                        </p>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          <Badge variant="outline" className="text-xs h-4">
+                                            {question.input_type.toUpperCase()}
+                                          </Badge>
+                                          {question.tags?.slice(0, 2).map((tag) => (
+                                            <Badge key={tag} variant="secondary" className="text-xs h-4">
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                          {question.tags?.length > 2 && (
+                                            <span className="text-xs text-muted-foreground self-center">
+                                              +{question.tags.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Footer - Fixed */}
+                            <div className="flex-shrink-0 p-2 sm:p-3 border-t border-border dark:border-border bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground dark:text-muted-foreground">
+                              Selected: {field.value?.length || 0} of {questions.length} questions
+                            </div>
+                          </div>
+                        )}
+                      />
+                      {createForm.formState.errors.assigned_questions && (
+                        <p className="text-red-600 text-sm">
+                          {createForm.formState.errors.assigned_questions.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Days to Complete - Fixed at bottom */}
+                    <div className="flex-shrink-0 flex items-center gap-3">
+                      <Label htmlFor="days_to_complete" className="text-sm font-medium whitespace-nowrap">
+                        Days to Complete:
+                      </Label>
+                      <Input
+                        type="number"
+                        {...createForm.register("days_to_complete", {
+                          valueAsNumber: true,
+                        })}
+                        min={1}
+                        max={30}
+                        className="w-20 h-8"
+                        defaultValue={7}
+                      />
+                      {createForm.formState.errors.days_to_complete && (
+                        <p className="text-red-600 text-sm">
+                          {createForm.formState.errors.days_to_complete.message}
+                        </p>
+                      )}
+                    </div>
+                  </form>
+                )}
+
+                {/* Edit Form */}
+                {isEditing && (
+                  <form
+                    onSubmit={editForm.handleSubmit(onEditSubmit)}
+                    className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden"
+                  >
+                    
+                    {/* Candidate Info - Fixed */}
+                    {editingQuestionnaire && (
+                      <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <Label className="text-xs font-medium block mb-1">Candidate:</Label>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={editingQuestionnaire.candidate.profile_photo_url?.url} />
+                            <AvatarFallback>
+                              {editingQuestionnaire.candidate.first_name[0]}
+                              {editingQuestionnaire.candidate.last_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-sm text-foreground dark:text-foreground">
+                              {editingQuestionnaire.candidate.first_name}{" "}
+                              {editingQuestionnaire.candidate.last_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground dark:text-muted-foreground">
+                              {editingQuestionnaire.candidate.email}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Due Date */}
-                  <div className="space-y-2">
-                    <Label htmlFor="due_at">Due Date</Label>
-                    <Input
-                      type="date"
-                      {...editForm.register("due_at")}
-                      className="w-48"
-                    />
-                    {editForm.formState.errors.due_at && (
-                      <p className="text-red-600 text-sm">
-                        {editForm.formState.errors.due_at.message}
-                      </p>
-                    )}
-                  </div>
-                </form>
-              )}
+                    {/* Questions Selection - Takes remaining space */}
+                    <div className="flex-1 min-h-0 flex flex-col space-y-3 overflow-hidden">
+                      <Label className="text-sm font-medium flex-shrink-0">Update Questions</Label>
+
+                      {/* Tag Selection - Fixed Height */}
+                      {getUniqueTags().length > 0 && (
+                        <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">
+                            Quick Select by Tags:
+                          </Label>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                            {getUniqueTags().map((tag) => (
+                              <Controller
+                                key={tag}
+                                name="assigned_questions"
+                                control={editForm.control}
+                                render={({ field }) => {
+                                  const isTagSelected = selectedTags.has(tag);
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant={isTagSelected ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleTagSelection(tag, field)}
+                                      className="text-xs h-6 px-2 sm:h-7"
+                                    >
+                                      {isTagSelected && "✓ "}
+                                      {tag}
+                                      <Badge variant="secondary" className="ml-1 text-xs h-3 sm:h-4 px-1">
+                                        {questions.filter((q) => q.tags?.includes(tag)).length}
+                                      </Badge>
+                                    </Button>
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+                            Click tags to select/deselect all questions with that tag
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Questions List - Only this scrolls */}
+                      <Controller
+                        name="assigned_questions"
+                        control={editForm.control}
+                        render={({ field }) => (
+                          <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                            
+                            {/* Header - Fixed */}
+                            <div className="flex-shrink-0 flex justify-between items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800">
+                              <span className="text-xs sm:text-sm font-medium">
+                                Individual Questions:
+                              </span>
+                              <div className="flex gap-1 sm:gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange(questions.map((q) => q._id));
+                                    setSelectedTags(new Set(getUniqueTags()));
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7"
+                                >
+                                  <span className="sm:hidden">All</span>
+                                  <span className="hidden sm:inline">Select All</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange([]);
+                                    setSelectedTags(new Set());
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7"
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* ONLY SCROLLABLE AREA - Questions List */}
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                              <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                                {questions.map((question) => {
+                                  const isChecked = field.value?.includes(question._id) || false;
+                                  return (
+                                    <div key={question._id} className="flex items-start space-x-3">
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => {
+                                          const currentValue = field.value || [];
+                                          if (checked) {
+                                            field.onChange([...currentValue, question._id]);
+                                          } else {
+                                            field.onChange(
+                                              currentValue.filter((id: string) => id !== question._id)
+                                            );
+                                            // Update selected tags if this was the last question of a tag
+                                            const newSelectedTags = new Set(selectedTags);
+                                            question.tags?.forEach((tag) => {
+                                              const otherQuestionsWithTag = questions.filter(
+                                                (q) =>
+                                                  q._id !== question._id &&
+                                                  q.tags?.includes(tag) &&
+                                                  currentValue.includes(q._id)
+                                              );
+                                              if (otherQuestionsWithTag.length === 0) {
+                                                newSelectedTags.delete(tag);
+                                              }
+                                            });
+                                            setSelectedTags(newSelectedTags);
+                                          }
+                                        }}
+                                        className="mt-0.5 flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground break-words line-clamp-2">
+                                          {question.question}
+                                        </p>
+                                        <div className="flex items-center flex-wrap gap-1 mt-1">
+                                          <Badge variant="outline" className="text-xs h-4">
+                                            {question.input_type.toUpperCase()}
+                                          </Badge>
+                                          {question.tags &&
+                                            question.tags.slice(0, 2).map((tag) => (
+                                              <Badge
+                                                key={tag}
+                                                variant={selectedTags.has(tag) ? "default" : "secondary"}
+                                                className="text-xs h-4"
+                                              >
+                                                {tag}
+                                              </Badge>
+                                            ))}
+                                          {question.tags?.length > 2 && (
+                                            <span className="text-xs text-muted-foreground self-center">
+                                              +{question.tags.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Footer - Fixed */}
+                            <div className="flex-shrink-0 p-2 sm:p-3 border-t border-border dark:border-border bg-gray-50 dark:bg-gray-800 text-xs text-muted-foreground dark:text-muted-foreground">
+                              Selected: {field.value?.length || 0} of {questions.length} questions
+                              {selectedTags.size > 0 && (
+                                <span className="ml-2 hidden sm:inline">
+                                  | Tags: {Array.from(selectedTags).join(", ")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      />
+                      {editForm.formState.errors.assigned_questions && (
+                        <p className="text-red-600 text-sm mt-1">
+                          {editForm.formState.errors.assigned_questions.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Due Date - Fixed at bottom */}
+                    <div className="flex-shrink-0 flex items-center gap-3">
+                      <Label htmlFor="due_at" className="text-sm font-medium whitespace-nowrap">
+                        Due Date:
+                      </Label>
+                      <Input
+                        type="date"
+                        {...editForm.register("due_at")}
+                        className="w-40 h-8"
+                      />
+                      {editForm.formState.errors.due_at && (
+                        <p className="text-red-600 text-sm">
+                          {editForm.formState.errors.due_at.message}
+                        </p>
+                      )}
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={closeDialog}>
-              Cancel
-            </Button>
-            <Button
-              onClick={
-                isEditing
-                  ? editForm.handleSubmit(onEditSubmit)
-                  : createForm.handleSubmit(onCreateSubmit)
-              }
-              disabled={submitting}
-            >
-              {submitting && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              )}
-              {isEditing ? "Update Questionnaire" : "Assign Questionnaire"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Details Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={closeViewDialog}>
-        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>Questionnaire Details</DialogTitle>
-            <DialogDescription>
-              Complete details of the assigned questionnaire
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedQuestionnaire && (
-            <ScrollArea className="flex-1 px-2 sm:px-2 max-w-screen-xl mx-auto">
-  <div className="space-y-4">
-    {/* Top Section: Candidate Info + Details */}
-    <Card>
-      <CardHeader>
-        <CardTitle>Candidate Information</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          {/* Avatar */}
-          <Avatar className="w-40 h-35">
-            <AvatarImage
-              src={selectedQuestionnaire.candidate.profile_photo_url?.url}
-            />
-            <AvatarFallback>
-              {selectedQuestionnaire.candidate.first_name[0]}
-              {selectedQuestionnaire.candidate.last_name[0]}
-            </AvatarFallback>
-          </Avatar>
-
-          {/* Info Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-            <div>
-              <h3 className="text-base font-semibold">
-                {selectedQuestionnaire.candidate.first_name}{" "}
-                {selectedQuestionnaire.candidate.last_name}
-              </h3>
-              <p className="text-muted-foreground break-words">
-                {selectedQuestionnaire.candidate.email}
-              </p>
-            </div>
-
-            <div>
-              <p className="font-medium">Due Date</p>
-              <p>{formatDate(selectedQuestionnaire.due_at)}</p>
-            </div>
-
-            <div>
-              <p className="font-medium">Assigned By</p>
-              <p>{selectedQuestionnaire.assigned_by.name}</p>
-              <p className="text-muted-foreground break-words">
-                {selectedQuestionnaire.assigned_by.email}
-              </p>
-            </div>
-
-            <div>
-              <p className="font-medium">Created At</p>
-              <p>{formatDate(selectedQuestionnaire.createdAt)}</p>
-            </div>
-
-            <div>
-              <p className="font-medium">Last Updated</p>
-              <p>{formatDate(selectedQuestionnaire.updatedAt)}</p>
-            </div>
-
-            <div>
-              <p className="font-medium">Status</p>
-              <Badge
-                className={getStatusColor(selectedQuestionnaire.status)}
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border dark:border-border bg-background">
+            <div className="flex gap-2 sm:gap-3">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={closeDialog}
+                className="flex-1 sm:flex-none h-9 text-sm"
               >
-                {selectedQuestionnaire.status.toUpperCase()}
-              </Badge>
+                Cancel
+              </Button>
+              <Button
+                onClick={
+                  isEditing
+                    ? editForm.handleSubmit(onEditSubmit)
+                    : createForm.handleSubmit(onCreateSubmit)
+                }
+                disabled={submitting}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                {submitting && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                )}
+                <span className="sm:hidden">{isEditing ? "Update" : "Assign"}</span>
+                <span className="hidden sm:inline">
+                  {isEditing ? "Update Questionnaire" : "Assign Questionnaire"}
+                </span>
+              </Button>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
 
-    {/* Questions */}
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>
-          Assigned Questions ({selectedQuestionnaire.assigned_questions.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 sm:p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {selectedQuestionnaire.assigned_questions.map((question, index) => (
-            <div key={question._id} className="border rounded-lg p-3">
-              <p className="font-medium mb-2">
-                {index + 1}. {question.question}
+
+
+        {/* View Details Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={closeViewDialog}>
+          <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">
+
+            {/* Header - Fixed */}
+            <div className="flex-shrink-0 px-4 py-3 sm:px-6 sm:py-4 border-b border-border dark:border-border">
+              <h2 className="text-lg sm:text-xl font-semibold">Questionnaire Details</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground dark:text-muted-foreground">
+                Complete details of the assigned questionnaire
               </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">
-                  {question.input_type.toUpperCase()}
-                </Badge>
-                {question.tags?.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+            </div>
+
+            {/* Scrollable Content */}
+            {selectedQuestionnaire && (
+              <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+                <div className="space-y-4 sm:space-y-6 max-w-screen-xl mx-auto">
+                  
+                  {/* Candidate Information Card */}
+                  <Card className="border-border dark:border-border">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base sm:text-lg">Candidate Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                        {/* Avatar */}
+                        <Avatar className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
+                          <AvatarImage src={selectedQuestionnaire.candidate.profile_photo_url?.url} />
+                          <AvatarFallback className="text-lg">
+                            {selectedQuestionnaire.candidate.first_name[0]}
+                            {selectedQuestionnaire.candidate.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Info Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm flex-1">
+                          <div>
+                            <h3 className="text-sm sm:text-base font-semibold text-foreground dark:text-foreground">
+                              {selectedQuestionnaire.candidate.first_name}{" "}
+                              {selectedQuestionnaire.candidate.last_name}
+                            </h3>
+                            <p className="text-muted-foreground dark:text-muted-foreground break-words text-xs sm:text-sm">
+                              {selectedQuestionnaire.candidate.email}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="font-medium text-foreground dark:text-foreground">Due Date</p>
+                            <p className="text-muted-foreground dark:text-muted-foreground text-xs sm:text-sm">
+                              {formatDate(selectedQuestionnaire.due_at)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="font-medium text-foreground dark:text-foreground">Assigned By</p>
+                            <p className="text-xs sm:text-sm">{selectedQuestionnaire.assigned_by.name}</p>
+                            <p className="text-muted-foreground dark:text-muted-foreground break-words text-xs">
+                              {selectedQuestionnaire.assigned_by.email}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="font-medium text-foreground dark:text-foreground">Created At</p>
+                            <p className="text-muted-foreground dark:text-muted-foreground text-xs sm:text-sm">
+                              {formatDate(selectedQuestionnaire.createdAt)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="font-medium text-foreground dark:text-foreground">Last Updated</p>
+                            <p className="text-muted-foreground dark:text-muted-foreground text-xs sm:text-sm">
+                              {formatDate(selectedQuestionnaire.updatedAt)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="font-medium text-foreground dark:text-foreground">Status</p>
+                            <Badge className={getStatusColor(selectedQuestionnaire.status)}>
+                              {selectedQuestionnaire.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Questions Card */}
+                  <Card className="border-border dark:border-border">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base sm:text-lg">
+                        Assigned Questions ({selectedQuestionnaire.assigned_questions.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {selectedQuestionnaire.assigned_questions.map((question, index) => (
+                          <div key={question._id} className="border border-border dark:border-border rounded-lg p-3 bg-card">
+                            <p className="font-medium mb-2 text-xs sm:text-sm text-foreground dark:text-foreground line-clamp-3">
+                              {index + 1}. {question.question}
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant="outline" className="text-xs h-4">
+                                {question.input_type.toUpperCase()}
+                              </Badge>
+                              {question.tags?.slice(0, 2).map((tag) => (
+                                <Badge key={tag} variant="secondary" className="text-xs h-4">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {question.tags?.length > 2 && (
+                                <Badge variant="secondary" className="text-xs h-4">
+                                  +{question.tags.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Fixed Footer */}
+            <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border dark:border-border bg-background">
+              <Button onClick={closeViewDialog} className="w-full sm:w-auto h-9">
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-md mx-4 sm:mx-auto">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-2">Confirm Delete</h2>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-4">
+                Are you sure you want to delete the questionnaire assigned to{" "}
+                <span className="font-semibold text-foreground dark:text-foreground">{deleteTargetName}</span>?
+              </p>
+
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-6">
+                <div className="flex items-start space-x-2">
+                  <div className="text-yellow-600 dark:text-yellow-400 text-sm">⚠️</div>
+                  <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                    This action cannot be undone. The questionnaire will be
+                    permanently removed from the candidate's record.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDeleteCancelled}
+                  disabled={deleteLoadingId === deleteTargetId}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteConfirmed}
+                  disabled={deleteLoadingId === deleteTargetId}
+                  className="flex-1"
+                >
+                  {deleteLoadingId === deleteTargetId ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Questionnaire"
+                  )}
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-</ScrollArea>
+          </DialogContent>
+        </Dialog>
 
-          )}
-
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button onClick={closeViewDialog}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the questionnaire assigned to{" "}
-              <span className="font-semibold">{deleteTargetName}</span>?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 my-4">
-            <div className="flex items-start space-x-2">
-              <div className="text-yellow-600 text-sm">⚠️</div>
-              <div className="text-sm text-yellow-800">
-                This action cannot be undone. The questionnaire will be
-                permanently removed from the candidate's record.
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDeleteCancelled}
-              disabled={deleteLoadingId === deleteTargetId}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteConfirmed}
-              disabled={deleteLoadingId === deleteTargetId}
-            >
-              {deleteLoadingId === deleteTargetId ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Deleting...
-                </>
-              ) : (
-                "Delete Questionnaire"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

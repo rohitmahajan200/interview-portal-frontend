@@ -51,10 +51,6 @@ import { StageCircle } from "../ui/StageCircle";
 import toast from "react-hot-toast";
 import HRCallingDetailsDisplay from "../HRCallingDetailsDisplay";
 import GloryDisplay from "../GloryDisplay";
-import type { 
-  ManagerCandidate, 
-  DetailedCandidate 
-} from "../../types/candidate";
 
 const ManagerAllCandidates = ({
   allCandidates,
@@ -330,10 +326,10 @@ const ManagerAllCandidates = ({
     if (hrResponses.length === 0) return null;
 
     return (
-      <Card className="mb-4">
+      <Card className="mb-4 border-border dark:border-border bg-card dark:bg-card">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex items-center gap-2 text-base text-foreground dark:text-foreground">
               <MessageSquare className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               HR Responses & Calling Details
               <Badge variant="secondary" className="text-xs ml-2">
@@ -344,7 +340,7 @@ const ManagerAllCandidates = ({
               variant="ghost"
               size="sm"
               onClick={() => toggleCollapse(candidate._id, "hrResponses")}
-              className="text-xs"
+              className="text-xs text-foreground dark:text-foreground hover:bg-muted dark:hover:bg-muted"
             >
               {isCardCollapsed ? "Show" : "Hide"}
               {isCardCollapsed ? (
@@ -359,7 +355,7 @@ const ManagerAllCandidates = ({
           <CardContent className="pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* HR Responses */}
-              <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+              <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-100 dark:border-purple-800">
                 <h5 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300">
                   HR Responses
                 </h5>
@@ -381,7 +377,7 @@ const ManagerAllCandidates = ({
               </div>
 
               {/* Calling Details */}
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800">
                 <HRCallingDetailsDisplay
                   candidateId={candidate._id}
                   candidateName={`${candidate.first_name} ${candidate.last_name}`}
@@ -394,6 +390,7 @@ const ManagerAllCandidates = ({
       </Card>
     );
   };
+
 
   // Component for Assessment Results & Scores
   const AssessmentResultsSection = ({ detailedCandidate }) => {

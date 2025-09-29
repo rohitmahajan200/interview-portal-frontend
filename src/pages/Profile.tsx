@@ -132,7 +132,7 @@ const Profile = () => {
               </p>
             )}
           <p>
-            <strong>Role:</strong> {user.applied_job?.name ?? "N/A"}
+            <strong>Role:</strong> {user.applied_job?.title ?? "N/A"}
           </p>
           <p>
             <strong>Stage:</strong> {user.current_stage ?? "N/A"}

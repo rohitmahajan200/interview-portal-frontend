@@ -3,8 +3,9 @@ import { useEffect } from "react";
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import pushNotificationService from "./services/pushNotificationService";
 
-// pages/components
+// Import components
 import GlobalErrorPage from "./components/GlobalErrorPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { LoginForm } from "@/pages/login-form";
 import { EmailVerification } from "./pages/emailVerification";
 import RegisterForm from "./pages/Register-form";
@@ -20,17 +21,12 @@ import OrgDashboard from "./pages/OrgDashboard";
 import SecureHRInterview from "./pages/SecureHrQn";
 import SebQuitPage from "./pages/SebQuitPage";
 
-// Optional: your toggle (comment out if you don't have it yet)
-// import PushNotificationToggle from "./components/PushNotificationToggle";
-
 function RootLayout() {
-  // Initialize push once, when the shell mounts
   useEffect(() => {
     const init = async () => {
       try {
         if (pushNotificationService.isSupported) {
           await pushNotificationService.initializeServiceWorker();
-          // console.log("✅ Push notifications initialized");
         }
       } catch (err) {
         console.error("❌ Failed to initialize push notifications:", err);
@@ -39,13 +35,7 @@ function RootLayout() {
     void init();
   }, []);
 
-  return (
-    <>
-      {/* Put any shared UI (nav, footer, etc.) here */}
-      {/* <PushNotificationToggle /> */}
-      <Outlet />
-    </>
-  );
+  return <Outlet />;
 }
 
 const router = createBrowserRouter([
@@ -54,7 +44,14 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     errorElement: <GlobalErrorPage />,
     children: [
-      { index: true, element: <Dashboard /> },
+      { 
+        index: true, 
+        element: (
+          <ProtectedRoute type="candidate">
+            <Dashboard />
+          </ProtectedRoute>
+        )
+      },
       { path: "login", element: <LoginForm /> },
       { path: "register-candidate", element: <RegisterForm /> },
       { path: "login-otp", element: <OTPLoginForm /> },
@@ -63,7 +60,14 @@ const router = createBrowserRouter([
       { path: "org/login", element: <OrgLoginForm /> },
       { path: "org/otp-login", element: <OrgOTPLoginForm /> },
       { path: "org/setup-password", element: <OrgSetupPasswordForm /> },
-      { path: "org", element: <OrgDashboard /> },
+      { 
+        path: "org", 
+        element: (
+          <ProtectedRoute type="org">
+            <OrgDashboard />
+          </ProtectedRoute>
+        )
+      },
       { path: "start-assessment", element: <SecureAssessmentLanding /> },
       { path: "start-hrqna", element: <SecureHRInterview /> },
       { path: "quit", element: <SebQuitPage /> },

@@ -13,9 +13,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search,Users, Clock, CheckCircle, X, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash, Search,Users, Clock, CheckCircle, X, } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import CandidateMultiSelect from '../CandidateMultiselect';
 
 // Replace the existing schemas with these updated ones
 const assessmentSchema = z.object({
@@ -60,6 +61,7 @@ interface Candidate {
     url: string;
     publicId: string;
   };
+  current_stage: string;
   applied_job?: {
     _id: string;
     name: string;
@@ -147,6 +149,26 @@ const AssessmentManagement = () => {
     }
   });
 
+// For Create Form - tracks selected questions and calculates total
+const createSelectedQuestionIds = useWatch({
+  control: createForm.control,
+  name: 'assigned_questions',
+});
+
+const createTotalMarks = useMemo(() => {
+  if (!Array.isArray(createSelectedQuestionIds) || createSelectedQuestionIds.length === 0) {
+    return 0;
+  }
+  
+  // Create a map of question ID to max_score for quick lookup
+  const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
+  
+  return createSelectedQuestionIds.reduce((sum, id) => {
+    return sum + (scoreById.get(id) ?? 0);
+  }, 0);
+}, [createSelectedQuestionIds, questions]);
+
+
   const editForm = useForm<EditFormData>({
     resolver: zodResolver(assessmentUpdateSchema),
     defaultValues: {
@@ -157,29 +179,25 @@ const AssessmentManagement = () => {
     }
   });
 
-  // FIXED: Use useWatch for reactive total marks calculation - CREATE FORM
-  const selectedCreateQuestionIds = useWatch({
-    control: createForm.control,
-    name: 'assigned_questions'
-  }) || [];
 
-  const createTotalMarks = useMemo(() => {
-    if (!Array.isArray(selectedCreateQuestionIds) || selectedCreateQuestionIds.length === 0) return 0;
-    const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
-    return selectedCreateQuestionIds.reduce((sum, id) => sum + (scoreById.get(id) ?? 0), 0);
-  }, [selectedCreateQuestionIds, questions]);
+  // For Edit Form - tracks selected questions and calculates total
+const editSelectedQuestionIds = useWatch({
+  control: editForm.control,
+  name: 'assigned_questions',
+});
 
-  // FIXED: Use useWatch for reactive total marks calculation - EDIT FORM
-  const selectedEditQuestionIds = useWatch({
-    control: editForm.control,
-    name: 'assigned_questions'
-  }) || [];
-
-  const editTotalMarks = useMemo(() => {
-    if (!Array.isArray(selectedEditQuestionIds) || selectedEditQuestionIds.length === 0) return 0;
-    const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
-    return selectedEditQuestionIds.reduce((sum, id) => sum + (scoreById.get(id) ?? 0), 0);
-  }, [selectedEditQuestionIds, questions]);
+const editTotalMarks = useMemo(() => {
+  if (!Array.isArray(editSelectedQuestionIds) || editSelectedQuestionIds.length === 0) {
+    return 0;
+  }
+  
+  // Create a map of question ID to max_score for quick lookup
+  const scoreById = new Map(questions.map(q => [q._id, q?.max_score ?? 0]));
+  
+  return editSelectedQuestionIds.reduce((sum, id) => {
+    return sum + (scoreById.get(id) ?? 0);
+  }, 0);
+}, [editSelectedQuestionIds, questions]);
 
   const isEditing = !!editingAssessment;
 
@@ -469,13 +487,25 @@ const AssessmentManagement = () => {
       day: 'numeric'
     });
   };
-
-  // Get available candidates (those without assessments)
+  // Get available candidates (those in assessment stage WITHOUT pending assessments)
   const getAvailableCandidates = () => {
-    return candidates.filter(candidate => 
-      !assessments.some(assessment => assessment.candidate._id === candidate._id)
-    );
+    return candidates.filter(candidate => {
+      // Must be in assessment stage
+      if (candidate.current_stage !== "assessment") {
+        return false;
+      }
+      
+      // Check if candidate has any pending assessments
+      const hasPendingAssessment = assessments.some(assessment => 
+        assessment.candidate._id === candidate._id && 
+        assessment.status === "pending"
+      );
+      
+      // Only include if NO pending assessment
+      return !hasPendingAssessment;
+    });
   };
+
 
   // Statistics
   const stats = {
@@ -711,639 +741,680 @@ const AssessmentManagement = () => {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={closeDialog}>
-        <DialogContent className="max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full h-[90vh] flex flex-col overflow-y-auto">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle>
-              {isEditing ? 'Edit Assessment' : 'Assign New Assessment'}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditing 
-                ? 'Update the assessment details and questions'
-                : 'Select candidates and assign technical questions to create new assessments'
-              }
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
-              {/* Create Form */}
-              {!isEditing && (
-                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-6">
-                  {/* Candidates Selection */}
-                  <div className="space-y-3">
-                    <Label>Select Candidates ({getAvailableCandidates().length} available)</Label>
+          {/* Main Content - NO SCROLL */}
+          <div className="flex-1 min-h-0 px-4 py-3 sm:px-6 sm:py-4 flex flex-col overflow-hidden">
+            <div className="flex flex-col h-full space-y-4 sm:space-y-6 overflow-hidden">
+              
+
+              {/* Form Content - Fills remaining space */}
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                {/* Create Form */}
+                {!isEditing && (
+                  <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden">
                     
-                    {/* Job Auto-Select Section - Following HR questionnaire pattern */}
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <Label className="text-sm font-medium mb-2 block">Quick Select by Job Applied:</Label>
-                      <div className="flex items-center gap-2">
-                        <Controller
-                          name="candidates"
-                          control={createForm.control}
-                          render={({ field }) => (
-                            <Select 
-                              value={selectedJobForAutoSelect} 
-                              onValueChange={(jobId) => {
-                                setSelectedJobForAutoSelect(jobId);
-                                selectCandidatesByJob(jobId, field);
-                              }}
-                            >
-                              <SelectTrigger className="w-64">
-                                <SelectValue placeholder="Select a job to auto-select candidates" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getUniqueJobs().map((job) => {
-                                  const candidateCount = getAvailableCandidates().filter(
-                                    c => c.applied_job?._id === job._id
-                                  ).length;
-                                  return (
-                                    <SelectItem key={job._id} value={job._id}>
-                                      <div className="flex items-center justify-between w-full">
-                                        <span>{job.title}</span>
-                                        <Badge variant="secondary" className="ml-2 text-xs">
-                                          {candidateCount} candidates
-                                        </Badge>
-                                      </div>
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                        
-                        {selectedJobForAutoSelect && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              clearJobSelection();
-                              createForm.setValue('candidates', []);
-                            }}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Clear
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Select a job to automatically choose all candidates who applied for that position
-                      </p>
-                    </div>
-
-                    {/* Candidate Selection */}
-                    <Controller
-                      name="candidates"
-                      control={createForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
-                          {/* Show selected job info if any */}
-                          {selectedJobForAutoSelect && (
-                            <div className="mb-3 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                <span className="text-sm text-green-700 dark:text-green-300">
-                                  Auto-selected candidates for: {getUniqueJobs().find(j => j._id === selectedJobForAutoSelect)?.title}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          
-                          <div className="space-y-3">
-                            {getAvailableCandidates().length === 0 ? (
-                              <p className="text-muted-foreground text-center py-4">
-                                No candidates available for assignment
-                              </p>
-                            ) : (
-                              getAvailableCandidates().map((candidate) => {
-                                const isChecked = field.value?.includes(candidate._id) || false;
-                                const isJobMatch = selectedJobForAutoSelect && candidate.applied_job?._id === selectedJobForAutoSelect;
-                                
-                                return (
-                                  <div 
-                                    key={candidate._id} 
-                                    className={`flex items-start space-x-3 p-2 rounded ${
-                                      isJobMatch ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : ''
-                                    }`}
-                                  >
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...currentValue, candidate._id]);
-                                        } else {
-                                          field.onChange(currentValue.filter((id: string) => id !== candidate._id));
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex items-center space-x-3 flex-1">
-                                      <Avatar className="w-8 h-8">
-                                        <AvatarImage src={candidate.profile_photo_url?.url} />
-                                        <AvatarFallback>
-                                          {candidate.first_name[0]}{candidate.last_name[0]}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="font-medium">
-                                          {candidate.first_name} {candidate.last_name}
+                    {/* Candidates Selection - Compact Popover */}
+                    <div className="flex-shrink-0 space-y-3">
+                      <Label className="text-sm font-medium">Select Candidates ({getAvailableCandidates().length} available)</Label>
+                      
+                      {/* Job Auto-Select Section - Fixed Height */}
+                      <div className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-border dark:border-border">
+                        <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">Quick Select by Job Applied:</Label>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                          <Controller
+                            name="candidates"
+                            control={createForm.control}
+                            render={({ field }) => (
+                              <Select 
+                                value={selectedJobForAutoSelect} 
+                                onValueChange={(jobId) => {
+                                  setSelectedJobForAutoSelect(jobId);
+                                  selectCandidatesByJob(jobId, field);
+                                }}
+                              >
+                                <SelectTrigger className="w-full sm:w-64">
+                                  <SelectValue placeholder="Select a job to auto-select candidates" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {getUniqueJobs().map((job) => {
+                                    const candidateCount = getAvailableCandidates().filter(
+                                      c => c.applied_job?._id === job._id
+                                    ).length;
+                                    return (
+                                      <SelectItem key={job._id} value={job._id}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <span>{job.title}</span>
+                                          <Badge variant="secondary" className="ml-2 text-xs">
+                                            {candidateCount} candidates
+                                          </Badge>
                                         </div>
-                                        <div className="text-sm text-muted-foreground truncate">
-                                          {candidate.email}
-                                        </div>
-                                        {/* Show applied job info */}
-                                        {candidate.applied_job && (
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <Badge variant="outline" className="text-xs">
-                                              {candidate.applied_job.title}
-                                            </Badge>
-                                            {isJobMatch && (
-                                              <Badge variant="default" className="text-xs bg-blue-600">
-                                                ✓ Job Match
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
                             )}
-                          </div>
-                        </div>
-                      )}
-                    />
-                    {createForm.formState.errors.candidates && (
-                      <p className="text-red-600 text-sm">{createForm.formState.errors.candidates.message}</p>
-                    )}
-                  </div>
-
-                  {/* Questions Selection */}
-                  <div className="space-y-3">
-                    <Label>Select Technical Questions</Label>
-                    
-                    {/* Tag Selection */}
-                    {getUniqueTags().length > 0 && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {getUniqueTags().map((tag) => (
-                            <Controller
-                              key={tag}
-                              name="assigned_questions"
-                              control={createForm.control}
-                              render={({ field }) => {
-                                const isTagSelected = selectedTags.has(tag);
-                                return (
-                                  <Button
-                                    type="button"
-                                    variant={isTagSelected ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleTagSelection(tag, field)}
-                                    className="text-xs"
-                                  >
-                                    {isTagSelected && "✓ "}{tag}
-                                    <Badge variant="secondary" className="ml-1 text-xs">
-                                      {questions.filter(q => q.tags?.includes(tag)).length}
-                                    </Badge>
-                                  </Button>
-                                );
+                          />
+                          
+                          {selectedJobForAutoSelect && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                clearJobSelection();
+                                createForm.setValue('candidates', []);
                               }}
-                            />
-                          ))}
+                              className="w-full sm:w-auto"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Clear
+                            </Button>
+                          )}
                         </div>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+                          Select a job to automatically choose all candidates who applied for that position
+                        </p>
                       </div>
-                    )}
 
-                    {/* Individual Questions */}
-                    <Controller
-                      name="assigned_questions"
-                      control={createForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg">
-                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                            <span className="text-sm font-medium">Select Questions:</span>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange(questions.map(q => q._id));
-                                  setSelectedTags(new Set(getUniqueTags()));
-                                }}
-                                className="text-xs"
-                              >
-                                Select All
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange([]);
-                                  setSelectedTags(new Set());
-                                }}
-                                className="text-xs"
-                              >
-                                Clear All
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="max-h-64 overflow-y-auto">
-                            <div className="p-4 space-y-3">
-                              {questions.map((question) => {
-                                const isChecked = field.value?.includes(question._id) || false;
-                                return (
-                                  <div key={question._id} className="flex items-start space-x-3">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...currentValue, question._id]);
-                                        } else {
-                                          field.onChange(currentValue.filter((id: string) => id !== question._id));
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium">{question.text}</p>
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        <Badge variant="outline" className="text-xs">
-                                          {question.type.toUpperCase()}
-                                        </Badge>
-                                        <Badge variant="secondary" className="text-xs">
-                                          {question.max_score} pts
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                            Selected: {field.value?.length || 0} of {questions.length} questions
-                          </div>
-                        </div>
-                      )}
-                    />
-                    {createForm.formState.errors.assigned_questions && (
-                      <p className="text-red-600 text-sm">{createForm.formState.errors.assigned_questions.message}</p>
-                    )}
-                  </div>
-
-                  {/* FIXED: Assessment Configuration with Uniform 4-Field Layout */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {/* SEB Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="is_seb">Safe Exam Browser (SEB)</Label>
+                      {/* Multiselect Candidates Popover */}
                       <Controller
-                        name="is_seb"
+                        name="candidates"
                         control={createForm.control}
                         render={({ field }) => (
-                          <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              id="is_seb"
-                            />
-                            <Label htmlFor="is_seb" className="text-sm font-normal">
-                              Required
-                            </Label>
-                          </div>
+                          <CandidateMultiSelect
+                            candidates={getAvailableCandidates()}
+                            selectedCandidates={field.value || []}
+                            onSelectionChange={field.onChange}
+                            selectedJobId={selectedJobForAutoSelect}
+                          />
                         )}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Secure browser requirement
-                      </p>
-                    </div>
-
-                    {/* Exam Duration Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="exam_duration">Exam Duration (Required)</Label>
-                      <Input
-                        type="number"
-                        {...createForm.register('exam_duration', { valueAsNumber: true })}
-                        min={1}
-                        max={600}
-                        placeholder="60"
-                        className="w-full"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {createForm.watch('exam_duration') ? 
-                          `${Math.floor((createForm.watch('exam_duration') || 60) / 60)}h ${(createForm.watch('exam_duration') || 60) % 60}m` 
-                          : 'Time in minutes'
-                        }
-                      </p>
-                      {createForm.formState.errors.exam_duration && (
-                        <p className="text-red-600 text-sm">{createForm.formState.errors.exam_duration.message}</p>
+                      {createForm.formState.errors.candidates && (
+                        <p className="text-red-600 text-sm">{createForm.formState.errors.candidates.message}</p>
                       )}
                     </div>
 
-                    {/* Total Marks Field - FIXED with Uniform Styling */}
-                    <div className="space-y-2">
-                      <Label htmlFor="create_total_marks">Total Marks</Label>
-                      <Input
-                        id="create_total_marks"
-                        type="number"
-                        value={createTotalMarks}
-                        readOnly
-                        className="w-full bg-gray-50"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Sum of selected questions
-                      </p>
-                    </div>
-
-                    {/* Days to Complete Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="days_to_complete">Days to Complete</Label>
-                      <Input
-                        type="number"
-                        {...createForm.register('days_to_complete', { valueAsNumber: true })}
-                        min={1}
-                        max={30}
-                        placeholder="7"
-                        className="w-full"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {createForm.watch('days_to_complete') ? 
-                          `Due: ${new Date(Date.now() + ((createForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000))
-                            .toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric'
-                            })}` 
-                          : 'Deadline calculation'
-                        }
-                      </p>
-                      {createForm.formState.errors.days_to_complete && (
-                        <p className="text-red-600 text-sm">{createForm.formState.errors.days_to_complete.message}</p>
+                    {/* Questions Selection - Takes remaining space */}
+                    <div className="flex-1 min-h-0 flex flex-col space-y-0.5 overflow-hidden">
+                      {/* Tag Selection - Fixed Height */}
+                      {getUniqueTags().length > 0 && (
+                        <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">Quick Select by Tags:</Label>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                            {getUniqueTags().map((tag) => (
+                              <Controller
+                                key={tag}
+                                name="assigned_questions"
+                                control={createForm.control}
+                                render={({ field }) => {
+                                  const isTagSelected = selectedTags.has(tag);
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant={isTagSelected ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleTagSelection(tag, field)}
+                                      className="text-xs h-6 px-2 sm:h-7"
+                                    >
+                                      {isTagSelected && "✓ "}{tag}
+                                      <Badge variant="secondary" className="ml-1 text-xs h-3 sm:h-4 px-1">
+                                        {questions.filter(q => q.tags?.includes(tag)).length}
+                                      </Badge>
+                                    </Button>
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                </form>
-              )}
 
-              {/* Edit Form */}
-              {isEditing && (
-                <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6">
-                  {/* Candidate Info (Read-only) */}
-                  {editingAssessment && (
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <Label className="text-sm font-medium mb-2 block">Candidate:</Label>
-                      <div className="flex items-center space-x-3">
-                        <Avatar>
-                          <AvatarImage src={editingAssessment.candidate.profile_photo_url?.url} />
-                          <AvatarFallback>
-                            {editingAssessment.candidate.first_name[0]}{editingAssessment.candidate.last_name[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">
-                            {editingAssessment.candidate.first_name} {editingAssessment.candidate.last_name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {editingAssessment.candidate.email}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Questions Selection for Edit */}
-                  <div className="space-y-3">
-                    <Label>Update Questions</Label>
-                    
-                    {/* Tag Selection */}
-                    {getUniqueTags().length > 0 && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <Label className="text-sm font-medium mb-2 block">Quick Select by Tags:</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {getUniqueTags().map((tag) => (
-                            <Controller
-                              key={tag}
-                              name="assigned_questions"
-                              control={editForm.control}
-                              render={({ field }) => {
-                                const isTagSelected = selectedTags.has(tag);
-                                return (
-                                  <Button
-                                    type="button"
-                                    variant={isTagSelected ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => toggleTagSelection(tag, field)}
-                                    className="text-xs"
-                                  >
-                                    {isTagSelected && "✓ "}{tag}
-                                    <Badge variant="secondary" className="ml-1 text-xs">
-                                      {questions.filter(q => q.tags?.includes(tag)).length}
-                                    </Badge>
-                                  </Button>
-                                );
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Individual Questions */}
-                    <Controller
-                      name="assigned_questions"
-                      control={editForm.control}
-                      render={({ field }) => (
-                        <div className="border rounded-lg">
-                          <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-                            <span className="text-sm font-medium">Select Questions:</span>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange(questions.map(q => q._id));
-                                  setSelectedTags(new Set(getUniqueTags()));
-                                }}
-                                className="text-xs"
-                              >
-                                Select All
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  field.onChange([]);
-                                  setSelectedTags(new Set());
-                                }}
-                                className="text-xs"
-                              >
-                                Clear All
-                              </Button>
+                      {/* Questions List - Only this scrolls, NOW WITH MORE SPACE! */}
+                      <Controller
+                        name="assigned_questions"
+                        control={createForm.control}
+                        render={({ field }) => (
+                          <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                            
+                            {/* Header with Integrated Count - Fixed */}
+                            <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs sm:text-sm font-medium">Select Questions</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.value?.length || 0} / {questions.length}
+                                </Badge>
+                                {field.value?.length > 0 && createTotalMarks > 0 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {createTotalMarks} pts
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange(questions.map(q => q._id));
+                                    setSelectedTags(new Set(getUniqueTags()));
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  <span className="sm:hidden">All</span>
+                                  <span className="hidden sm:inline">Select All</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange([]);
+                                    setSelectedTags(new Set());
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  Clear
+                                </Button>
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="max-h-64 overflow-y-auto">
-                            <div className="p-4 space-y-3">
-                              {questions.map((question) => {
-                                const isChecked = field.value?.includes(question._id) || false;
-                                return (
-                                  <div key={question._id} className="flex items-start space-x-3">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        const currentValue = field.value || [];
-                                        if (checked) {
-                                          field.onChange([...currentValue, question._id]);
-                                        } else {
-                                          field.onChange(currentValue.filter((id: string) => id !== question._id));
-                                        }
-                                      }}
-                                    />
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium">{question.text}</p>
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        <Badge variant="outline" className="text-xs">
-                                          {question.type.toUpperCase()}
-                                        </Badge>
-                                        <Badge variant="secondary" className="text-xs">
-                                          {question.max_score} pts
-                                        </Badge>
+                            {/* EXPANDED SCROLLABLE AREA - No Footer Taking Space! */}
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                              <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                                {questions.map((question) => {
+                                  const isChecked = field.value?.includes(question._id) || false;
+                                  return (
+                                    <div key={question._id} className="flex items-start space-x-3">
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => {
+                                          const currentValue = field.value || [];
+                                          if (checked) {
+                                            field.onChange([...currentValue, question._id]);
+                                          } else {
+                                            field.onChange(currentValue.filter((id: string) => id !== question._id));
+                                          }
+                                        }}
+                                        className="mt-0.5 flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground line-clamp-2">
+                                          {question.text}
+                                        </p>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          <Badge variant="outline" className="text-xs h-4">
+                                            {question.type.toUpperCase()}
+                                          </Badge>
+                                          {question.max_score && (
+                                            <Badge variant="secondary" className="text-xs h-4">
+                                              {question.max_score} pts
+                                            </Badge>
+                                          )}
+                                          {question.tags?.slice(0, 2).map((tag) => (
+                                            <Badge key={tag} variant="secondary" className="text-xs h-4">
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                          {question.tags && question.tags.length > 2 && (
+                                            <span className="text-xs text-muted-foreground self-center">
+                                              +{question.tags.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="p-3 border-t bg-gray-50 text-xs text-muted-foreground">
-                            Selected: {field.value?.length || 0} of {questions.length} questions
-                          </div>
-                        </div>
-                      )}
-                    />
-                    {editForm.formState.errors.assigned_questions && (
-                      <p className="text-red-600 text-sm">{editForm.formState.errors.assigned_questions.message}</p>
-                    )}
-                  </div>
-
-                  {/* FIXED: Assessment Configuration with Uniform 4-Field Layout - EDIT FORM */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {/* SEB Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_is_seb">Safe Exam Browser (SEB)</Label>
-                      <Controller
-                        name="is_seb"
-                        control={editForm.control}
-                        render={({ field }) => (
-                          <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              id="edit_is_seb"
-                            />
-                            <Label htmlFor="edit_is_seb" className="text-sm font-normal">
-                              Required
-                            </Label>
+                            {/* NO FOOTER - More space for questions! */}
+                            
                           </div>
                         )}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Secure browser requirement
-                      </p>
-                    </div>
-
-                    {/* Exam Duration Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_exam_duration">Exam Duration (Required)</Label>
-                      <Input
-                        type="number"
-                        {...editForm.register('exam_duration', { valueAsNumber: true })}
-                        min={1}
-                        max={600}
-                        placeholder="60"
-                        className="w-full"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {editForm.watch('exam_duration') ? 
-                          `${Math.floor((editForm.watch('exam_duration') || 60) / 60)}h ${(editForm.watch('exam_duration') || 60) % 60}m` 
-                          : 'Time in minutes'
-                        }
-                      </p>
-                      {editForm.formState.errors.exam_duration && (
-                        <p className="text-red-600 text-sm">{editForm.formState.errors.exam_duration.message}</p>
+                      {createForm.formState.errors.assigned_questions && (
+                        <p className="text-red-600 text-sm">{createForm.formState.errors.assigned_questions.message}</p>
                       )}
                     </div>
 
-                    {/* Total Marks Field - FIXED with Uniform Styling */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_total_marks">Total Marks</Label>
-                      <Input
-                        id="edit_total_marks"
-                        type="number"
-                        value={editTotalMarks}
-                        readOnly
-                        className="w-full bg-gray-50"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Sum of selected questions
-                      </p>
+
+                    {/* Assessment Configuration - Fixed at bottom */}
+                    <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* SEB Field */}
+                      <div className="">
+                        <Label htmlFor="is_seb" className="text-sm font-medium">Safe Exam Browser (SEB)</Label>
+                        <Controller
+                          name="is_seb"
+                          control={createForm.control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2 p-2 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                id="is_seb"
+                              />
+                              <Label htmlFor="is_seb" className="text-sm font-normal">
+                                Required
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          Secure browser requirement
+                        </p>
+                      </div>
+
+                      {/* Exam Duration Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="exam_duration" className="text-sm font-medium">
+                          Exam Duration (Required)
+                        </Label>
+                        <Input
+                          type="number"
+                          {...createForm.register('exam_duration', { valueAsNumber: true })}
+                          min={1}
+                          max={600}
+                          placeholder="60"
+                          className="w-full h-8"
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          {createForm.watch('exam_duration')
+                            ? `${Math.floor((createForm.watch('exam_duration') || 60) / 60)}h ${(createForm.watch('exam_duration') || 60) % 60}m`
+                            : "Time in minutes"
+                          }
+                        </p>
+                        {createForm.formState.errors.exam_duration && (
+                          <p className="text-red-600 text-sm">{createForm.formState.errors.exam_duration.message}</p>
+                        )}
+                      </div>
+
+                      {/* Total Marks Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="total_marks" className="text-sm font-medium">Total Marks</Label>
+                        <Input
+                          id="total_marks"
+                          type="number"
+                          value={createTotalMarks}
+                          readOnly
+                          className="w-full h-8 bg-gray-50 dark:bg-gray-800"
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          Sum of selected questions
+                        </p>
+                      </div>
+
+
+                      {/* Days to Complete Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="days_to_complete" className="text-sm font-medium">Days to Complete</Label>
+                        <Input
+                          type="number"
+                          {...createForm.register('days_to_complete', { valueAsNumber: true })}
+                          min={1}
+                          max={30}
+                          className="w-full h-8"
+                          defaultValue={7}
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          {createForm.watch('days_to_complete')
+                            ? `Due: ${new Date(Date.now() + (createForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}`
+                            : "Deadline calculation"
+                          }
+                        </p>
+                        {createForm.formState.errors.days_to_complete && (
+                          <p className="text-red-600 text-sm">{createForm.formState.errors.days_to_complete.message}</p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Days to Complete Field */}
-                    <div className="space-y-2">
-                      <Label htmlFor="edit_days_to_complete">Days to Complete</Label>
-                      <Input
-                        type="number"
-                        {...editForm.register('days_to_complete', { valueAsNumber: true })}
-                        min={1}
-                        max={30}
-                        placeholder="7"
-                        className="w-full"
+                  </form>
+                )}
+
+                {/* Edit Form */}
+                {isEditing && (
+                  <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex-1 min-h-0 flex flex-col space-y-4 sm:space-y-6 overflow-hidden">
+                    
+                    {/* Candidate Info - Fixed */}
+                    {editingAssessment && (
+                      <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <Label className="text-xs font-medium block mb-1">Candidate:</Label>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={editingAssessment.candidate.profile_photo_url?.url} />
+                            <AvatarFallback>
+                              {editingAssessment.candidate.first_name[0]}{editingAssessment.candidate.last_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-sm text-foreground dark:text-foreground">
+                              {editingAssessment.candidate.first_name} {editingAssessment.candidate.last_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground dark:text-muted-foreground">
+                              {editingAssessment.candidate.email}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Questions Selection - Takes remaining space */}
+                    <div className="flex-1 min-h-0 flex flex-col space-y-0.5 overflow-hidden">
+                      <Label className="text-sm font-medium flex-shrink-0">Update Questions</Label>
+                      
+                      {/* Tag Selection - Fixed Height */}
+                      {getUniqueTags().length > 0 && (
+                        <div className="flex-shrink-0 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <Label className="text-xs sm:text-sm font-medium mb-1 sm:mb-2 block">Quick Select by Tags:</Label>
+                          <div className="flex flex-wrap gap-1 sm:gap-2">
+                            {getUniqueTags().map((tag) => (
+                              <Controller
+                                key={tag}
+                                name="assigned_questions"
+                                control={editForm.control}
+                                render={({ field }) => {
+                                  const isTagSelected = selectedTags.has(tag);
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant={isTagSelected ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => toggleTagSelection(tag, field)}
+                                      className="text-xs h-6 px-2 sm:h-7"
+                                    >
+                                      {isTagSelected && "✓ "}{tag}
+                                      <Badge variant="secondary" className="ml-1 text-xs h-3 sm:h-4 px-1">
+                                        {questions.filter(q => q.tags?.includes(tag)).length}
+                                      </Badge>
+                                    </Button>
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+                            Click tags to select/deselect all questions with that tag
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Questions List - Only this scrolls, NOW WITH MORE SPACE! */}
+                      <Controller
+                        name="assigned_questions"
+                        control={editForm.control}
+                        render={({ field }) => (
+                          <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
+                            
+                            {/* Header with Integrated Count and Selected Tags - Fixed */}
+                            <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs sm:text-sm font-medium">Individual Questions</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.value?.length || 0} / {questions.length}
+                                </Badge>
+                                {field.value?.length > 0 && editTotalMarks > 0 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {editTotalMarks} pts
+                                  </Badge>
+                                )}
+                                {selectedTags.size > 0 && (
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">Tags:</span>
+                                    {Array.from(selectedTags).slice(0, 3).map((tag) => (
+                                      <Badge key={tag} variant="default" className="text-xs h-4">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                    {selectedTags.size > 3 && (
+                                      <span className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                        +{selectedTags.size - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="flex gap-1 sm:gap-2 w-full sm:w-auto">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange(questions.map(q => q._id));
+                                    setSelectedTags(new Set(getUniqueTags()));
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  <span className="sm:hidden">All</span>
+                                  <span className="hidden sm:inline">Select All</span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    field.onChange([]);
+                                    setSelectedTags(new Set());
+                                  }}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* EXPANDED SCROLLABLE AREA - No Footer Taking Space! */}
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                              <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                                {questions.map((question) => {
+                                  const isChecked = field.value?.includes(question._id) || false;
+                                  return (
+                                    <div key={question._id} className="flex items-start space-x-3">
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => {
+                                          const currentValue = field.value || [];
+                                          if (checked) {
+                                            field.onChange([...currentValue, question._id]);
+                                          } else {
+                                            field.onChange(currentValue.filter((id: string) => id !== question._id));
+                                            
+                                            // Update selected tags if this was the last question of a tag
+                                            const newSelectedTags = new Set(selectedTags);
+                                            question.tags?.forEach((tag) => {
+                                              const otherQuestionsWithTag = questions.filter(
+                                                q => q._id !== question._id && 
+                                                q.tags?.includes(tag) && 
+                                                currentValue.includes(q._id)
+                                              );
+                                              if (otherQuestionsWithTag.length === 0) {
+                                                newSelectedTags.delete(tag);
+                                              }
+                                            });
+                                            setSelectedTags(newSelectedTags);
+                                          }
+                                        }}
+                                        className="mt-0.5 flex-shrink-0"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs sm:text-sm font-medium text-foreground dark:text-foreground break-words line-clamp-2">
+                                          {question.text}
+                                        </p>
+                                        <div className="flex items-center flex-wrap gap-1 mt-1">
+                                          <Badge variant="outline" className="text-xs h-4">
+                                            {question.type.toUpperCase()}
+                                          </Badge>
+                                          {question.max_score && (
+                                            <Badge variant="secondary" className="text-xs h-4">
+                                              {question.max_score} pts
+                                            </Badge>
+                                          )}
+                                          {question.tags && question.tags.slice(0, 2).map((tag) => (
+                                            <Badge 
+                                              key={tag} 
+                                              variant={selectedTags.has(tag) ? "default" : "secondary"} 
+                                              className="text-xs h-4"
+                                            >
+                                              {tag}
+                                            </Badge>
+                                          ))}
+                                          {question.tags && question.tags.length > 2 && (
+                                            <span className="text-xs text-muted-foreground self-center">
+                                              +{question.tags.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* NO FOOTER - More space for questions! */}
+                            
+                          </div>
+                        )}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        {editForm.watch('days_to_complete') ? 
-                          `Due: ${new Date(Date.now() + ((editForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000))
-                            .toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric'
-                            })}` 
-                          : 'Deadline calculation'
-                        }
-                      </p>
-                      {editForm.formState.errors.days_to_complete && (
-                        <p className="text-red-600 text-sm">{editForm.formState.errors.days_to_complete.message}</p>
+                      {editForm.formState.errors.assigned_questions && (
+                        <p className="text-red-600 text-sm mt-1">{editForm.formState.errors.assigned_questions.message}</p>
                       )}
                     </div>
-                  </div>
-                </form>
-              )}
+
+                    {/* Assessment Configuration - Fixed at bottom */}
+                    <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {/* SEB Field */}
+                      <div className="">
+                        <Label htmlFor="edit_is_seb" className="text-sm font-medium">Safe Exam Browser (SEB)</Label>
+                        <Controller
+                          name="is_seb"
+                          control={editForm.control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2 p-2 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                id="edit_is_seb"
+                              />
+                              <Label htmlFor="edit_is_seb" className="text-sm font-normal">
+                                Required
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          Secure browser requirement
+                        </p>
+                      </div>
+
+                      {/* Exam Duration Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_exam_duration" className="text-sm font-medium">
+                          Exam Duration (Required)
+                        </Label>
+                        <Input
+                          type="number"
+                          {...editForm.register('exam_duration', { valueAsNumber: true })}
+                          min={1}
+                          max={600}
+                          placeholder="60"
+                          className="w-full h-8"
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          {editForm.watch('exam_duration')
+                            ? `${Math.floor((editForm.watch('exam_duration') || 60) / 60)}h ${(editForm.watch('exam_duration') || 60) % 60}m`
+                            : "Time in minutes"
+                          }
+                        </p>
+                        {editForm.formState.errors.exam_duration && (
+                          <p className="text-red-600 text-sm">{editForm.formState.errors.exam_duration.message}</p>
+                        )}
+                      </div>
+
+                      {/* Total Marks Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_total_marks" className="text-sm font-medium">Total Marks</Label>
+                        <Input
+                          id="edit_total_marks"
+                          type="number"
+                          value={editTotalMarks}
+                          readOnly
+                          className="w-full h-8 bg-gray-50 dark:bg-gray-800"
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          Sum of selected questions
+                        </p>
+                      </div>
+
+
+                      {/* Days to Complete Field */}
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_days_to_complete" className="text-sm font-medium">Days to Complete</Label>
+                        <Input
+                          type="number"
+                          {...editForm.register('days_to_complete', { valueAsNumber: true })}
+                          min={1}
+                          max={30}
+                          className="w-full h-8"
+                          defaultValue={7}
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          {editForm.watch('days_to_complete')
+                            ? `Due: ${new Date(Date.now() + (editForm.watch('days_to_complete') || 7) * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}`
+                            : "Deadline calculation"
+                          }
+                        </p>
+                        {editForm.formState.errors.days_to_complete && (
+                          <p className="text-red-600 text-sm">{editForm.formState.errors.days_to_complete.message}</p>
+                        )}
+                      </div>
+                    </div>
+
+                  </form>
+                )}
+              </div>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={closeDialog}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={isEditing ? editForm.handleSubmit(onEditSubmit) : createForm.handleSubmit(onCreateSubmit)}
-              disabled={submitting}
-            >
-              {submitting && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>}
-              {isEditing ? 'Update Assessment' : 'Assign Assessment'}
-            </Button>
-          </DialogFooter>
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border dark:border-border bg-background">
+            <div className="flex gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeDialog}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={isEditing ? editForm.handleSubmit(onEditSubmit) : createForm.handleSubmit(onCreateSubmit)}
+                disabled={submitting}
+                className="flex-1 sm:flex-none h-9 text-sm"
+              >
+                {submitting && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                )}
+                <span className="sm:hidden">{isEditing ? 'Update' : 'Assign'}</span>
+                <span className="hidden sm:inline">{isEditing ? 'Update Assessment' : 'Assign Assessment'}</span>
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
+
+
 
       {/* View Details Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={closeViewDialog}>
