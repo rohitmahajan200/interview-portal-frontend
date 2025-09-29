@@ -10,16 +10,32 @@ import ThemeProvider from './components/ThemeProvider';
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
     <ThemeProvider>
+      <App />
       <Toaster
         position="bottom-right"
         reverseOrder={false}
-        containerStyle={{ zIndex: 999999 }}
+        containerStyle={{ 
+          zIndex: 999999,
+          top: '20px',
+        }}
         toastOptions={{
-          style: { zIndex: 999999 },
           duration: 4000,
+          success: {
+            duration: 4000,
+            style: {
+              background: '#10b981',
+              color: 'white',
+            },
+          },
+          error: {
+            duration: 6000,
+            style: {
+              background: '#ef4444',
+              color: 'white',
+            },
+          },
         }}
       />
-      <App />
     </ThemeProvider>
   </Provider>
 );

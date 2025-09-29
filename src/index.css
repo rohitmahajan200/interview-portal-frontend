@@ -127,3 +127,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add this to your global CSS file (index.css) */
+div[data-hot-toast] {
+  z-index: 999999 !important;
+}
+
+div[data-hot-toast] > div {
+  z-index: 999999 !important;
+  position: fixed !important;
+}
+
+.Toaster__toast {
+  z-index: 999999 !important;
+}

@@ -33,10 +33,13 @@ const Settings = () => {
   const handleDeleteRequest = async () => {
     try {
       setLoadingDelete(true);
-      await api.post("/candidates/request-delete"); // ✅ your backend route
+      await api.post("/candidates/request-delete");
       setOpenDeleteDialog(false);
       alert("✅ Your data deletion request has been submitted.");
-       navigate("/");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500); // delay in ms
     } catch (error) {
       console.error("Failed to request data deletion", error);
       alert("❌ Failed to request data deletion. Please try again.");

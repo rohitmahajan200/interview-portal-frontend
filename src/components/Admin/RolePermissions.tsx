@@ -26,9 +26,9 @@ import {
   ArrowRightLeft,
 } from "lucide-react";
 import api from "@/lib/api";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
-// TypeScript Interfaces (keeping all your existing interfaces)
+// TypeScript Interfaces
 type Role = "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER";
 type Stage =
   | "registered"
@@ -49,7 +49,7 @@ interface Job {
   _id: string;
   name: string;
   description?: string;
-  title?:string;
+  title?: string;
 }
 
 interface Candidate {
@@ -106,6 +106,7 @@ const UnifiedAssignmentDashboard = () => {
   // Invigilator Assignment States
   const [selectedInvigilator, setSelectedInvigilator] = useState("");
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const [jobSearchTerm, setJobSearchTerm] = useState("");
 
   // Manager Reassignment States
   const [reassignCandidates, setReassignCandidates] = useState<string[]>([]);
@@ -135,7 +136,6 @@ const UnifiedAssignmentDashboard = () => {
     }
   }, [selectedJobs]);
 
-  // All your existing functions (fetchInitialData, handleManagerAssignment, etc.)
   const fetchInitialData = async () => {
     try {
       setInitialLoading(true);
@@ -149,8 +149,6 @@ const UnifiedAssignmentDashboard = () => {
 
       if (usersRes.data.success) {
         const users = usersRes.data.data || [];
-        console.log("new info=>", usersRes.data.data);
-
         setManagers(users.filter((user: User) => user.role === "MANAGER"));
         setInvigilators(
           users.filter((user: User) => user.role === "INVIGILATOR")
@@ -289,6 +287,7 @@ const UnifiedAssignmentDashboard = () => {
       setSelectedInvigilator("");
       setSelectedJobs([]);
       setJobCandidates([]);
+      setJobSearchTerm("");
 
       await fetchInitialData();
     } catch (error: any) {
@@ -360,7 +359,6 @@ const UnifiedAssignmentDashboard = () => {
     }
   };
 
-  // All your other existing handlers...
   const handleCandidateSelect = (candidateId: string, isSelected: boolean) => {
     if (isSelected) {
       setSelectedCandidates((prev) => [...(prev || []), candidateId]);
@@ -402,10 +400,16 @@ const UnifiedAssignmentDashboard = () => {
   };
 
   const handleSelectAllJobs = () => {
-    if ((selectedJobs || []).length === jobs.length && jobs.length > 0) {
+    const filteredJobs = jobs.filter(
+      (job) =>
+        (job.title?.toLowerCase().includes(jobSearchTerm.toLowerCase()) ||
+         job.name?.toLowerCase().includes(jobSearchTerm.toLowerCase()))
+    );
+
+    if ((selectedJobs || []).length === filteredJobs.length && filteredJobs.length > 0) {
       setSelectedJobs([]);
     } else {
-      setSelectedJobs(jobs.map((j) => j._id));
+      setSelectedJobs(filteredJobs.map((j) => j._id));
     }
   };
 
@@ -421,6 +425,7 @@ const UnifiedAssignmentDashboard = () => {
     setSelectedInvigilator("");
     setSelectedJobs([]);
     setJobCandidates([]);
+    setJobSearchTerm("");
     setError("");
     setSuccess("");
   };
@@ -480,6 +485,12 @@ const UnifiedAssignmentDashboard = () => {
       candidate.email?.toLowerCase().includes(candidateSearchTerm.toLowerCase())
   );
 
+  const filteredJobs = jobs.filter(
+    (job) =>
+      job.title?.toLowerCase().includes(jobSearchTerm.toLowerCase()) ||
+      job.name?.toLowerCase().includes(jobSearchTerm.toLowerCase())
+  );
+
   const stats = {
     unassigned: (unassignedCandidates || []).length,
     managers: (managers || []).length,
@@ -500,8 +511,6 @@ const UnifiedAssignmentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-4 lg:p-6">
-      <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
-
       <div className="max-w-full mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
@@ -603,7 +612,6 @@ const UnifiedAssignmentDashboard = () => {
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <h2 className="text-lg sm:text-xl font-semibold">Assignment Operations</h2>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-              {/* Reassignments Toggle Button */}
               <Button
                 onClick={() => setShowReassignments(!showReassignments)}
                 variant={showReassignments ? "default" : "outline"}
@@ -629,7 +637,6 @@ const UnifiedAssignmentDashboard = () => {
           </CardHeader>
           <CardContent className="p-3 sm:p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              {/* Updated TabsList to include reassignment tabs when showReassignments is true */}
               <div className="w-full overflow-x-auto">
                 <TabsList
                   className={`inline-flex w-full min-w-max h-auto p-1 ${
@@ -706,38 +713,30 @@ const UnifiedAssignmentDashboard = () => {
                           <X className="h-4 w-4 mr-2 flex-shrink-0" />
                           <span className="truncate">Clear Selection</span>
                         </Button>
-
-                        
-                    {/* Assignment Button */}
-                    <Button
-                      onClick={handleInvigilatorAssignment}
-                      disabled={
-                        isAssigningToInvigilator ||
-                        !selectedInvigilator ||
-                        (selectedJobs || []).length === 0
-                      }
-                      className="w-full sm:w-auto sm:min-w-[220px]"
-                    >
-                      {isAssigningToInvigilator ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
-                          <span className="truncate">Assigning...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">Assign to {(selectedJobs || []).length} Job(s)</span>
-                        </>
-                      )}
-                    </Button>
-
-
+                        <Button
+                          onClick={handleManagerAssignment}
+                          disabled={
+                            isAssigningToManager ||
+                            !selectedManager ||
+                            (selectedCandidates || []).length === 0
+                          }
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        >
+                          {isAssigningToManager ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                              <span className="truncate">Assigning...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <span className="truncate">Assign {(selectedCandidates || []).length}</span>
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
-
-                  
-
-
                   </div>
 
                   {/* Candidate Selection */}
@@ -771,7 +770,7 @@ const UnifiedAssignmentDashboard = () => {
                     </div>
 
                     {/* Candidates List */}
-                    <div className="max-h-64 sm:max-h-80 overflow-y-auto space-y-2 border rounded-lg p-3 sm:p-4">
+                    <div className="space-y-2 border rounded-lg p-3 sm:p-4">
                       {filteredCandidates.length === 0 ? (
                         <div className="text-center py-6 sm:py-8">
                           <Users className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
@@ -840,31 +839,6 @@ const UnifiedAssignmentDashboard = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Assignment Button */}
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleManagerAssignment}
-                      disabled={
-                        isAssigningToManager ||
-                        !selectedManager ||
-                        (selectedCandidates || []).length === 0
-                      }
-                      className="w-full sm:w-auto sm:min-w-[220px]"
-                    >
-                      {isAssigningToManager ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
-                          <span className="truncate">Assigning...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                          <span className="truncate">Assign {(selectedCandidates || []).length} Candidates</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
               </TabsContent>
 
@@ -924,6 +898,28 @@ const UnifiedAssignmentDashboard = () => {
                           <X className="h-4 w-4 mr-2 flex-shrink-0" />
                           <span className="truncate">Clear Selection</span>
                         </Button>
+                        <Button
+                          onClick={handleInvigilatorAssignment}
+                          disabled={
+                            isAssigningToInvigilator ||
+                            !selectedInvigilator ||
+                            (selectedJobs || []).length === 0
+                          }
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        >
+                          {isAssigningToInvigilator ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
+                              <span className="truncate">Assigning...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <span className="truncate">Assign {(selectedJobs || []).length} Job(s)</span>
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -937,28 +933,50 @@ const UnifiedAssignmentDashboard = () => {
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           checked={
-                            (selectedJobs || []).length === jobs.length &&
-                            jobs.length > 0
+                            (selectedJobs || []).length === filteredJobs.length &&
+                            filteredJobs.length > 0
                           }
                           onCheckedChange={handleSelectAllJobs}
                         />
                         <Label className="text-xs sm:text-sm">
-                          Select All Jobs ({jobs.length})
+                          Select All Jobs ({filteredJobs.length})
                         </Label>
                       </div>
                     </div>
 
+                    {/* Search Jobs */}
+                    <div className="relative mb-4">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <Input
+                        placeholder="Search jobs by title or name..."
+                        value={jobSearchTerm}
+                        onChange={(e) => setJobSearchTerm(e.target.value)}
+                        className="pl-10 text-sm"
+                      />
+                    </div>
+
+                    {/* No Jobs Message - moved to top */}
+                    {(selectedJobs || []).length > 0 && (jobCandidates || []).length === 0 && (
+                      <div className="text-center py-4 mb-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          No candidates found for the selected job(s).
+                        </p>
+                      </div>
+                    )}
+
                     {/* Jobs List */}
                     <div className="space-y-2 border rounded-lg p-3 sm:p-4">
-                      {jobs.length === 0 ? (
+                      {filteredJobs.length === 0 ? (
                         <div className="text-center py-6 sm:py-8">
                           <Briefcase className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
                           <p className="text-xs sm:text-sm text-muted-foreground">
-                            No jobs available.
+                            {jobSearchTerm
+                              ? "No jobs match your search."
+                              : "No jobs available."}
                           </p>
                         </div>
                       ) : (
-                        jobs.map((job) => (
+                        filteredJobs.map((job) => (
                           <div
                             key={job._id}
                             className="flex items-center space-x-3 p-2 sm:p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -971,7 +989,10 @@ const UnifiedAssignmentDashboard = () => {
                               className="flex-shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm sm:text-base truncate">{job.title}</p>
+                              <p className="font-medium text-sm sm:text-base truncate">{job.title || job.name}</p>
+                              {job.description && (
+                                <p className="text-xs text-muted-foreground truncate">{job.description}</p>
+                              )}
                             </div>
                           </div>
                         ))
@@ -980,60 +1001,50 @@ const UnifiedAssignmentDashboard = () => {
                   </div>
 
                   {/* Job Candidates Preview */}
-                  {(selectedJobs || []).length > 0 &&
-                    (jobCandidates || []).length > 0 && (
-                      <div>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
-                          <Label className="text-sm sm:text-base">
-                            Candidates from Selected Jobs ({(jobCandidates || []).length})
-                          </Label>
-                          <Badge variant="secondary" className="text-xs w-fit">
-                            {(jobCandidates || []).length} candidates will be assigned
-                          </Badge>
-                        </div>
-                        <div className="max-h-36 sm:max-h-48 overflow-y-auto space-y-2 border rounded-lg p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20">
-                          {(jobCandidates || []).map((candidate) => (
-                            <div
-                              key={candidate._id}
-                              className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 border rounded-lg bg-white dark:bg-gray-800 space-y-2 sm:space-y-0"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-xs sm:text-sm truncate">
-                                  {candidate.first_name} {candidate.last_name}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {candidate.email}
-                                </p>
-                                {candidate.applied_job && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs mt-1"
-                                  >
-                                    {candidate.applied_job.name}
-                                  </Badge>
-                                )}
-                              </div>
-                              <Badge
-                                className={`${getStageColor(
-                                  candidate.current_stage
-                                )} text-xs flex-shrink-0`}
-                              >
-                                {candidate.current_stage}
-                              </Badge>
+                  {(selectedJobs || []).length > 0 && (jobCandidates || []).length > 0 && (
+                    <div>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
+                        <Label className="text-sm sm:text-base">
+                          Candidates from Selected Jobs ({(jobCandidates || []).length})
+                        </Label>
+                        <Badge variant="secondary" className="text-xs w-fit">
+                          {(jobCandidates || []).length} candidates will be assigned
+                        </Badge>
+                      </div>
+                      <div className="space-y-2 border rounded-lg p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20">
+                        {(jobCandidates || []).map((candidate) => (
+                          <div
+                            key={candidate._id}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 border rounded-lg bg-white dark:bg-gray-800 space-y-2 sm:space-y-0"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-xs sm:text-sm truncate">
+                                {candidate.first_name} {candidate.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {candidate.email}
+                              </p>
+                              {candidate.applied_job && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs mt-1"
+                                >
+                                  {candidate.applied_job.name}
+                                </Badge>
+                              )}
                             </div>
-                          ))}
-                        </div>
+                            <Badge
+                              className={`${getStageColor(
+                                candidate.current_stage
+                              )} text-xs flex-shrink-0`}
+                            >
+                              {candidate.current_stage}
+                            </Badge>
+                          </div>
+                        ))}
                       </div>
-                    )}
-
-                  {(selectedJobs || []).length > 0 &&
-                    (jobCandidates || []).length === 0 && (
-                      <div className="text-center py-6 sm:py-8 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          No candidates found for the selected job(s).
-                        </p>
-                      </div>
-                    )}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -1070,13 +1081,13 @@ const UnifiedAssignmentDashboard = () => {
                         </div>
                         <div>
                           <Label className="text-sm sm:text-base">Select Candidates to Reassign</Label>
-                          <div className="max-h-32 sm:max-h-44 overflow-y-auto border rounded-lg p-2 mt-1">
+                          <div className="border rounded-lg p-2 mt-1">
                             {(
                               managers.find(
                                 (m) => m._id === currentManagerForReassign
                               )?.candidates || []
                             ).length === 0 ? (
-                              <p className="text-xs sm:text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground py-2">
                                 No candidates assigned to this manager.
                               </p>
                             ) : (
@@ -1132,7 +1143,6 @@ const UnifiedAssignmentDashboard = () => {
                             )}
                           </div>
                         </div>
-
                         <div>
                           <Label className="text-sm sm:text-base">Select New Manager</Label>
                           <Select
@@ -1219,13 +1229,13 @@ const UnifiedAssignmentDashboard = () => {
                         </div>
                         <div>
                           <Label className="text-sm sm:text-base">Select Job(s) to Reassign</Label>
-                          <div className="max-h-32 sm:max-h-44 overflow-y-auto border rounded-lg p-2 mt-1">
+                          <div className="border rounded-lg p-2 mt-1">
                             {(
                               invigilators.find(
                                 (i) => i._id === currentInvigilatorForReassign
                               )?.jobs || []
                             ).length === 0 ? (
-                              <p className="text-xs sm:text-sm text-muted-foreground">
+                              <p className="text-xs sm:text-sm text-muted-foreground py-2">
                                 No jobs assigned to this invigilator.
                               </p>
                             ) : (
@@ -1241,7 +1251,7 @@ const UnifiedAssignmentDashboard = () => {
                                   const jobData = jobs.find(
                                     (j) => j._id === jobId
                                   );
-                                  const label = jobData ? jobData.name : jobId;
+                                  const label = jobData ? (jobData.title || jobData.name) : jobId;
                                   return (
                                     <div
                                       key={jobId}
