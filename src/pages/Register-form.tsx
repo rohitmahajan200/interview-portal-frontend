@@ -176,8 +176,7 @@ export default function RegisterForm({
           }
         }
       } catch (error) {
-        console.error('Failed to load jobs:', error);
-        setJobs([]);
+                setJobs([]);
         toast.error('Failed to load available jobs');
       } finally {
         setLoadingJobs(false);
@@ -211,8 +210,7 @@ export default function RegisterForm({
       });
       setCheckboxSelections(initialCheckboxSelections);
     } catch (error) {
-      console.error("Failed to load HR questions:", error);
-      toast.error("Failed to load HR questions");
+            toast.error("Failed to load HR questions");
     } finally {
       setLoadingQuestions(false);
     }
@@ -253,8 +251,7 @@ export default function RegisterForm({
       setMediaRecorders((prev) => ({ ...prev, [questionIndex]: mediaRecorder }));
       setRecordingStates((prev) => ({ ...prev, [questionIndex]: true }));
     } catch (error) {
-      console.error("Error accessing microphone:", error);
-      toast.error("Could not access microphone. Please check permissions.");
+            toast.error("Could not access microphone. Please check permissions.");
     }
   };
 
@@ -655,8 +652,7 @@ case "checkbox": {
                     response: uploadResult.url
                   };
                 } catch (uploadError) {
-                  console.error(`Failed to upload audio for question ${index}:`, uploadError);
-                  throw new Error(`Failed to upload audio for question ${index + 1}`);
+                                    throw new Error(`Failed to upload audio for question ${index + 1}`);
                 }
               }
             }

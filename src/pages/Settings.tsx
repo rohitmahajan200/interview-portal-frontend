@@ -41,8 +41,7 @@ const Settings = () => {
         navigate("/login");
       }, 1500); // delay in ms
     } catch (error) {
-      console.error("Failed to request data deletion", error);
-      alert("❌ Failed to request data deletion. Please try again.");
+            alert("❌ Failed to request data deletion. Please try again.");
     } finally {
       setLoadingDelete(false);
     }
@@ -82,8 +81,7 @@ const Settings = () => {
           window.URL.revokeObjectURL(url);
           document.body.removeChild(link);
         } catch (error) {
-          console.error("Failed to download DOCX file", error);
-        }
+                  }
       },
     },
     {

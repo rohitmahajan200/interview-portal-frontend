@@ -8,8 +8,7 @@ export default function Logo({ open }: { open: boolean }) {
         onContextMenu={(e) => e.preventDefault()}
         onError={(e) => {
           // Fallback if image fails to load
-          console.error('Logo failed to load:', e);
-          e.currentTarget.style.display = 'none';
+                    e.currentTarget.style.display = 'none';
         }}
         className={`${
           open ? "h-8 w-8" : "h-7 w-7"

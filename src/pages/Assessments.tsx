@@ -608,8 +608,7 @@ export default function Assessments() {
                     setCopySuccess(true);
                     setTimeout(() => setCopySuccess(false), 2000);
                   } catch (err) {
-                    console.error('Failed to copy token:', err);
-                  }
+                                      }
                 }
               }}
             >
@@ -674,8 +673,7 @@ export default function Assessments() {
 
                   // Include token in SEB link (URL-encoded)
                   const sebUrl = `seb://${host}/api/candidates/seb/config?token=${row.access_token}`;
-                  console.log(sebUrl);
-
+                  
                   window.location.href = sebUrl;
                   setShowSebDialog(null);
                 }}

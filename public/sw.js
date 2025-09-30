@@ -3,14 +3,12 @@ const CACHE_NAME = 'change-networks-v1';
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('📦 Service Worker installing...');
-  self.skipWaiting(); // Activate immediately
+    self.skipWaiting(); // Activate immediately
 });
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker activated');
-  event.waitUntil(self.clients.claim());
+    event.waitUntil(self.clients.claim());
 });
 
 // Push event handler
@@ -21,8 +19,7 @@ self.addEventListener('push', (event) => {
   try {
     notificationData = event.data ? event.data.json() : {};
   } catch (error) {
-    console.error('Failed to parse push data:', error);
-    notificationData = { title: 'New Notification', body: 'You have a new notification' };
+        notificationData = { title: 'New Notification', body: 'You have a new notification' };
   }
 
   const {
@@ -56,8 +53,7 @@ self.addEventListener('push', (event) => {
 
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
-  console.log('🖱️ Notification clicked:', event.notification);
-  
+    
   const { data } = event.notification;
   const targetUrl = data?.url || '/';
 
@@ -65,8 +61,7 @@ self.addEventListener('notificationclick', (event) => {
 
   // Handle action clicks
   if (event.action) {
-    console.log('Action clicked:', event.action);
-    
+        
     switch (event.action) {
       case 'view':
         event.waitUntil(
@@ -75,12 +70,10 @@ self.addEventListener('notificationclick', (event) => {
         break;
       case 'later':
         // Handle "remind later" action
-        console.log('User chose to be reminded later');
-        break;
+                break;
       case 'calendar':
         // Handle "add to calendar" action
-        console.log('User wants to add to calendar');
-        break;
+                break;
       default:
         event.waitUntil(
           self.clients.openWindow(targetUrl)
@@ -109,13 +102,11 @@ self.addEventListener('notificationclick', (event) => {
 
 // Background sync (optional)
 self.addEventListener('sync', (event) => {
-  console.log('🔄 Background sync triggered:', event.tag);
-});
+  });
 
 // Message handler for communication with main thread
 self.addEventListener('message', (event) => {
-  console.log('📨 Message received in SW:', event.data);
-  
+    
   if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
@@ -124,10 +115,8 @@ self.addEventListener('message', (event) => {
 
 // Add to your sw.js
 self.addEventListener('pushsubscriptionchange', (event) => {
-  console.log('Push subscription changed');
-  // Handle subscription renewal
+    // Handle subscription renewal
 });
 
 self.addEventListener('error', (event) => {
-  console.error('Service Worker error:', event.error);
-});
+  });

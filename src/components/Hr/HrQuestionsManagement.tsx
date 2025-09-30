@@ -170,8 +170,7 @@ const HrQuestionsManagement = () => {
       setQuestions(response.data.data || []);
       setFilteredQuestions(response.data.data || []);
     } catch (error) {
-      console.error('Failed to fetch questions:', error);
-      toast.error('Failed to load HR questions');
+            toast.error('Failed to load HR questions');
     } finally {
       setLoading(false);
     }
@@ -297,8 +296,7 @@ const HrQuestionsManagement = () => {
       toast.success('Question deleted successfully');
       fetchQuestions();
     } catch (error) {
-      console.error('Failed to delete question:', error);
-      toast.error('Failed to delete question');
+            toast.error('Failed to delete question');
     } finally {
       setDeleteLoadingId(null);
     }

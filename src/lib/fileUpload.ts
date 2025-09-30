@@ -101,14 +101,12 @@ export const uploadFileToBackend = async (
         publicId: response.data.data.filename, // Use filename as publicId for compatibility
       };
 
-      console.log(`✅ [UPLOAD] Success:`, result);
-      return result;
+            return result;
     } else {
       throw new Error(response.data?.message || "Upload failed");
     }
   } catch (error: any) {
-    console.error(`❌ [UPLOAD] Failed:`, error);
-    
+        
     if (error?.response?.status === 413) {
       throw new Error("File too large. Please select a smaller file.");
     } else if (error?.response?.status === 415) {

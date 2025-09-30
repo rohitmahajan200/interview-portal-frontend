@@ -150,8 +150,7 @@ const InterviewScheduling = () => {
         setInterviews(response.data.data as Interview[]);
       }
     } catch (error) {
-      console.error('Error fetching interviews:', error);
-      toast.error('Failed to load interviews');
+            toast.error('Failed to load interviews');
     } finally {
       setLoading(false);
     }

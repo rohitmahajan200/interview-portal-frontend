@@ -550,8 +550,7 @@ const HRHome = () => {
         throw new Error(response.data.message || "Failed to update document");
       }
     } catch (error: any) {
-      console.error("Error updating document verification:", error);
-      const errorMessage =
+            const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
         "Failed to update document verification";
@@ -632,8 +631,7 @@ const HRHome = () => {
         throw new Error(response.data.message || "Failed to update documents");
       }
     } catch (error: any) {
-      console.error("Error updating document verification:", error);
-      const errorMessage =
+            const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
         "Failed to update document verification";
@@ -807,15 +805,8 @@ const HRHome = () => {
       setCandidates(candidatesResponse.data.data);
       setFilteredCandidates(candidatesResponse.data.data);
 
-      console.log(
-        `✅ Loaded ${hrQuestionsResponse.data.data?.length || 0} HR questions`
-      );
-      console.log(
-        `✅ Loaded ${filteredTechQuestions.length} technical questions`
-      );
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast.error("Failed to reload data");
+                } catch (error) {
+            toast.error("Failed to reload data");
     }
   };
 
@@ -997,8 +988,7 @@ const HRHome = () => {
         );
       }
     } catch (error: any) {
-      console.error("Failed to assign HR questionnaire:", error);
-      toast.error(
+            toast.error(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to assign HR questionnaire"
@@ -1036,8 +1026,7 @@ const HRHome = () => {
         );
       }
     } catch (error: unknown) {
-      console.error("Technical assessment assignment error:", error);
-      const errorMessage =
+            const errorMessage =
         error && typeof error === "object" && "response" in error
           ? (error as { response?: { data?: { message?: string } } }).response
               ?.data?.message
@@ -1107,8 +1096,7 @@ const HRHome = () => {
 
       setTimeout(() => setCopiedDocId(null), 2000);
     } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
-      toast.error("Failed to copy link");
+            toast.error("Failed to copy link");
     }
   };
 
@@ -1166,8 +1154,7 @@ const HRHome = () => {
       await loadCallingDetails(candidateId);
       setDialogOpen(true);
     } catch (error) {
-      console.error("Failed to fetch candidate details:", error);
-      toast.error("Failed to load candidate details");
+            toast.error("Failed to load candidate details");
     } finally {
       setLoadingCandidate(false);
     }
@@ -1248,8 +1235,7 @@ const HRHome = () => {
   const loadCallingDetails = async (candidateId: string) => {
     try {
       const response = await api.get(`/org/calling-details/${candidateId}`);
-      console.log(response.data);
-
+      
       if (
         response.data.success &&
         response.data.data &&
@@ -1318,8 +1304,7 @@ const HRHome = () => {
         setHrRemark("");
       }
     } catch (error: any) {
-      console.error("Error loading calling details:", error);
-      // Don't show error toast for loading as it might not exist for new candidates
+            // Don't show error toast for loading as it might not exist for new candidates
       // Reset to default state on error
       const defaultFields = [
         { id: "1", key: "Current CTC", value: "" },
@@ -1356,8 +1341,7 @@ const HRHome = () => {
         setCandidates(response.data.data);
         setFilteredCandidates(response.data.data);
       } catch (error) {
-        console.error("Failed to fetch candidates:", error);
-        toast.error("Failed to load candidates");
+                toast.error("Failed to load candidates");
       } finally {
         setLoading(false);
       }

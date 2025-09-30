@@ -156,8 +156,7 @@ const ManagerAllCandidates = ({
       toast.success("Document link copied to clipboard");
       setTimeout(() => setCopiedDocId(null), 2000);
     } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
-      toast.error("Failed to copy link");
+            toast.error("Failed to copy link");
     }
   };
 

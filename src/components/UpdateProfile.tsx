@@ -111,8 +111,7 @@ export default function UpdateProfile({
       // ✅ Use new backend upload system
       const result = await uploadProfilePhoto(file);
       
-      console.log(`[UPLOAD] Profile photo upload successful:`, result);
-
+      
       if (result?.url) {
         const imageData = {
           url: result.url,
@@ -130,8 +129,7 @@ export default function UpdateProfile({
         throw new Error("Upload failed - no URL returned");
       }
     } catch (error: any) {
-      console.error("[UPLOAD] Profile photo upload failed:", error);
-      toast.error(error.message || "Failed to upload image. Please try again.");
+            toast.error(error.message || "Failed to upload image. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -156,16 +154,13 @@ export default function UpdateProfile({
   };
 
   const onSubmit = async (data: z.infer<typeof candidateUpdateSchema>) => {
-    console.log("[SUBMIT] Submitting profile update:", data);
-    
+        
     try {
       const res = await api.put("/candidates/me", data);
-      console.log("[SUBMIT] PUT response:", res.data);
-      
+            
       // Get updated user data
       const userRes = await api.get("/candidates/me");
-      console.log("[SUBMIT] GET response:", userRes.data);
-      
+            
       dispatch(setUser(userRes.data.user));
       
       toast.success("Profile updated successfully!", { 
@@ -179,8 +174,7 @@ export default function UpdateProfile({
       }, 1000);
       
     } catch (err: any) {
-      console.error("[SUBMIT] Profile update failed:", err);
-      
+            
       let errorMessage = "Failed to update profile. Please try again.";
       
       if (err.response?.status === 401) {

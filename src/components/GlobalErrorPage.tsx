@@ -9,8 +9,7 @@ export default function GlobalErrorPage() {
 
   const message = isError(error) ? error.message : "An unexpected error occurred.";
 
-  console.error("Route Error:", error);
-
+  
   return (
     <div className="flex h-screen items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded shadow-md text-center max-w-md">

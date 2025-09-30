@@ -56,8 +56,7 @@ const Home = () => {
       });
     }
     pushNotificationService.initializeServiceWorker().catch((e) => {
-      console.error("SW init failed:", e);
-      toast.error("Failed to initialize notifications.");
+            toast.error("Failed to initialize notifications.");
     });
   }, [supported]);
 
@@ -73,8 +72,7 @@ const Home = () => {
       }
       setOpen(false);
     } catch (e) {
-      console.error("Subscribe failed:", e);
-      toast.error("Couldn’t enable notifications.");
+            toast.error("Couldn’t enable notifications.");
     }
   };
 
@@ -150,8 +148,7 @@ const Home = () => {
 
         setEvents([...assessments, ...interviews]);
       } catch (error) {
-        console.error("Failed to fetch candidate data:", error);
-        setError("Failed to load data. Please try again later.");
+                setError("Failed to load data. Please try again later.");
         setEvents([]);
         setApplicationStatus([]);
       } finally {

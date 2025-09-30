@@ -27,8 +27,7 @@ export const EmailPreferenceToggle = ({ className }: EmailPreferenceToggleProps)
         setEmailPreference(response.data.data.emailPreference);
       }
     } catch (error: any) {
-      console.error('Failed to fetch email preference:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to load email preference';
+            const errorMessage = error.response?.data?.message || 'Failed to load email preference';
       toast.error(errorMessage);
     }
   };
@@ -46,8 +45,7 @@ export const EmailPreferenceToggle = ({ className }: EmailPreferenceToggleProps)
         throw new Error(response.data.message);
       }
     } catch (error: any) {
-      console.error('Failed to toggle email preference:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update email preference';
+            const errorMessage = error.response?.data?.message || 'Failed to update email preference';
       toast.error(errorMessage);
     } finally {
       setLoading(false);

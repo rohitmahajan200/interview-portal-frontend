@@ -46,8 +46,7 @@ export const useGlory = (fixedRole: 'hr' | 'manager' | 'invigilator' | 'admin' =
   const gradeOptions = ["A+", "A", "B", "C", "D", "E"];
 
   const openGloryDialog = async (candidate: Candidate) => {
-    console.log("Opening Glory dialog for:", candidate);
-    setCandidateForGlory(candidate);
+        setCandidateForGlory(candidate);
     setGloryDialogOpen(true);
     
     // Get current user info (you might need to adjust this based on your auth system)
@@ -55,8 +54,7 @@ export const useGlory = (fixedRole: 'hr' | 'manager' | 'invigilator' | 'admin' =
       const userResponse = await api.get('org/me');
       setCurrentUser(userResponse.data.user);
     } catch (error) {
-      console.log("Could not fetch current user info");
-    }
+          }
     
     // Load existing glory grades for the fixed role
     if (candidate._id) {
@@ -73,8 +71,7 @@ export const useGlory = (fixedRole: 'hr' | 'manager' | 'invigilator' | 'admin' =
           }
         }
       } catch (error) {
-        console.log("No existing glory data found, starting fresh", error);
-        setGloryGrades({});
+                setGloryGrades({});
       } finally {
         setLoadingGlory(false);
       }
@@ -144,8 +141,7 @@ const submitGloryGrades = async (onSuccess?: () => void) => {
       }
       return [];
     } catch (error) {
-      console.error("Failed to fetch grading parameters:", error);
-      return [];
+            return [];
     }
   };
 

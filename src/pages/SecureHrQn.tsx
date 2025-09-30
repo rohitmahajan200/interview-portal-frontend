@@ -62,8 +62,7 @@ const uploadAudioToBackend = async (file: File, questionId: string): Promise<str
     formData.append('type', 'questionnaire_audio');
     formData.append('timestamp', Date.now().toString());
 
-    console.log('[AUDIO] Uploading audio file...');
-    
+        
     const response = await api.post('/candidates/audio-response', formData);
 
     if (response.data?.success && response.data?.data?.url) {
@@ -74,8 +73,7 @@ const uploadAudioToBackend = async (file: File, questionId: string): Promise<str
       throw new Error(response.data?.message || 'Upload failed - no URL returned');
     }
   } catch (error: any) {
-    console.error('[AUDIO] Backend upload failed:', error);
-    
+        
     let errorMessage = 'Audio upload failed';
     if (error?.response?.data?.message) {
       errorMessage = error.response.data.message;
@@ -153,8 +151,7 @@ const HRQuestionnaireResponse: React.FC = () => {
         });
         setCheckboxSelections(initialCheckboxSelections);
       } catch (error) {
-        console.error("Failed to fetch questionnaire:", error);
-        toast.error("Failed to load questionnaire. Please try again.");
+                toast.error("Failed to load questionnaire. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -211,8 +208,7 @@ const HRQuestionnaireResponse: React.FC = () => {
 
       toast.success("Audio file uploaded successfully");
     } catch (error: any) {
-      console.error("Error uploading file:", error);
-      toast.error(error.message || "Failed to upload audio file");
+            toast.error(error.message || "Failed to upload audio file");
     } finally {
       setUploadingStates((prev) => ({ ...prev, [questionIndex]: false }));
     }
@@ -279,8 +275,7 @@ const HRQuestionnaireResponse: React.FC = () => {
       }));
       setRecordingStates((prev) => ({ ...prev, [questionIndex]: true }));
     } catch (error) {
-      console.error("Error accessing microphone:", error);
-      toast.error("Could not access microphone. Please check permissions.");
+            toast.error("Could not access microphone. Please check permissions.");
     }
   };
 
@@ -331,8 +326,7 @@ const HRQuestionnaireResponse: React.FC = () => {
           setPlayingStates((prev) => ({ ...prev, [questionIndex]: true }));
         })
         .catch((error) => {
-          console.error("Error playing audio:", error);
-          toast.error("Error playing audio");
+                    toast.error("Error playing audio");
         });
     }
   };
@@ -412,8 +406,7 @@ const HRQuestionnaireResponse: React.FC = () => {
                   attachment: audioUrl,
                 };
               } catch (uploadError) {
-                console.error(`Failed to upload audio for question ${index}:`, uploadError);
-                throw new Error(`Failed to upload audio for question ${index + 1}`);
+                                throw new Error(`Failed to upload audio for question ${index + 1}`);
               }
             }
           }
@@ -452,15 +445,13 @@ const HRQuestionnaireResponse: React.FC = () => {
         responses: processedResponses,
       };
 
-      console.log("Submission data:", submissionData);
-
+      
       await api.post("/candidates/hr-questionnaire-response", submissionData);
 
       toast.success("Questionnaire submitted successfully!");
       navigate("/");
     } catch (error) {
-      console.error("Submission failed:", error);
-      if (error instanceof Error) {
+            if (error instanceof Error) {
         toast.error(error.message);
       } else {
         toast.error("Failed to submit questionnaire. Please try again.");

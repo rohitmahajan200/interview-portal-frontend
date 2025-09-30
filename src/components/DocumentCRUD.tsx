@@ -40,8 +40,7 @@ export default function DocumentCRUD() {
         dispatch(setUser(res.data.user));
       }
     } catch (error) {
-      console.error('Failed to refresh user data:', error);
-      toast.error('Failed to refresh user data');
+            toast.error('Failed to refresh user data');
     }
   };
 
@@ -84,8 +83,7 @@ export default function DocumentCRUD() {
         throw new Error(response.data?.message || 'Upload failed');
       }
     } catch (err: unknown) {
-      console.error("Doc upload fail=>", err);
-      const error = err as ApiError;
+            const error = err as ApiError;
       const errorMessage = error?.response?.data?.message || error?.message || 'Upload failed';
       toast.error(errorMessage, { duration: 2000 });
     } finally {

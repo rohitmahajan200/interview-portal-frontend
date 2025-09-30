@@ -40,8 +40,7 @@ export const OrgPushNotificationToggle = ({
       const subscription = await pushNotificationService.getSubscription();
       setIsSubscribed(!!subscription);
     } catch (error) {
-      console.error('Failed to check subscription status:', error);
-    }
+          }
   };
 
   const requestPermission = async (): Promise<boolean> => {
@@ -79,8 +78,7 @@ export const OrgPushNotificationToggle = ({
       const oldSub = await reg.pushManager.getSubscription();
       if (oldSub) {
         await oldSub.unsubscribe();
-        console.log("🧹 Cleared old push subscription");
-      }
+              }
 
       // 👉 Now create fresh subscription
       const subscription = await pushNotificationService.subscribe();
@@ -97,8 +95,7 @@ export const OrgPushNotificationToggle = ({
         }
       }
     } catch (error: any) {
-      console.error("Subscription failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to enable notifications");
+            toast.error(error?.response?.data?.message || "Failed to enable notifications");
     } finally {
       setLoading(false);
     }
@@ -120,8 +117,7 @@ export const OrgPushNotificationToggle = ({
       setIsSubscribed(false);
       toast.success('Push notifications disabled');
     } catch (error: any) {
-      console.error('Unsubscription failed:', error);
-      toast.error('Failed to disable notifications');
+            toast.error('Failed to disable notifications');
     } finally {
       setLoading(false);
     }

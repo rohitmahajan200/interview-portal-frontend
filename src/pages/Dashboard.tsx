@@ -46,8 +46,7 @@ export default function Page() {
         dispatch(setNotifications(res.data.data || []));
       }
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-    }
+          }
   }, [dispatch]);
 
   useEffect(() => {
@@ -73,8 +72,7 @@ export default function Page() {
           notificationIntervalRef.current = setInterval(fetchNotifications, 60000);
         }
       } catch (error) {
-        console.error("Failed to fetch candidate profile:", error);
-        // Don't navigate here - ProtectedRoute handles this
+                // Don't navigate here - ProtectedRoute handles this
       }
     };
 
@@ -105,8 +103,7 @@ export default function Page() {
       setShowDocumentBanner(false);
       alert("🎉 Documents submitted successfully!");
     } catch (error) {
-      console.error("Failed to refresh candidate data:", error);
-      setShowDocumentUpload(false);
+            setShowDocumentUpload(false);
     }
   };
 

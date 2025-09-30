@@ -15,18 +15,14 @@ export const usePushNotificationInit = () => {
             setTimeout(async () => {
               try {
                 const permission = await Notification.requestPermission();
-                console.log('Permission result:', permission);
-              } catch (error) {
-                console.log('Permission request failed:', error);
-              }
+                              } catch (error) {
+                              }
             }, 1000);
           }
           
-          console.log("✅ Push notification service initialized");
-        }
+                  }
       } catch (err) {
-        console.error("❌ Failed to initialize push notifications:", err);
-      }
+              }
     };
 
     initializePushNotifications();

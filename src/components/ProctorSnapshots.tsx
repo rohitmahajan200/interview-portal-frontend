@@ -31,8 +31,7 @@ function dataURLtoFile(dataURL: string, filename: string): File {
     
     return new File([u8], filename, { type: mime });
   } catch (error) {
-    console.error("[SNAP] Failed to convert dataURL to File:", error);
-    throw new Error("Failed to process snapshot data");
+        throw new Error("Failed to process snapshot data");
   }
 }
 
@@ -51,8 +50,7 @@ const uploadSnapshotToBackend = async (file: File, candidateId?: string): Promis
     formData.append('timestamp', Date.now().toString());
     formData.append('type', 'proctor_snapshot');
 
-    console.log('[SNAP] Uploading to backend...');
-    
+        
     // 🆕 UPDATED: Use your API endpoint for snapshot upload
     const response = await api.post('/candidates/snapshots', formData);
 
@@ -64,8 +62,7 @@ const uploadSnapshotToBackend = async (file: File, candidateId?: string): Promis
       throw new Error(response.data?.message || 'Upload failed - no URL returned');
     }
   } catch (error: any) {
-    console.error('[SNAP] Backend upload failed:', error);
-    
+        
     // Extract error message
     let errorMessage = 'Upload failed';
     if (error?.response?.data?.message) {
@@ -86,12 +83,10 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
 
   useEffect(() => {
     if (!active) return;
-    console.log("[SNAP] Proctor snapshots module mounted");
-    
+        
     // 🆕 ADDED: Show initial status
     if (candidateId) {
-      console.log("[SNAP] Candidate ID:", candidateId);
-    }
+          }
   }, [active, candidateId]);
 
   useEffect(() => {
@@ -100,8 +95,7 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
     const tick = async () => {
       // 🆕 ADDED: Skip if already uploading to prevent overlap
       if (uploading) {
-        console.log("[SNAP] Skipping tick - upload in progress");
-        return;
+                return;
       }
 
       const ts = Date.now();
@@ -126,12 +120,10 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
         
         // Store the snapshot URL in local storage/store
         await addSnapshotUrl(snapshotUrl);
-        console.log("[SNAP] Snapshot saved:", snapshotUrl);
-
+        
 
       } catch (err: unknown) {
-        console.error("[SNAP] Snapshot upload error:", err);
-        
+                
         const msg = err instanceof Error ? err.message : String(err);
         toast.error(`❌ Snapshot error: ${msg}`, { 
           id: toastId, 
@@ -139,8 +131,7 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
         });
         
         // 🆕 ADDED: Could implement retry logic here
-        console.log("[SNAP] Will retry on next interval");
-        
+                
       } finally {
         setUploading(false);
       }
@@ -190,16 +181,14 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
         }}
         onUserMedia={() => {
           setReady(true);
-          console.log("[SNAP] Camera ready - starting snapshot monitoring");
-          toast.success("📸 Proctor monitoring active", { 
+                    toast.success("📸 Proctor monitoring active", { 
             id: "snap-active", 
             duration: 2000 
           });
         }}
         onUserMediaError={(e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
-          console.error("[SNAP] Camera access error:", e);
-          toast.error(`❌ Camera error: ${msg}`, { duration: 5000 });
+                    toast.error(`❌ Camera error: ${msg}`, { duration: 5000 });
           setReady(false);
         }}
         style={{

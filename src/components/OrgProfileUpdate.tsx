@@ -123,19 +123,16 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
     try {
       setIsSubmitting(true);
       
-      console.log('📤 Submitting form:', { name: data.name, hasFile: !!selectedFile });
-      
+            
       const formData = new FormData();
       formData.append('name', data.name);
       
       if (selectedFile) {
         formData.append('profilephoto', selectedFile);
-        console.log('📎 Added file to FormData:', selectedFile.name);
-      }
+              }
 
       // Debug FormData contents
-      console.log('📋 FormData entries:');
-      for (const [key, value] of formData.entries()) {
+            for (const [key, value] of formData.entries()) {
         console.log(`  ${key}:`, value instanceof File ? `File(${value.name})` : value);
       }
 
@@ -162,8 +159,7 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
             setPreviewUrl(null);
           }
         } catch (fetchError) {
-          console.warn('Failed to fetch fresh user data, using response data');
-          if (response.data?.data?.user) {
+                    if (response.data?.data?.user) {
             dispatch(setUser(response.data.data.user));
           }
           toast.success('Profile updated successfully');
@@ -173,8 +169,7 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
         }
       }
     } catch (error: unknown) {
-      console.error('❌ Profile update failed:', error);
-      
+            
       // 🆕 FIXED: Proper error type handling
       let errorMessage = 'Failed to update profile';
       
@@ -197,8 +192,7 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response?: { data?: unknown } };
         if (axiosError.response?.data) {
-          console.error('Error details:', axiosError.response.data);
-        }
+                  }
       }
     } finally {
       setIsSubmitting(false);

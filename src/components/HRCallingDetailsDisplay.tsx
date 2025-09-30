@@ -108,8 +108,7 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
         }
       }
     } catch (error: any) {
-      console.error("Error loading calling details:", error);
-      setError("Failed to load calling details");
+            setError("Failed to load calling details");
       setCallingDetails([]);
       setHrRemarks("");
       setHasData(false);
@@ -183,8 +182,7 @@ const HRCallingDetailsDisplay: React.FC<HRCallingDetailsDisplayProps> = ({
         toast.error(response.data.message || "Failed to submit");
       }
     } catch (error: any) {
-      console.error("Error submitting:", error);
-      toast.error("Failed to submit details");
+            toast.error("Failed to submit details");
     } finally {
       setSaving(false);
     }

@@ -114,8 +114,7 @@ const HRAnalyticsDashboard: React.FC = () => {
       setInterviewData(interviewsRes.data.data);
       setTrendsData(trendsRes.data.data);
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-      toast.error('Failed to load analytics data');
+            toast.error('Failed to load analytics data');
     } finally {
       setLoading(false);
     }
