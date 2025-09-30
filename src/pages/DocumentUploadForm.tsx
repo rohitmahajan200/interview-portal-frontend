@@ -276,9 +276,9 @@ const validateFile = (file: File): string | null => {
     return "Please upload PDF, JPG, PNG, DOC, or DOCX files only";
   }
 
-  if (file.size > 20 * 1024 * 1024) {
+  if (file.size > 1 * 1024 * 1024) {
     // 20MB limit (matches Multer config)
-    return "File size must be less than 20MB";
+    return "File size must be less than 1MB";
   }
 
   return null;
@@ -417,7 +417,8 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
 
       toast.success(`${file.name} uploaded successfully`);
     } catch (error: any) {
-            toast.error(error.message || "Upload failed");
+      console.error("Upload error:", error);
+      toast.error(error.response.data.message || "Upload failed");
 
       setUploadedFiles((prev) => {
         const newFiles = { ...prev };
@@ -736,7 +737,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                         Click to upload
                       </span>
                       <span className="text-xs text-gray-500">
-                        PDF, JPG, PNG, DOC, DOCX (Max 20MB)
+                        PDF, JPG, PNG (Max 1 MB)
                       </span>
                     </Label>
                   </div>
@@ -919,7 +920,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
                               <Input
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                accept=".pdf,.jpg,.jpeg,.png"
                                 onChange={(e) =>
                                   handleFileChange(
                                     `org_${index}_appointment`,
@@ -972,7 +973,7 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center">
                               <Input
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                accept=".pdf,.jpg,.jpeg,.png"
                                 onChange={(e) =>
                                   handleFileChange(
                                     `org_${index}_relieving`,
@@ -1186,9 +1187,9 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
                   </h3>
                   <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
                     <li>
-                      All files must be in PDF, JPG, PNG, DOC, or DOCX format
+                      All files must be in PDF, JPG, PNG
                     </li>
-                    <li>Maximum file size: 20MB per file</li>
+                    <li>Maximum file size: 1 MB per file</li>
                     <li>
                       If you upload documents in a section, complete all
                       required fields in that section

@@ -27,12 +27,12 @@ const roleColor = (role: string) => ({
 }[role] ?? 'bg-gray-100 text-gray-800');
 
 const gradeColor = (g: string) => ({
-  'A+': 'bg-green-100 text-green-800',
-  A:   'bg-green-100 text-green-700',
-  B:   'bg-blue-100  text-blue-700',
-  C:   'bg-yellow-100 text-yellow-700',
-  D:   'bg-orange-100 text-orange-700',
-  E:   'bg-red-100    text-red-700',
+  'A+': 'bg-blue-300 text-blue-700',
+  A:   'bg-green-300 text-green-700',
+  B:   'bg-lime-300  text-lime-700',
+  C:   'bg-yellow-300 text-yellow-700',
+  D:   'bg-orange-300 text-orange-700',
+  E:   'bg-red-300    text-red-700',
 }[g] ?? 'bg-gray-100 text-gray-700');
 
 

@@ -153,7 +153,7 @@ type Candidate = {
     expInYears: string;
     salary: string;
     jobId: string;
-    title:string;
+    title: string;
   };
   current_stage:
     | "registered"
@@ -314,6 +314,25 @@ const InvigilatorHome = () => {
   const [interviewsCollapsed, setInterviewsCollapsed] = useState(false);
   const [feedBackCollapsed, setFeedBackCollapsed] = useState(false);
   const [timeLineCollapsed, setTimeLineCollapsed] = useState(false);
+
+  const getGradeColor = (grade: string) => {
+    switch (grade.toUpperCase()) {
+      case "A+":
+        return "bg-blue-300 text-blue-700 dark:bg-blue-900/30 dark:text-blue-700";
+      case "A":
+        return "bg-green-300 text-green-700 dark:bg-green-900/30 dark:text-green-700";
+      case "B":
+        return "bg-lime-300 text-lime-700 dark:bg-lime-900/30 dark:text-lime-700";
+      case "C":
+        return "bg-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-700";
+      case "D":
+        return "bg-orange-300 text-orange-700 dark:bg-orange-900/30 dark:text-orange-700";
+      case "E":
+        return "bg-red-300 text-red-700 dark:bg-red-900/30 dark:text-red-700";
+      default:
+        return "bg-gray-300 text-gray-700 dark:bg-gray-900/30 dark:text-gray-700";
+    }
+  };
   // Updated Glory helper functions
   const renderGloryGrades = (glory: any) => {
     if (
@@ -361,10 +380,13 @@ const InvigilatorHome = () => {
 
     return (
       <div className="flex items-center gap-1">
-        <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
+        <Badge
+          variant="outline"
+          className={`text-xs ${getGradeColor(displayGrade)}`}
+        >
           {displayGrade}
         </Badge>
-        <span className="text-sm font-medium text-blue-600">{}</span>
+        
       </div>
     );
   };
@@ -2137,26 +2159,6 @@ const InvigilatorHome = () => {
                                           interview.interviewers.find(
                                             (int) => int._id === remark.provider
                                           ) || interview.scheduled_by;
-
-                                        const getGradeColor = (
-                                          grade: string
-                                        ) => {
-                                          switch (grade.toUpperCase()) {
-                                            case "A+":
-                                            case "A":
-                                              return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-                                            case "B":
-                                              return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-                                            case "C":
-                                              return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-                                            case "D":
-                                              return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
-                                            case "E":
-                                              return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-                                            default:
-                                              return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-                                          }
-                                        };
 
                                         return (
                                           <div

@@ -44,18 +44,22 @@ import {
   CheckCircle2,
   FileAudio,
   X,
-  Loader2
+  Loader2,
+  Shield // Added Shield icon for CAPTCHA
 } from "lucide-react";
 import api from "@/lib/api";
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { uploadToCloudinary } from "@/lib/clodinary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { registerCandidateSchema } from '@/lib/zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { uploadDocument, uploadProfilePhoto } from "@/lib/fileUpload";
+import uploadFileToBackend, { uploadFileToBackendForRegister } from "@/lib/fileUpload";
+import ReCAPTCHA from "react-google-recaptcha";
+
+// CAPTCHA configuration
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 type Job = {
   _id: string;
@@ -112,16 +116,17 @@ export default function RegisterForm({
   const navigate = useNavigate();
   const location = useLocation();
   const [jobIdFromUrl, setJobIdFromUrl] = useState<string | null>(null);
+  
+  // CAPTCHA states
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaExpired, setCaptchaExpired] = useState(false);
+  const captchaRef = useRef<ReCAPTCHA>(null);
+  
   // Basic Details states
   const [hrQuestionnaireOpen, setHrQuestionnaireOpen] = useState(false);
   const [hrQuestions, setHrQuestions] = useState<HRQuestion[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [hrResponses, setHrResponses] = useState<FormValues['hr_responses']>([]);
-  // Helper function to get query parameter
-  const getQueryParam = (name: string): string | null => {
-    const urlParams = new URLSearchParams(location.search);
-    return urlParams.get(name);
-  };
 
   // Audio states for Basic Details
   const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
@@ -133,7 +138,52 @@ export default function RegisterForm({
   const [checkboxSelections, setCheckboxSelections] = useState<{ [key: number]: string[] }>({});
   const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
 
+  // Helper function to get query parameter
+  const getQueryParam = (name: string): string | null => {
+    const urlParams = new URLSearchParams(location.search);
+    return urlParams.get(name);
+  };
+
   const selectedJobId = watch("applied_job");
+
+  // CAPTCHA handlers
+  const onCaptchaChange = (token: string | null) => {
+    setCaptchaToken(token);
+    setCaptchaExpired(false);
+    
+    if (token) {
+      toast.success("CAPTCHA verified successfully", {
+        duration: 3000,
+        style: {
+          background: '#10B981',
+          color: 'white',
+        },
+      });
+    }
+  };
+
+  const onCaptchaExpired = () => {
+    setCaptchaToken(null);
+    setCaptchaExpired(true);
+    toast.error("CAPTCHA expired. Please verify again.", {
+      duration: 4000,
+    });
+  };
+
+  const onCaptchaError = () => {
+    setCaptchaToken(null);
+    toast.error("CAPTCHA verification failed. Please try again.", {
+      duration: 4000,
+    });
+  };
+
+  const resetCaptcha = () => {
+    if (captchaRef.current) {
+      captchaRef.current.reset();
+    }
+    setCaptchaToken(null);
+    setCaptchaExpired(false);
+  };
 
   // Load jobs on component mount and handle jobId from URL
   useEffect(() => {
@@ -432,53 +482,53 @@ export default function RegisterForm({
           </div>
         );
 
-case "checkbox": {
-  const selectedOptions = checkboxSelections[index] || [];
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <CheckCircle2 className="w-4 h-4" />
-        <span className="text-sm font-medium">Multiple Selection</span>
-      </div>
-      <div className="space-y-3">
-        {question.options?.map((optionText, optionIndex) => {
-          const isSelected = selectedOptions.includes(optionText);
-          return (
-            <div key={optionIndex} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id={`hr-question-${index}-checkbox-${optionIndex}`}
-                checked={isSelected}
-                onChange={(e) => {
-                  let newSelections;
-                  if (e.target.checked) {
-                    newSelections = [...selectedOptions, optionText];
-                  } else {
-                    newSelections = selectedOptions.filter(option => option !== optionText);
-                  }
-
-                  setCheckboxSelections((prev) => ({
-                    ...prev,
-                    [index]: newSelections,
-                  }));
-
-                  updateHRResponse(index, newSelections.length > 0 ? newSelections : []);
-                }}
-                className="w-4 h-4 text-primary"
-              />
-              <Label
-                htmlFor={`hr-question-${index}-checkbox-${optionIndex}`}
-                className="text-sm font-normal cursor-pointer flex-1"
-              >
-                {optionText}
-              </Label>
+      case "checkbox": {
+        const selectedOptions = checkboxSelections[index] || [];
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-sm font-medium">Multiple Selection</span>
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+            <div className="space-y-3">
+              {question.options?.map((optionText, optionIndex) => {
+                const isSelected = selectedOptions.includes(optionText);
+                return (
+                  <div key={optionIndex} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`hr-question-${index}-checkbox-${optionIndex}`}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        let newSelections;
+                        if (e.target.checked) {
+                          newSelections = [...selectedOptions, optionText];
+                        } else {
+                          newSelections = selectedOptions.filter(option => option !== optionText);
+                        }
+
+                        setCheckboxSelections((prev) => ({
+                          ...prev,
+                          [index]: newSelections,
+                        }));
+
+                        updateHRResponse(index, newSelections.length > 0 ? newSelections : []);
+                      }}
+                      className="w-4 h-4 text-primary"
+                    />
+                    <Label
+                      htmlFor={`hr-question-${index}-checkbox-${optionIndex}`}
+                      className="text-sm font-normal cursor-pointer flex-1"
+                    >
+                      {optionText}
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
 
       case "audio":
         return (
@@ -596,8 +646,20 @@ case "checkbox": {
     }
   };
 
-  // Main form submission
+  // Main form submission - FIXED: No CAPTCHA for uploads, only for registration
   const onSubmit = async (data: FormValues) => {
+    // CAPTCHA validation
+    if (!captchaToken) {
+      toast.error("Please complete the CAPTCHA verification");
+      return;
+    }
+
+    if (captchaExpired) {
+      toast.error("CAPTCHA has expired. Please verify again.");
+      resetCaptcha();
+      return;
+    }
+
     setLoading(true);
     try {
       if (!hrResponses || hrResponses.length === 0) {
@@ -622,12 +684,13 @@ case "checkbox": {
         setLoading(false);
         return;
       }
+      
       const profilePhotoFile = data.profile_photo_url[0];
       const resumeFile = data.resume[0];
 
-      // Upload files
-      const profilePhotoUrl = await uploadProfilePhoto(profilePhotoFile);
-      const resumeUrl = await uploadDocument(resumeFile);
+      // FIXED: Upload files WITHOUT CAPTCHA tokens (matches your backend)
+      const profilePhotoUrl = await uploadFileToBackendForRegister(profilePhotoFile, { folder: 'profiles' });
+      const resumeUrl = await uploadFileToBackendForRegister(resumeFile, { folder: 'documents' });
 
       // Process HR responses - upload audio files if any
       let processedHRResponses: FormValues['hr_responses'] = [];
@@ -646,7 +709,7 @@ case "checkbox": {
 
               if (fileToUpload) {
                 try {
-                  const uploadResult = await uploadToCloudinary(fileToUpload, "audio");
+                  const uploadResult = await uploadFileToBackendForRegister(fileToUpload, {folder:'audio'});
                   return {
                     ...response,
                     response: uploadResult.url
@@ -670,14 +733,15 @@ case "checkbox": {
         );
       }
 
-      // Prepare payload
+      // Prepare payload with CAPTCHA token - ONLY for final registration
       const payload = {
         ...data,
         profile_photo_url: profilePhotoUrl,
         documents: [
           { document_type: "resume", document_url: resumeUrl.url, publicid: resumeUrl.publicId }
         ],
-        hr_responses: processedHRResponses
+        hr_responses: processedHRResponses,
+        captcha_token: captchaToken // Include CAPTCHA token ONLY for registration
       };
 
       // Remove the resume property
@@ -687,10 +751,17 @@ case "checkbox": {
       await api.post("/candidates/register", payload);
 
       toast.success("Account created successfully. Please verify your email.");
+      
+      // Reset CAPTCHA after successful submission
+      resetCaptcha();
+      
       setTimeout(() => {
         navigate(`/email-verification?email=${data.email}`);
       }, 1000);
     } catch (err: any) {
+      // Reset CAPTCHA on error
+      resetCaptcha();
+      
       if (err?.response?.data?.errors) {
         Object.entries(err.response.data.errors).forEach(([field, msg]) => {
           setError(field as keyof FormValues, {
@@ -999,8 +1070,53 @@ case "checkbox": {
                   )}
                 </div>
 
+                {/* CAPTCHA Section */}
+                <div className="pt-6 border-t">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-primary" />
+                      <h3 className="text-lg font-medium">Security Verification</h3>
+                      <span className="text-destructive">*</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center space-y-4">
+                      <ReCAPTCHA
+                        ref={captchaRef}
+                        sitekey={RECAPTCHA_SITE_KEY}
+                        onChange={onCaptchaChange}
+                        onExpired={onCaptchaExpired}
+                        onError={onCaptchaError}
+                        theme="light"
+                        size="normal"
+                      />
+                      
+                      {captchaExpired && (
+                        <div className="flex items-center gap-2 text-destructive text-sm">
+                          <X className="w-4 h-4" />
+                          <span>CAPTCHA expired. Please verify again.</span>
+                        </div>
+                      )}
+                      
+                      {captchaToken && !captchaExpired && (
+                        <div className="flex items-center gap-2 text-green-600 text-sm">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>CAPTCHA verified successfully</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground text-center">
+                      Please complete the security verification to proceed with registration
+                    </p>
+                  </div>
+                </div>
+
                 <div className="pt-6 space-y-4">
-                  <Button type="submit" className="w-full text-base py-2.5" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full text-base py-2.5" 
+                    disabled={loading || !captchaToken || captchaExpired}
+                  >
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

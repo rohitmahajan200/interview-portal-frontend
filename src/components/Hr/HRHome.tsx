@@ -471,25 +471,6 @@ const HRHome = () => {
   const deletePair = (id: string) => {
     setKeyValuePairs(keyValuePairs.filter((pair) => pair.id !== id));
   };
-  // Add this helper function with your other helper functions
-  const getGradeColor = (grade: string) => {
-    switch (grade.toUpperCase()) {
-      case "A+":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "A":
-        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
-      case "B":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300";
-      case "C":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300";
-      case "D":
-        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300";
-      case "E":
-        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300";
-      default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300";
-    }
-  };
 
   // Handle Enter key press to add new pair
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -810,6 +791,24 @@ const HRHome = () => {
     }
   };
 
+   const getGradeColor = (grade: string) => {
+                                        switch (grade.toUpperCase()) {
+                                          case "A+":
+                                          case "A":
+                                            return "bg-blue-300 text-blue-700";
+                                          case "B":
+                                            return "bg-green-300 text-green-700";
+                                          case "C":
+                                            return "bg-yellow-300 text-yellow-700";
+                                          case "D":
+                                            return "bg-orange-300 text-orange-700";
+                                          case "E":
+                                            return "bg-red-300 text-red-700";
+                                          default:
+                                            return "bg-gray-300 text-gray-700";
+                                        }
+                                      };
+
   // Updated Glory helper functions
   const renderGloryGrades = (glory: any) => {
     if (
@@ -855,12 +854,13 @@ const HRHome = () => {
 
     return (
       <div className="flex items-center gap-1">
-        <Badge variant="outline" className={`text-xs ${getRoleColor(role)}`}>
-          {role.toUpperCase()}
-        </Badge>
-        <span className="text-sm font-medium text-blue-600">
+        <Badge variant="outline" className={`text-xs ${getGradeColor(displayGrade)}`}>
+          {role.toUpperCase()}-
+          <span className={getGradeColor(displayGrade)}>
           {displayGrade}
         </span>
+        </Badge>
+        
       </div>
     );
   };
@@ -1630,7 +1630,9 @@ const HRHome = () => {
                     </TableCell>
 
                     {/* Glory */}
-                    <TableCell>{renderGloryGrades(candidate.glory)}</TableCell>
+                    <TableCell>
+                      {renderGloryGrades(candidate.glory)}
+                      </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -2772,24 +2774,6 @@ const HRHome = () => {
                                         interview.interviewers.find(
                                           (int) => int._id === remark.provider
                                         ) || interview.scheduled_by;
-
-                                      const getGradeColor = (grade: string) => {
-                                        switch (grade.toUpperCase()) {
-                                          case "A+":
-                                          case "A":
-                                            return "bg-green-100 text-green-800";
-                                          case "B":
-                                            return "bg-blue-100 text-blue-800";
-                                          case "C":
-                                            return "bg-yellow-100 text-yellow-800";
-                                          case "D":
-                                            return "bg-orange-100 text-orange-800";
-                                          case "E":
-                                            return "bg-red-100 text-red-800";
-                                          default:
-                                            return "bg-gray-100 text-gray-800";
-                                        }
-                                      };
 
                                       return (
                                         <div

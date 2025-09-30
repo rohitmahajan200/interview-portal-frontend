@@ -109,12 +109,12 @@ const GloryDialog: React.FC<GloryDialogProps> = ({
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
-      case "A+": return "bg-green-100 text-green-800";
-      case "A": return "bg-green-100 text-green-700";
-      case "B": return "bg-blue-100 text-blue-700";
-      case "C": return "bg-yellow-100 text-yellow-700";
-      case "D": return "bg-orange-100 text-orange-700";
-      case "E": return "bg-red-100 text-red-700";
+      case "A+": return "bg-blue-300 text-blue-700";
+      case "A": return "bg-green-300 text-green-700";
+      case "B": return "bg-lime-300 text-lime-700";
+      case "C": return "bg-yellow-300 text-yellow-700";
+      case "D": return "bg-orange-300 text-orange-700";
+      case "E": return "bg-red-300 text-red-700";
       default: return "bg-gray-100 text-gray-700";
     }
   };
