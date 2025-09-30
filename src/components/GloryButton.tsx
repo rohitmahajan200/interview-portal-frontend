@@ -17,8 +17,7 @@ const GloryButton: React.FC<GloryButtonProps> = ({
   className = "" 
 }) => {
   const handleClick = () => {
-    console.log("Glory button clicked for candidate:", candidate);
-    onOpenGlory(candidate); // Use prop function
+        onOpenGlory(candidate); // Use prop function
   };
 
   return (

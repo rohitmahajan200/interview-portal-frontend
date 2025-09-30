@@ -59,8 +59,7 @@ const OTPLoginForm: React.FC = () => {
       }
     } catch (e: unknown) {
       setError("Invalid OTP. Please try again.");
-      console.error(e);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

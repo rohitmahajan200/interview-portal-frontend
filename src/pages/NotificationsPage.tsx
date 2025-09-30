@@ -37,8 +37,7 @@ const CandidateNotifications = () => {
         dispatch(setNotifications(res.data.data || []));
       }
     } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-      toast.error("Failed to load notifications");
+            toast.error("Failed to load notifications");
     } finally {
       setLocalLoading(false);
       dispatch(setLoading(false));
@@ -55,8 +54,7 @@ const CandidateNotifications = () => {
       dispatch(markAsRead(id));
       toast.success("Notification marked as read");
     } catch (err) {
-      console.error("Failed to mark as read:", err);
-      toast.error("Failed to update notification");
+            toast.error("Failed to update notification");
     }
   };
 
@@ -66,8 +64,7 @@ const CandidateNotifications = () => {
       dispatch(markAllAsRead());
       toast.success("All notifications marked as read");
     } catch (err) {
-      console.error("Failed to mark all as read:", err);
-      toast.error("Failed to update notifications");
+            toast.error("Failed to update notifications");
     }
   };
 

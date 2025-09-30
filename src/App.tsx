@@ -29,8 +29,7 @@ function RootLayout() {
           await pushNotificationService.initializeServiceWorker();
         }
       } catch (err) {
-        console.error("❌ Failed to initialize push notifications:", err);
-      }
+              }
     };
     void init();
   }, []);

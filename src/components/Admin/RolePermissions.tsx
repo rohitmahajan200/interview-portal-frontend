@@ -163,8 +163,7 @@ const UnifiedAssignmentDashboard = () => {
         setUnassignedCandidates(candidatesRes.data.data?.candidates || []);
       }
     } catch (error: any) {
-      console.error("Failed to fetch initial data:", error);
-      const errorMessage =
+            const errorMessage =
         error?.response?.data?.message || "Failed to load dashboard data";
       setError(errorMessage);
       toast.error(errorMessage);
@@ -195,8 +194,7 @@ const UnifiedAssignmentDashboard = () => {
 
       setJobCandidates(uniqueCandidates);
     } catch (error: unknown) {
-      console.error("Failed to fetch job candidates:", error);
-      const errorMessage =
+            const errorMessage =
         (error as { response?: { data?: { message?: string } } })?.response
           ?.data?.message || "Failed to fetch job candidates";
       toast.error(errorMessage);

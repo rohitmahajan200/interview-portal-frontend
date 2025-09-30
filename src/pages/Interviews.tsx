@@ -126,8 +126,7 @@ export default function Interviews() {
         const res = await api.get("/candidates/interviews");
         setInterviews(res.data.data as Interview[]);
       } catch (e) {
-        console.error("Failed to fetch interviews:", e);
-      } finally {
+              } finally {
         setLoading(false);
       }
     })();

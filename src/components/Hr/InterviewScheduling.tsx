@@ -278,8 +278,7 @@ const InterviewCalendar = () => {
         setCandidates(response.data.data.users || response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching candidates:', error);
-      toast.error('Failed to load candidates');
+            toast.error('Failed to load candidates');
     } finally {
       setLoading(prev => ({ ...prev, candidates: false }));
     }
@@ -292,8 +291,7 @@ const InterviewCalendar = () => {
         setOrgUsers(response.data.data.users || response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching org users:', error);
-      toast.error('Failed to load organization users');
+            toast.error('Failed to load organization users');
     } finally {
       setLoading(prev => ({ ...prev, users: false }));
     }
@@ -306,8 +304,7 @@ const InterviewCalendar = () => {
         setInterviews(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching interviews:', error);
-      toast.error('Failed to load interviews');
+            toast.error('Failed to load interviews');
     } finally {
       setLoading(prev => ({ ...prev, interviews: false }));
     }
@@ -384,8 +381,7 @@ const InterviewCalendar = () => {
         resetForm();
       }
     } catch (error: any) {
-      console.error('Error creating interview:', error);
-
+      
       if (error.response?.status === 409 && error.response?.data?.error === "INTERVIEW_CONFLICT") {
         const conflictData = error.response.data;
         toast.error(
@@ -449,8 +445,7 @@ const InterviewCalendar = () => {
       await fetchInterviews();
       setSelectedInterview(null);
     } catch (error: any) {
-      console.error('Error deleting interview:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to delete interview';
+            const errorMessage = error.response?.data?.message || 'Failed to delete interview';
       toast.error(errorMessage);
     } finally {
       setLoading(prev => ({ ...prev, submitting: false }));

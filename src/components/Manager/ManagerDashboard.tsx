@@ -196,8 +196,7 @@ const ManagerDashboard: React.FC = () => {
         setStats(statsRes.data.data.statistics);
       }
     } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast.error("Failed to load dashboard");
+            toast.error("Failed to load dashboard");
     } finally {
       setLoading(false);
     }
@@ -259,8 +258,7 @@ const ManagerDashboard: React.FC = () => {
         }));
       }
     } catch (error) {
-      console.error("Failed to fetch candidate details:", error);
-      toast.error("Failed to load candidate details");
+            toast.error("Failed to load candidate details");
     } finally {
       setLoadingDetails((prev) => {
         const newSet = new Set(prev);
@@ -281,8 +279,7 @@ const ManagerDashboard: React.FC = () => {
       await navigator.clipboard.writeText(link);
       toast.success("Meeting link copied to clipboard!");
     } catch (error) {
-      console.error("Failed to copy link:", error);
-      toast.error("Failed to copy link");
+            toast.error("Failed to copy link");
     }
   };
   // Normalize docs to always include isVerified
@@ -385,8 +382,7 @@ const ManagerDashboard: React.FC = () => {
         });
       }
     } catch (error: unknown) {
-      console.error(`Failed to ${actionModal.type}:`, error);
-      const apiError = error as { response?: { data?: { message?: string } } };
+            const apiError = error as { response?: { data?: { message?: string } } };
       toast.error(
         apiError.response?.data?.message || `Failed to ${actionModal.type}`
       );
@@ -407,8 +403,7 @@ const ManagerDashboard: React.FC = () => {
         toast.success("Joining meeting...");
       }
     } catch (error: unknown) {
-      console.error("Failed to join meeting:", error);
-      const apiError = error as { response?: { data?: { message?: string } } };
+            const apiError = error as { response?: { data?: { message?: string } } };
       toast.error(apiError.response?.data?.message || "Failed to join meeting");
     }
   };

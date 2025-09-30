@@ -65,8 +65,7 @@ export default function AdminDashboard() {
 
     // register SW silently; prompt must be from a user gesture
     pushNotificationService.initializeServiceWorker().catch((e) => {
-      console.error("SW init failed:", e);
-      toast.error("Failed to initialize notifications.");
+            toast.error("Failed to initialize notifications.");
     });
   }, [supported]);
 
@@ -84,8 +83,7 @@ export default function AdminDashboard() {
       }
       setOpen(false);
     } catch (e) {
-      console.error("Subscribe failed:", e);
-      toast.error("Couldn’t enable notifications.");
+            toast.error("Couldn’t enable notifications.");
     }
   };
 
@@ -106,8 +104,7 @@ export default function AdminDashboard() {
         );
       }
     } catch (error) {
-      console.error("Failed to fetch admin notifications:", error);
-      toast.error("Failed to fetch notifications.");
+            toast.error("Failed to fetch notifications.");
     }
   }, [dispatch, user]); 
 
@@ -119,8 +116,7 @@ export default function AdminDashboard() {
           dispatch(setUser(res.data.user));
         }
       } catch (error) {
-        console.error("Failed to fetch org user profile:", error);
-        toast.error("Failed to load profile.");
+                toast.error("Failed to load profile.");
       }
     };
 

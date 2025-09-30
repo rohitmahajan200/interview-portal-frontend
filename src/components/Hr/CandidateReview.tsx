@@ -190,8 +190,7 @@ const saveScrollPosition = (candidateId: string, scrollTop: number, activeQuesti
       localStorage.setItem(getActiveQuestionStorageKey(candidateId), activeQuestionId);
     }
   } catch (error) {
-    console.warn('Failed to save scroll position:', error);
-  }
+      }
 };
 
 const getScrollPosition = (candidateId: string): { scrollTop: number; activeQuestionId?: string } => {
@@ -200,8 +199,7 @@ const getScrollPosition = (candidateId: string): { scrollTop: number; activeQues
     const activeQuestionId = localStorage.getItem(getActiveQuestionStorageKey(candidateId)) || undefined;
     return { scrollTop, activeQuestionId };
   } catch (error) {
-    console.warn('Failed to get scroll position:', error);
-    return { scrollTop: 0 };
+        return { scrollTop: 0 };
   }
 };
 
@@ -210,8 +208,7 @@ const clearScrollPosition = (candidateId: string) => {
     localStorage.removeItem(getScrollStorageKey(candidateId));
     localStorage.removeItem(getActiveQuestionStorageKey(candidateId));
   } catch (error) {
-    console.warn('Failed to clear scroll position:', error);
-  }
+      }
 };
 
 // 🆕 ENHANCED: Manual Review Form Component with Scroll Position Persistence
@@ -538,8 +535,7 @@ const CandidateReview = () => {
             behavior: 'smooth',
             block: 'center'
           });
-          console.log(`[SCROLL] Restored to question: ${activeQuestionId}`);
-        }
+                  }
         isRestoringScroll.current = false;
       }, 100);
     } 
@@ -550,8 +546,7 @@ const CandidateReview = () => {
           top: scrollTop,
           behavior: 'smooth'
         });
-        console.log(`[SCROLL] Restored to position: ${scrollTop}px`);
-        isRestoringScroll.current = false;
+                isRestoringScroll.current = false;
       }, 100);
     } else {
       isRestoringScroll.current = false;
@@ -593,8 +588,7 @@ const CandidateReview = () => {
   // 🆕 ADDED: Function to handle save success and maintain position
   const handleReviewSaveSuccess = useCallback(() => {
     // Position is already saved in the ManualReviewForm component
-    console.log("[SCROLL] Review saved, position maintained");
-  }, []);
+      }, []);
 
   // 🆕 ADDED: Set active question when editing starts
   const handleEditingResponse = useCallback((responseId: string | null) => {
@@ -623,8 +617,7 @@ const CandidateReview = () => {
   // Transform CandidateDetail to match Glory's expected candidate structure
   const transformCandidateForGlory = (candidate: CandidateDetail): any => {
     if (!candidate?.candidate) {
-      console.warn("Invalid candidate structure for Glory:", candidate);
-      return null;
+            return null;
     }
 
     const convertGrades = (grades: any): GloryData => {
@@ -671,11 +664,9 @@ const CandidateReview = () => {
         glory: transformedGlory
       };
 
-      console.log("Transformed candidate for Glory:", transformed);
-      return transformed;
+            return transformed;
     } catch (error) {
-      console.error("Error transforming candidate for Glory:", error);
-      return null;
+            return null;
     }
   };
 
@@ -689,11 +680,9 @@ const CandidateReview = () => {
         return;
       }
 
-      console.log("Opening Glory dialog for:", transformedCandidate);
-      openGloryDialog(transformedCandidate);
+            openGloryDialog(transformedCandidate);
     } catch (error) {
-      console.error("Error opening Glory dialog:", error);
-      toast.error("Failed to open Glory grading dialog");
+            toast.error("Failed to open Glory grading dialog");
     }
   };
 
@@ -703,8 +692,7 @@ const CandidateReview = () => {
       const response = await api.get<StatisticsAPIResponse>("/org/hr-responses/statistics");
       setStatistics(response.data.data);
     } catch (error) {
-      console.error("Failed to fetch statistics:", error);
-    }
+          }
   };
 
   const triggerAIEvaluation = async (responseId: string) => {
@@ -717,10 +705,8 @@ const CandidateReview = () => {
       }
 
       await fetchResponsesList();
-      console.log("AI evaluation completed:", response.data.message);
-    } catch (error) {
-      console.error("AI evaluation failed:", error);
-    } finally {
+          } catch (error) {
+          } finally {
       setLoadingActions((prev) => ({ ...prev, [`ai_${responseId}`]: false }));
     }
   };
@@ -747,8 +733,7 @@ const CandidateReview = () => {
       }
 
     } catch (error) {
-      console.error("Failed to update review:", error);
-      throw error;
+            throw error;
     } finally {
       setLoadingActions((prev) => ({
         ...prev,
@@ -766,8 +751,7 @@ const CandidateReview = () => {
   ) => {
     setLoadingActions((prev) => ({ ...prev, [`stage_${responseId}`]: true }));
     try {
-      console.log("HR Glory Grades=>",gloryGrades);
-      const hrGlory = selectedCandidate?.candidate?.glory?.hr;
+            const hrGlory = selectedCandidate?.candidate?.glory?.hr;
       if (!hrGlory || !hrGlory.grades || Object.keys(hrGlory.grades).length === 0) {
         toast.error("Glory Required To Stage Update");
         return;
@@ -787,8 +771,7 @@ const CandidateReview = () => {
       setIsDialogOpen(false);
       toast.success(`Candidate stage updated to ${newStage.toUpperCase()}`);
     } catch (error: any) {
-      console.error("Failed to update stage:", error);
-      toast.error(
+            toast.error(
         error?.response?.data?.message || "Failed to update candidate stage"
       );
     } finally {
@@ -805,8 +788,7 @@ const CandidateReview = () => {
       const response = await api.get("/org/hr-responses");
       setResponsesList(response.data.data || []);
     } catch (error) {
-      console.error("Failed to fetch responses list:", error);
-    } finally {
+          } finally {
       setLoadingList(false);
     }
   };
@@ -824,8 +806,7 @@ const CandidateReview = () => {
       }, 200);
       
     } catch (error) {
-      console.error("Failed to fetch candidate details:", error);
-      setSelectedCandidate(null);
+            setSelectedCandidate(null);
     } finally {
       setLoadingDetail(false);
     }

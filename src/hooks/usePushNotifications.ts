@@ -27,8 +27,7 @@ export const usePushNotifications = () => {
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : "Failed to initialize push notifications";
-        console.error(msg, err);
-        setError(msg);
+                setError(msg);
       }
     };
 

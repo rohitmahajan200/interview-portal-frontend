@@ -61,8 +61,7 @@ export default function Manager() {
     }
 
     pushNotificationService.initializeServiceWorker().catch((e) => {
-      console.error("SW init failed:", e);
-      toast.error("Failed to initialize notifications.");
+            toast.error("Failed to initialize notifications.");
     });
   }, [supported, user]);
 
@@ -78,8 +77,7 @@ export default function Manager() {
       }
       setOpen(false);
     } catch (e) {
-      console.error("Subscribe failed:", e);
-      toast.error("Couldn’t enable notifications.");
+            toast.error("Couldn’t enable notifications.");
     }
   };
 
@@ -90,8 +88,7 @@ export default function Manager() {
         dispatch(setNotifications(response.data.data || []));
       }
     } catch (e) {
-      console.error("Failed to fetch org notifications:", e);
-      toast.error("Failed to fetch notifications.");
+            toast.error("Failed to fetch notifications.");
     }
   }, [dispatch]);
 
@@ -101,8 +98,7 @@ export default function Manager() {
         const res = await api.get("/org/me");
         if (res.data.user) dispatch(setUser(res.data.user));
       } catch (error) {
-        console.error("Failed to fetch org user profile:", error);
-      }
+              }
     };
 
     fetchOrgUser();

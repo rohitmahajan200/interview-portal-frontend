@@ -34,8 +34,7 @@ const ManagerNotifications = () => {
         dispatch(setNotifications(res.data.data || []));
       }
     } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-    } finally {
+          } finally {
       setLocalLoading(false);
       dispatch(setLoading(false));
     }
@@ -50,8 +49,7 @@ const ManagerNotifications = () => {
       await api.patch(`/org/notifications/${id}/read`);
       dispatch(markAsRead(id));
     } catch (err) {
-      console.error("Failed to mark as read:", err);
-    }
+          }
   };
 
   const handleMarkAllAsRead = async () => {
@@ -59,8 +57,7 @@ const ManagerNotifications = () => {
       await api.patch("/org/notifications/read-all");
       dispatch(markAllAsRead());
     } catch (err) {
-      console.error("Failed to mark all as read:", err);
-    }
+          }
   };
 
   const getTypeColor = (type?: string) => {

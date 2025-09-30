@@ -281,8 +281,7 @@ const editTotalMarks = useMemo(() => {
       setQuestions(questionsRes.data.data || []);
       setCandidates(candidatesRes.data.data || []);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
-      toast.error('Failed to load data');
+            toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -390,8 +389,7 @@ const editTotalMarks = useMemo(() => {
       setDeleteDialogOpen(false);
       fetchAllData();
     } catch (error: unknown) {
-      console.error('Failed to delete assessment:', error);
-      const errorMessage = error && typeof error === 'object' && 'response' in error 
+            const errorMessage = error && typeof error === 'object' && 'response' in error 
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
         : 'Failed to delete assessment';
       toast.error(errorMessage || 'Failed to delete assessment');
@@ -428,8 +426,7 @@ const editTotalMarks = useMemo(() => {
       closeDialog();
       fetchAllData();
     } catch (error: unknown) {
-      console.error('Failed to create assessments:', error);
-      const errorMessage = error && typeof error === 'object' && 'response' in error 
+            const errorMessage = error && typeof error === 'object' && 'response' in error 
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
         : 'Failed to create assessments';
       toast.error(errorMessage || 'Failed to create assessments');
@@ -458,8 +455,7 @@ const editTotalMarks = useMemo(() => {
       closeDialog();
       fetchAllData();
     } catch (error: unknown) {
-      console.error('Failed to update assessment:', error);
-      const errorMessage = error && typeof error === 'object' && 'response' in error 
+            const errorMessage = error && typeof error === 'object' && 'response' in error 
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
         : 'Failed to update assessment';
       toast.error(errorMessage || 'Failed to update assessment');

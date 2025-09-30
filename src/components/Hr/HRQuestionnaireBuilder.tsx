@@ -311,8 +311,7 @@ const HRQuestionnaireBuilder = () => {
       setQuestions(questionsRes.data.data || []);
       setCandidates(candidatesRes.data.data || []);
     } catch (error) {
-      console.error("Failed to fetch data:", error);
-      toast.error("Failed to load data");
+            toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -413,8 +412,7 @@ const HRQuestionnaireBuilder = () => {
       setDeleteDialogOpen(false);
       fetchAllData();
     } catch (error: any) {
-      console.error("Failed to delete questionnaire:", error);
-      toast.error(
+            toast.error(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to delete questionnaire"
@@ -467,8 +465,7 @@ const HRQuestionnaireBuilder = () => {
       closeDialog();
       fetchAllData();
     } catch (error: any) {
-      console.error("Failed to create questionnaire:", error);
-      toast.error(
+            toast.error(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to create questionnaire"
@@ -492,8 +489,7 @@ const HRQuestionnaireBuilder = () => {
       closeDialog();
       fetchAllData();
     } catch (error: any) {
-      console.error("Failed to update questionnaire:", error);
-      toast.error(
+            toast.error(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to update questionnaire"

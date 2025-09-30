@@ -95,8 +95,7 @@ const ProctorGhost: React.FC = () => {
     onSpeechStart: () => {},            // suppressed
     onVADMisfire: () => {},             // suppressed
     onSpeechRealStart: () => {
-      console.log("Audio: speech started");
-      incSpeechStarted();               // ← count speech starts (per-minute bucket)
+            incSpeechStarted();               // ← count speech starts (per-minute bucket)
     },
     onSpeechEnd: () => console.log("Audio: speech ended"),
   });
@@ -149,11 +148,9 @@ const ProctorGhost: React.FC = () => {
           faceStateNow !== lastFaceState.current
         ) {
           if (faceStateNow === "none") {
-            console.log("Face: not detected");
-            incNoFace();
+                        incNoFace();
           } else if (faceStateNow === "one") {
-            console.log("Face: detected");
-          } else {
+                      } else {
             console.log(`Face: multiple (${count})`);
             incMultiFace(); 
           }
@@ -201,10 +198,7 @@ const ProctorGhost: React.FC = () => {
               gazeStreak.current >= GAZE_STREAK_FRAMES &&
               gazeNow !== lastGaze.current
             ) {
-              console.log(
-                gazeNow === "center" ? "Gaze: looking center" : "Gaze: looking away"
-              );
-              if (gazeNow === "away") incLookingAway(); 
+                            if (gazeNow === "away") incLookingAway(); 
               lastGaze.current = gazeNow;
             }
           }
@@ -237,8 +231,7 @@ const ProctorGhost: React.FC = () => {
 
               const str = unique.join(", ");
               if (str !== lastObjects.current) {
-                console.log(`Objects: ${str}`);
-                lastObjects.current = str;
+                                lastObjects.current = str;
               }
             } else {
               lastObjects.current = "";

@@ -217,16 +217,13 @@ const AdminHome = () => {
       const response = await api.get("/org/orgUser");
       
       if (response?.data?.success && response?.data?.data) {
-        console.log('📥 Fetched users:', response.data.data.length);
-        setUsers(response.data.data);
+                setUsers(response.data.data);
         setFilteredUsers(response.data.data);
       } else {
-        console.error('❌ Invalid response format:', response?.data);
-        toast.error("Invalid response format from server");
+                toast.error("Invalid response format from server");
       }
     } catch (error: any) {
-      console.error('❌ Fetch users error:', error);
-      const errorMessage = error?.response?.data?.message || 
+            const errorMessage = error?.response?.data?.message || 
                           error?.message || 
                           "Failed to load users";
       toast.error(errorMessage);

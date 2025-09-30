@@ -16,8 +16,7 @@ const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 (async () => {
   try {
     if (!fs.existsSync(inputFile)) {
-      console.error(`❌ Input file not found: ${inputFile}`);
-      process.exit(1);
+            process.exit(1);
     }
 
     if (!fs.existsSync(outputDir)) {
@@ -31,12 +30,9 @@ const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
         .png()
         .toFile(outFile);
 
-      console.log(`✅ Generated ${outFile}`);
-    }
+          }
 
-    console.log("🎉 All icons generated successfully!");
-  } catch (err) {
-    console.error("❌ Error generating icons:", err);
-    process.exit(1);
+      } catch (err) {
+        process.exit(1);
   }
 })();

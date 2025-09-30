@@ -25,8 +25,7 @@ const Feedback = () => {
         }
       } catch (err) {
         setError(err.message);
-        console.error("Error fetching feedbacks:", err);
-      } finally {
+              } finally {
         setLoading(false);
       }
     };

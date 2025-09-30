@@ -184,8 +184,7 @@ const JobManagement = () => {
         toast.error(response.data.message || "Failed to fetch jobs");
       }
     } catch (error: any) {
-      console.error("Failed to fetch jobs:", error);
-      const errorMessage = error?.response?.data?.message || "Failed to load jobs";
+            const errorMessage = error?.response?.data?.message || "Failed to load jobs";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -206,8 +205,7 @@ const JobManagement = () => {
             data: response.data.success ? response.data.data || [] : []
           };
         } catch (error) {
-          console.warn(`Failed to fetch distinct values for ${field}:`, error);
-          return { field, data: [] };
+                    return { field, data: [] };
         }
       });
 
@@ -231,8 +229,7 @@ const JobManagement = () => {
 
       setAutocompleteData(newAutocompleteData);
     } catch (error) {
-      console.error("Failed to fetch autocomplete data:", error);
-    }
+          }
   };
 
     // Convert sentences array to styled HTML format for Description

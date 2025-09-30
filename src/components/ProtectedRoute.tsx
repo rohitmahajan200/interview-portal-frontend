@@ -32,8 +32,7 @@ export default function ProtectedRoute({ children, type, onUserLoaded }: Protect
           throw new Error('No user data');
         }
       } catch (error) {
-        console.error(`${type} auth check failed:`, error);
-        setIsAuthenticated(false);
+                setIsAuthenticated(false);
         
         const redirectPath = type === 'candidate' ? '/login' : '/org/login';
         navigate(redirectPath, { replace: true });

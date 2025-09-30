@@ -5,8 +5,7 @@ import { HomeIcon } from "lucide-react";
 
 export default function NotFound() {
   const error = useRouteError();
-  console.error(error);
-
+  
   return (
     <div className="flex items-center justify-center h-screen bg-background px-4">
       <Card className="max-w-md w-full p-6 text-center shadow-lg">

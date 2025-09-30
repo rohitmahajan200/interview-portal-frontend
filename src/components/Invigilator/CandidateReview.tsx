@@ -495,8 +495,7 @@ const AssessmentReview = () => {
 
   // 🆕 ADDED: Function to handle save success
   const handleReviewSaveSuccess = useCallback(() => {
-    console.log("[ASSESSMENT] Review saved successfully");
-  }, []);
+      }, []);
 
   // Helper function to safely render Glory grades
   const renderFullGloryDisplay = (glory: CandidateGlory | undefined) => {
@@ -510,8 +509,7 @@ const AssessmentReview = () => {
   // Transform candidate for Glory system
   const transformCandidateForGlory = (assessmentDetail: AssessmentDetail): any => {
     if (!assessmentDetail?.candidate) {
-      console.warn("Invalid candidate structure for Glory:", assessmentDetail);
-      return null;
+            return null;
     }
 
     const candidate = assessmentDetail.candidate;
@@ -541,8 +539,7 @@ const AssessmentReview = () => {
       const response = await api.get("/org/assessment-responses/statistics");
       setStatistics(response.data.data);
     } catch (error) {
-      console.error("Failed to fetch statistics:", error);
-    }
+          }
   };
 
   const triggerAIEvaluation = async (responseId: string, event?: React.MouseEvent) => {
@@ -557,8 +554,7 @@ const AssessmentReview = () => {
       await fetchStatistics();
       toast.success("AI evaluation completed successfully");
     } catch (error: any) {
-      console.error("AI evaluation failed:", error);
-      toast.error(error?.response?.data?.message || "Failed to evaluate assessment");
+            toast.error(error?.response?.data?.message || "Failed to evaluate assessment");
     } finally {
       setLoadingActions((prev) => ({ ...prev, [`ai_${responseId}`]: false }));
     }
@@ -597,8 +593,7 @@ const AssessmentReview = () => {
         setIsDialogOpen(false);
       }
     } catch (error: any) {
-      console.error("Failed to update stage:", error);
-      toast.error(error?.response?.data?.message || "Failed to update candidate stage");
+            toast.error(error?.response?.data?.message || "Failed to update candidate stage");
     } finally {
       setIsUpdatingStage(false);
     }
@@ -620,8 +615,7 @@ const AssessmentReview = () => {
         setRejectionReason("");
       }
     } catch (error: any) {
-      console.error("Failed to reject candidate:", error);
-      toast.error(error?.response?.data?.message || "Failed to reject candidate");
+            toast.error(error?.response?.data?.message || "Failed to reject candidate");
     } finally {
       setIsRejecting(false);
     }
@@ -633,8 +627,7 @@ const AssessmentReview = () => {
       const response = await api.get("/org/assessment-responses");
       setAssessmentsList(response.data.data || []);
     } catch (error) {
-      console.error("Failed to fetch assessments list:", error);
-    } finally {
+          } finally {
       setLoadingList(false);
     }
   };
@@ -645,8 +638,7 @@ const AssessmentReview = () => {
       const response = await api.get(`/org/assessment-responses/${id}`);
       setSelectedAssessment(response.data.data);
     } catch (error) {
-      console.error("Failed to fetch assessment details:", error);
-      setSelectedAssessment(null);
+            setSelectedAssessment(null);
     } finally {
       setLoadingDetail(false);
     }
@@ -807,8 +799,7 @@ const AssessmentReview = () => {
         // setEditingResponse(null);
       }
     } catch (error: any) {
-      console.error("Failed to update review:", error);
-      throw error; // Re-throw so the component can handle it
+            throw error; // Re-throw so the component can handle it
     } finally {
       setLoadingActions((prev) => ({
         ...prev,

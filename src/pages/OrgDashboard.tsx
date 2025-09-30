@@ -24,8 +24,7 @@ const OrgDashboard = () => {
           dispatch(setUser(response.data.user));
         }
       } catch (error) {
-        console.error("Failed to fetch org user:", error);
-        // Don't navigate here - ProtectedRoute handles this
+                // Don't navigate here - ProtectedRoute handles this
       }
     };
 

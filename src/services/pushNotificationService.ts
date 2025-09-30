@@ -167,8 +167,7 @@ export const getSubscriptionStatus = async (): Promise<boolean> => {
     const subscription = await registration.pushManager.getSubscription();
     return !!subscription;
   } catch (err) {
-    console.error("Failed to check subscription:", err);
-    return false;
+        return false;
   }
 };
 
