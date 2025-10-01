@@ -792,7 +792,19 @@ const CandidateReview = () => {
       setLoadingList(false);
     }
   };
+      function useIsCompact(breakpoint = 1220) {
+    const [isCompact, setIsCompact] = useState(false);
 
+    useEffect(() => {
+      const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+      checkWidth(); // run on mount
+      window.addEventListener("resize", checkWidth);
+      return () => window.removeEventListener("resize", checkWidth);
+    }, [breakpoint]);
+
+    return isCompact;
+  }
+  const isMobile = useIsCompact(430);
   // 🆕 UPDATED: Enhanced fetchCandidateDetail with scroll restoration
   const fetchCandidateDetail = async (id: string) => {
     setLoadingDetail(true);
@@ -1041,13 +1053,6 @@ const CandidateReview = () => {
                           <div className="min-w-0">
                             <p className="font-medium text-xs sm:text-sm text-foreground dark:text-foreground truncate">
                               {item.candidate.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
-                              {item.candidate.email}
-                            </p>
-                            {/* Mobile: Show job here */}
-                            <p className="text-xs text-muted-foreground dark:text-muted-foreground truncate sm:hidden">
-                              {item.candidate.applied_job.title}
                             </p>
                           </div>
                         </div>

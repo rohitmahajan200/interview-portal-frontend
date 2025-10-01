@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
+  DialogHeader,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -37,10 +39,13 @@ import {
   Clock,
   CheckCircle,
   X,
+  Eye,
+  Loader2,
 } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
 import CandidateMultiSelect from "../CandidateMultiselect";
+import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
 
 // Validation Schemas
 const questionnaireSchema = z.object({
@@ -171,6 +176,8 @@ const HRQuestionnaireBuilder = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState<string>("");
+  const [selectedQuestionnaireForAction, setSelectedQuestionnaireForAction] = useState<HrQuestionnaire | null>(null);
+
   const [selectedJobForAutoSelect, setSelectedJobForAutoSelect] =
     useState<string>("");
 
@@ -199,6 +206,7 @@ const HRQuestionnaireBuilder = () => {
     return isCompact;
   }
   const isCompact = useIsCompact(1220);
+  const isMobile = useIsCompact(430);
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -661,114 +669,172 @@ const HRQuestionnaireBuilder = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Candidate</TableHead>
-                    {!isCompact && <TableHead>Questions</TableHead>}
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    {!isCompact && <TableHead>Assigned By</TableHead>}
-                    {!isCompact && <TableHead>Created</TableHead>}
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuestionnaires.map((questionnaire) => (
-                    <TableRow
-                        key={questionnaire._id}
-                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                        onClick={(e) => openViewDialog(questionnaire,e)}
-                      >
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage
-                              src={
-                                questionnaire.candidate.profile_photo_url?.url
-                              }
-                            />
-                            <AvatarFallback>
-                              {questionnaire.candidate.first_name[0]}
-                              {questionnaire.candidate.last_name[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">
-                              {questionnaire.candidate.first_name}{" "}
-                              {questionnaire.candidate.last_name}
+            <>
+              {/* Desktop Table */}
+              {!isMobile && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Candidate</TableHead>
+                        {!isCompact && <TableHead>Questions</TableHead>}
+                        <TableHead>Status</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        {!isCompact && <TableHead>Assigned By</TableHead>}
+                        {!isCompact && <TableHead>Created</TableHead>}
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredQuestionnaires.map((questionnaire) => (
+                        <TableRow
+                          key={questionnaire._id}
+                          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          onClick={(e) => openViewDialog(questionnaire, e)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar>
+                                <AvatarImage
+                                  src={
+                                    questionnaire.candidate.profile_photo_url?.url
+                                  }
+                                />
+                                <AvatarFallback>
+                                  {questionnaire.candidate.first_name[0]}
+                                  {questionnaire.candidate.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">
+                                  {questionnaire.candidate.first_name}{" "}
+                                  {questionnaire.candidate.last_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {questionnaire.candidate.email}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {questionnaire.candidate.email}
+                          </TableCell>
+                          {!isCompact && <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {questionnaire.assigned_questions
+                                .slice(0, 2)
+                                .map((question) => (
+                                  <Badge
+                                    key={question._id}
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    {question.input_type.toUpperCase()}
+                                  </Badge>
+                                ))}
+                              {questionnaire.assigned_questions.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{questionnaire.assigned_questions.length - 2}{" "}
+                                  more
+                                </Badge>
+                              )}
                             </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      {!isCompact && <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {questionnaire.assigned_questions
-                            .slice(0, 2)
-                            .map((question) => (
-                              <Badge
-                                key={question._id}
-                                variant="outline"
-                                className="text-xs"
-                              >
-                                {question.input_type.toUpperCase()}
-                              </Badge>
-                            ))}
-                          {questionnaire.assigned_questions.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{questionnaire.assigned_questions.length - 2}{" "}
-                              more
+                          </TableCell>}
+                          <TableCell>
+                            <Badge className={getStatusColor(questionnaire.status)}>
+                              {questionnaire.status.toUpperCase()}
                             </Badge>
-                          )}
-                        </div>
-                      </TableCell>}
-                      <TableCell>
-                        <Badge className={getStatusColor(questionnaire.status)}>
-                          {questionnaire.status.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(questionnaire.due_at)}
-                      </TableCell>
-                      {!isCompact && <TableCell className="text-sm">
-                        {questionnaire.assigned_by.name}
-                      </TableCell>}
-                      {!isCompact && <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(questionnaire.createdAt)}
-                      </TableCell>}
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => openEditDialog(questionnaire,e)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={(e) =>
-                              openDeleteDialog(
-                                questionnaire._id,
-                                `${questionnaire.candidate.first_name} ${questionnaire.candidate.last_name}`,
-                                e
-                              )
-                            }
-                            disabled={deleteLoadingId === questionnaire._id}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {formatDate(questionnaire.due_at)}
+                          </TableCell>
+                          {!isCompact && <TableCell className="text-sm">
+                            {questionnaire.assigned_by.name}
+                          </TableCell>}
+                          {!isCompact && <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(questionnaire.createdAt)}
+                          </TableCell>}
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => openEditDialog(questionnaire, e)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={(e) =>
+                                  openDeleteDialog(
+                                    questionnaire._id,
+                                    `${questionnaire.candidate.first_name} ${questionnaire.candidate.last_name}`,
+                                    e
+                                  )
+                                }
+                                disabled={deleteLoadingId === questionnaire._id}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Mobile Table */}
+              {isMobile && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-full">Candidate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredQuestionnaires.map((questionnaire) => (
+                        <TableRow
+                          key={questionnaire._id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => setSelectedQuestionnaireForAction(questionnaire)}
+                        >
+                          <TableCell className="w-full pr-2">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarImage
+                                  src={questionnaire.candidate.profile_photo_url?.url}
+                                />
+                                <AvatarFallback className="text-xs font-medium">
+                                  {questionnaire.candidate.first_name[0]}
+                                  {questionnaire.candidate.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium truncate text-sm">
+                                  {questionnaire.candidate.first_name}{" "}
+                                  {questionnaire.candidate.last_name}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {questionnaire.candidate.email}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge className={getStatusColor(questionnaire.status)} variant="outline">
+                                    {questionnaire.status.toUpperCase()}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {questionnaire.assigned_questions.length} questions
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
               {filteredQuestionnaires.length === 0 && !loading && (
                 <div className="text-center py-10">
@@ -779,10 +845,130 @@ const HRQuestionnaireBuilder = () => {
                   </p>
                 </div>
               )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile Actions Dialog */}
+      <Dialog 
+        open={!!selectedQuestionnaireForAction} 
+        onOpenChange={(open) => !open && setSelectedQuestionnaireForAction(null)}
+      >
+        <DialogContent className="w-[95vw] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Questionnaire Actions</DialogTitle>
+            <DialogDescription>
+              Choose an action for this questionnaire
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedQuestionnaireForAction && (
+            <div className="space-y-4">
+              {/* Questionnaire Preview */}
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage
+                      src={selectedQuestionnaireForAction.candidate.profile_photo_url?.url}
+                    />
+                    <AvatarFallback className="text-sm">
+                      {selectedQuestionnaireForAction.candidate.first_name[0]}
+                      {selectedQuestionnaireForAction.candidate.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">
+                      {selectedQuestionnaireForAction.candidate.first_name}{" "}
+                      {selectedQuestionnaireForAction.candidate.last_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {selectedQuestionnaireForAction.candidate.email}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(selectedQuestionnaireForAction.status)} variant="outline">
+                      {selectedQuestionnaireForAction.status.toUpperCase()}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedQuestionnaireForAction.assigned_questions.length} questions
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <div>Due: {formatDate(selectedQuestionnaireForAction.due_at)}</div>
+                    <div>Assigned by: {selectedQuestionnaireForAction.assigned_by.name}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    const questionnaire = selectedQuestionnaireForAction;
+                    setSelectedQuestionnaireForAction(null);
+                    // Create a mock event object for compatibility
+                    const mockEvent = { stopPropagation: () => {} };
+                    openViewDialog(questionnaire, mockEvent);
+                  }}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </Button>
+
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    const questionnaire = selectedQuestionnaireForAction;
+                    setSelectedQuestionnaireForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    openEditDialog(questionnaire, mockEvent);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Questionnaire
+                </Button>
+                
+                <Button
+                  className="w-full justify-start text-red-600 hover:text-red-700"
+                  variant="outline"
+                  onClick={() => {
+                    const questionnaire = selectedQuestionnaireForAction;
+                    setSelectedQuestionnaireForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    openDeleteDialog(
+                      questionnaire._id,
+                      `${questionnaire.candidate.first_name} ${questionnaire.candidate.last_name}`,
+                      mockEvent
+                    );
+                  }}
+                  disabled={deleteLoadingId === selectedQuestionnaireForAction._id}
+                >
+                  {deleteLoadingId === selectedQuestionnaireForAction._id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash className="w-4 h-4 mr-2" />
+                  )}
+                  Delete Questionnaire
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedQuestionnaireForAction(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={closeDialog}>
         <DialogContent className="h-screen max-w-4xl md:max-w-[85vw] lg:max-w-[90vw] w-full max-h-none sm:max-h-none flex flex-col overflow-hidden bg-background border-0 sm:border rounded-none sm:rounded-lg m-0 sm:m-2 p-0">

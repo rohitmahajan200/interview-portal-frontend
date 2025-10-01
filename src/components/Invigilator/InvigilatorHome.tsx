@@ -390,7 +390,19 @@ const InvigilatorHome = () => {
       </div>
     );
   };
-
+    function useIsCompact(breakpoint = 1220) {
+      const [isCompact, setIsCompact] = useState(false);
+  
+      useEffect(() => {
+        const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+        checkWidth(); // run on mount
+        window.addEventListener("resize", checkWidth);
+        return () => window.removeEventListener("resize", checkWidth);
+      }, [breakpoint]);
+  
+      return isCompact;
+    }
+    const isMobile = useIsCompact(430);
   // Helper function to render full Glory display in details
   const renderFullGloryDisplay = (glory: any) => {
     if (
@@ -1130,80 +1142,127 @@ const InvigilatorHome = () => {
             </div>
           </div>
 
-          {/* Candidates Table */}
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Candidate</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Glory</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCandidates.map((candidate) => {
-                  const assessmentStatus = getAssessmentStatus(candidate);
+          {/* Desktop Candidates Table */}
+          {!isMobile && (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidate</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Glory</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCandidates.map((candidate) => {
+                    const assessmentStatus = getAssessmentStatus(candidate);
 
-                  return (
-                    <TableRow
-                      key={candidate._id}
-                      onClick={() => fetchCandidateDetails(candidate._id)}
-                      className="cursor-pointer hover:bg-muted"
-                    >
-                      {/* Candidate Information */}
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage
-                              src={candidate.profile_photo_url.url}
-                            />
-                            <AvatarFallback>
-                              {candidate.first_name[0]}
-                              {candidate.last_name[0]}
-                            </AvatarFallback>
-                          </Avatar>
+                    return (
+                      <TableRow
+                        key={candidate._id}
+                        onClick={() => fetchCandidateDetails(candidate._id)}
+                        className="cursor-pointer hover:bg-muted"
+                      >
+                        {/* Candidate Information */}
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <Avatar>
+                              <AvatarImage
+                                src={candidate.profile_photo_url.url}
+                              />
+                              <AvatarFallback>
+                                {candidate.first_name[0]}
+                                {candidate.last_name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">
+                                {candidate.first_name} {candidate.last_name}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {candidate.gender} •{" "}
+                                {formatDate(candidate.date_of_birth)}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* Contact Information */}
+                        <TableCell>
                           <div>
-                            <div className="font-medium">
-                              {candidate.first_name} {candidate.last_name}
-                            </div>
+                            <div className="text-sm">{candidate.email}</div>
                             <div className="text-sm text-muted-foreground">
-                              {candidate.gender} •{" "}
-                              {formatDate(candidate.date_of_birth)}
+                              {candidate.phone}
                             </div>
                           </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Contact Information */}
-                      <TableCell>
-                        <div>
-                          <div className="text-sm">{candidate.email}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {candidate.phone}
+                        {/* Assessment Status Badge */}
+                        <TableCell>
+                          <Badge
+                            className={getAssessmentStatusColor(assessmentStatus)}
+                          >
+                            {assessmentStatus.replace("-", " ").toUpperCase()}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Glory */}
+                        <TableCell>
+                          {renderGloryGrades(candidate.glory)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Mobile Candidates Table */}
+          {isMobile && (
+            <div className="border rounded-lg overflow-hidden">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-full">Candidate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCandidates.map((candidate) => {
+                    const assessmentStatus = getAssessmentStatus(candidate);
+
+                    return (
+                      <TableRow
+                        key={candidate._id}
+                        onClick={() => fetchCandidateDetails(candidate._id)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell className="w-full pr-2">
+                          <div className="flex items-center space-x-3 min-w-0">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage
+                                src={candidate.profile_photo_url.url}
+                              />
+                              <AvatarFallback className="text-xs font-medium">
+                                {candidate.first_name[0]}
+                                {candidate.last_name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate text-sm">
+                                {candidate.first_name} {candidate.last_name}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Assessment Status Badge */}
-                      <TableCell>
-                        <Badge
-                          className={getAssessmentStatusColor(assessmentStatus)}
-                        >
-                          {assessmentStatus.replace("-", " ").toUpperCase()}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Glory */}
-                      <TableCell>
-                        {renderGloryGrades(candidate.glory)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {/* Empty State */}
           {filteredCandidates.length === 0 && (
@@ -1220,6 +1279,7 @@ const InvigilatorHome = () => {
           )}
         </CardContent>
       </Card>
+
 
       {/* Assignment Dialog */}
       <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
@@ -1639,7 +1699,7 @@ const InvigilatorHome = () => {
 
           {selectedCandidate && (
             <div className="space-y-6">
-              {/* Personal Information Card - Now Clean Without Action Buttons */}
+              {/* Personal Information Card */}
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1661,153 +1721,164 @@ const InvigilatorHome = () => {
                     </Button>
                   </div>
                 </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Profile Info */}
+                  {!personalCollapsed && (
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                      {/* Avatar and Basic Info - Mobile Stack */}
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 p-3 sm:p-4 rounded-xl w-full lg:w-auto">
+                        <Avatar className="w-32 h-32 sm:w-40 sm:h-37 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
+                          <AvatarImage
+                            src={selectedCandidate.profile_photo_url?.url}
+                            className="object-cover w-full h-full"
+                          />
+                          <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
+                            {selectedCandidate.first_name?.[0]}
+                            {selectedCandidate.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
 
-              <CardContent className="space-y-4">
-                {/* Profile Info */}
-                {!personalCollapsed && (
-                  <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 sm:p-4 rounded-xl w-full lg:w-auto">
-                      <Avatar className="w-40 h-37 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
-                        <AvatarImage
-                          src={selectedCandidate.profile_photo_url?.url}
-                          className="object-cover w-full h-full"
-                        />
-                        <AvatarFallback className="text-lg font-semibold flex items-center justify-center">
-                          {selectedCandidate.first_name?.[0]}
-                          {selectedCandidate.last_name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
-                        <p className="text-lg sm:text-xs font-medium text-purple-600 dark:text-purple-400 mb-2">
-                          <strong>
-                            Applied For - {selectedCandidate.applied_job?.title}
-                          </strong>
-                        </p>
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {selectedCandidate.first_name} {selectedCandidate.last_name}
-                        </h3>
-                        <div className="flex justify-center sm:justify-start items-center gap-2">
-                          <span className="text-lg sm:text-xs font-medium text-purple-600 dark:text-purple-400 mb-2">
-                            <strong>Current Stage -</strong>
-                          </span>
-                          <Badge
-                            className={getStageColor(selectedCandidate.current_stage)}
-                            variant="secondary"
-                          >
-                            {selectedCandidate.current_stage?.toUpperCase()}
-                          </Badge>
-                        </div>
-                        <div className="inline-flex items-center gap-2">
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            <strong className="text-purple-600 dark:text-purple-400">Status:</strong>{" "}
-                            <span
-                              className={`inline-flex items-center gap-1 px-1 ${
-                                selectedCandidate.status.toLowerCase() === "hired"
-                                  ? "text-green-700 dark:text-green-400"
-                                  : "text-yellow-700 dark:text-yellow-300"
-                              }`}
-                            >
-                              {selectedCandidate.status.toUpperCase()}
-                              {selectedCandidate.status.toLowerCase() === "hired" && (
-                                <Check className="w-3 h-3" />
-                              )}
+                        <div className="space-y-1 text-center sm:text-left w-full sm:w-auto">
+                          <p className="text-xs sm:text-xs font-medium text-purple-600 dark:text-purple-400 mb-2">
+                            <strong>
+                              Applied For - {selectedCandidate.applied_job?.title}
+                            </strong>
+                          </p>
+                          <h3 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100 break-words">
+                            {selectedCandidate.first_name} {selectedCandidate.last_name}
+                          </h3>
+                          <div className="flex flex-col sm:flex-row sm:justify-start items-center gap-2">
+                            <span className="text-xs sm:text-xs font-medium text-purple-600 dark:text-purple-400 mb-2">
+                              <strong>Current Stage -</strong>
                             </span>
+                            <Badge
+                              className={getStageColor(selectedCandidate.current_stage)}
+                              variant="secondary"
+                            >
+                              {selectedCandidate.current_stage?.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div className="inline-flex items-center gap-2">
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              <strong className="text-purple-600 dark:text-purple-400">Status:</strong>{" "}
+                              <span
+                                className={`inline-flex items-center gap-1 px-1 ${
+                                  selectedCandidate.status.toLowerCase() === "hired"
+                                    ? "text-green-700 dark:text-green-400"
+                                    : "text-yellow-700 dark:text-yellow-300"
+                                }`}
+                              >
+                                {selectedCandidate.status.toUpperCase()}
+                                {selectedCandidate.status.toLowerCase() === "hired" && (
+                                  <Check className="w-3 h-3" />
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Contact Info - Mobile Stack */}
+                          <div className="flex flex-col gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="break-all">📧 {selectedCandidate.email}</span>
+                            <span>📱 {selectedCandidate.phone}</span>
                           </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="break-all">📧 {selectedCandidate.email}</span>
-                          <span>📱 {selectedCandidate.phone}</span>
-                        </div>
                       </div>
-                    </div>
 
-                    {/* Applied Position */}
-                    <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-                      {/* Personal Details Grid */}
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                        {selectedCandidate.date_of_birth && (
+                      {/* Personal Details Grid - Mobile Responsive */}
+                      <div className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                        {/* Personal Details Grid - Mobile Responsive */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                          {selectedCandidate.date_of_birth && (
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                                DATE OF BIRTH
+                                <sup>
+                                  <i className="text-blue-400">
+                                    {differenceInYears(
+                                      new Date(),
+                                      new Date(selectedCandidate.date_of_birth)
+                                    ) + " year"}
+                                  </i>
+                                </sup>
+                              </p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">
+                                {formatDate(selectedCandidate.date_of_birth)}
+                              </p>
+                            </div>
+                          )}
+
+                          {selectedCandidate.gender && (
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                                GENDER
+                              </p>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {selectedCandidate.gender}
+                              </p>
+                            </div>
+                          )}
+
                           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                              DATE OF BIRTH
-                              <sup>
-                                <i className="text-blue-400">
-                                  {differenceInYears(
-                                    new Date(),
-                                    new Date(selectedCandidate.date_of_birth)
-                                  ) + " year"}
-                                </i>
-                              </sup>
+                              REGISTRATION
                             </p>
-                            <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                              {formatDate(selectedCandidate.date_of_birth)}
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">
+                              {formatDate(selectedCandidate.registration_date)}
                             </p>
                           </div>
-                        )}
 
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                            REGISTRATION
-                          </p>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                            {formatDate(selectedCandidate.registration_date)}
-                          </p>
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
+                              SHORTLISTED
+                            </p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              {selectedCandidate.shortlisted ? "✅ Yes" : "❌ No"}
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">
-                            SHORTLISTED
-                          </p>
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
-                            {selectedCandidate.shortlisted ? "✅ Yes" : "❌ No"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Address */}
-                      {selectedCandidate.address && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 mt-4">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
-                            Address
-                          </p>
-                          <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
-                            {selectedCandidate.address}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Job Details Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
-                        {selectedCandidate.applied_job?.title && (
-                          <div className="sm:col-span-2 font-semibold text-sm text-gray-800 dark:text-gray-200">
-                            📌 {selectedCandidate.applied_job.title}
+                        {/* Address - Mobile Responsive */}
+                        {selectedCandidate.address && (
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 mt-4">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2 uppercase tracking-wide">
+                              Address
+                            </p>
+                            <p className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                              {selectedCandidate.address}
+                            </p>
                           </div>
                         )}
-                        {selectedCandidate.applied_job?.location && (
-                          <div>📍 {selectedCandidate.applied_job?.location}</div>
-                        )}
-                        {selectedCandidate.applied_job?.country && (
-                          <div>🌍 {selectedCandidate.applied_job.country}</div>
-                        )}
-                        {selectedCandidate.applied_job?.time && (
-                          <div>⏰ {selectedCandidate.applied_job.time}</div>
-                        )}
-                        {selectedCandidate.applied_job?.expInYears && (
-                          <div>💼 {selectedCandidate.applied_job.expInYears}Years</div>
-                        )}
-                        {selectedCandidate.applied_job?.salary && (
-                          <div className="sm:col-span-2">
-                            💰 {selectedCandidate.applied_job.salary}
-                          </div>
-                        )}
+
+                        {/* Job Details Grid - Mobile Responsive */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
+                          {selectedCandidate.applied_job?.title && (
+                            <div className="sm:col-span-2 font-semibold text-sm text-gray-800 dark:text-gray-200 break-words">
+                              📌 {selectedCandidate.applied_job.title}
+                            </div>
+                          )}
+                          {selectedCandidate.applied_job?.location && (
+                            <div className="break-words">📍 {selectedCandidate.applied_job?.location}</div>
+                          )}
+                          {selectedCandidate.applied_job?.country && (
+                            <div className="break-words">🌍 {selectedCandidate.applied_job.country}</div>
+                          )}
+                          {selectedCandidate.applied_job?.time && (
+                            <div className="break-words">⏰ {selectedCandidate.applied_job.time}</div>
+                          )}
+                          {selectedCandidate.applied_job?.expInYears && (
+                            <div className="break-words">💼 {selectedCandidate.applied_job.expInYears}Years</div>
+                          )}
+                          {selectedCandidate.applied_job?.salary && (
+                            <div className="sm:col-span-2 break-words">
+                              💰 {selectedCandidate.applied_job.salary}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-
-
+                  )}
+                </CardContent>
               </Card>
+
 
               {/* Documents - Compact One Line Version */}
               {selectedCandidate.documents &&
@@ -2211,49 +2282,46 @@ const InvigilatorHome = () => {
                   </Card>
                 )}
 
-              {/* Internal Feedback Section - Enhanced with Stage Information */}
-              {selectedCandidate.internal_feedback &&
-                selectedCandidate.internal_feedback.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <CardTitle>
-                          💬 Internal Feedback
-                          <Badge variant="secondary" className="text-xs ml-2">
-                            {selectedCandidate.internal_feedback.length}
-                          </Badge>
-                        </CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setFeedBackCollapsed(!feedBackCollapsed)
-                          }
-                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                          <span className="text-sm font-medium">
-                            {feedBackCollapsed ? "Show" : "Hide"}
-                          </span>
-                          {feedBackCollapsed ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronUp className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {!feedBackCollapsed &&
-                          selectedCandidate.internal_feedback.map(
-                            (feedback) => (
+                {/* Internal Feedback Section - Enhanced with Stage Information */}
+                {selectedCandidate.internal_feedback &&
+                  selectedCandidate.internal_feedback.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <CardTitle>
+                            Internal Feedback{" "}
+                            <Badge variant="secondary" className="text-xs ml-2">
+                              {selectedCandidate.internal_feedback.length}
+                            </Badge>
+                          </CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setFeedBackCollapsed(!feedBackCollapsed)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                          >
+                            <span className="text-sm font-medium">
+                              {feedBackCollapsed ? "Show" : "Hide"}
+                            </span>
+                            {feedBackCollapsed ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronUp className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {!feedBackCollapsed &&
+                            selectedCandidate.internal_feedback.map((feedback) => (
                               <div
                                 key={feedback._id}
                                 className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20"
                               >
-                                <div className="flex items-start justify-between mb-3">
+                                <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                                   <div className="flex items-center gap-3">
-                                    <Avatar className="w-10 h-10">
+                                    <Avatar className="w-10 h-10 flex-shrink-0">
                                       <AvatarFallback className="text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                                         {feedback.feedback_by.name
                                           .split(" ")
@@ -2261,11 +2329,11 @@ const InvigilatorHome = () => {
                                           .join("")}
                                       </AvatarFallback>
                                     </Avatar>
-                                    <div>
-                                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 break-words">
                                         {feedback.feedback_by.name}
                                       </p>
-                                      <div className="flex items-center gap-2 mt-1">
+                                      <div className="flex flex-wrap items-center gap-2 mt-1">
                                         <Badge
                                           variant="outline"
                                           className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700"
@@ -2275,23 +2343,20 @@ const InvigilatorHome = () => {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="text-right">
+                                  <div className="text-left sm:text-right flex-shrink-0">
                                     <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">
-                                      💬 Feedback
+                                      Feedback
                                     </div>
-                                    <div className="flex items-center justify-end gap-1">
+                                    <div className="flex flex-wrap sm:justify-end items-center gap-1">
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         At
                                       </span>
                                       <Badge
-                                        className={`text-xs ${getStageColor(
-                                          feedback.feedback_at
-                                        )}`}
+                                        className={`text-xs ${getStageColor(feedback.feedback_at)}`}
                                       >
-                                        {feedback.feedback_at &&
-                                          feedback.feedback_at
-                                            .replace("_", " ")
-                                            .toUpperCase()}
+                                        {feedback.feedback_at
+                                          ? feedback.feedback_at.replace("_", " ").toUpperCase()
+                                          : "UNKNOWN"}
                                       </Badge>
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         stage
@@ -2299,108 +2364,99 @@ const InvigilatorHome = () => {
                                     </div>
                                   </div>
                                 </div>
-
                                 <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-                                    "{feedback.feedback}"
+                                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed break-words">
+                                    {feedback.feedback}
                                   </p>
                                 </div>
                               </div>
-                            )
-                          )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-              {/* Stage History */}
-              {selectedCandidate.stage_history &&
-                selectedCandidate.stage_history.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <CardTitle>Application Time-Line</CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setTimeLineCollapsed(!timeLineCollapsed)
-                          }
-                          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                          <span className="text-sm font-medium">
-                            {timeLineCollapsed ? "Show" : "Hide"}
-                          </span>
-                          {timeLineCollapsed ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronUp className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {!timeLineCollapsed &&
-                          selectedCandidate.stage_history.map((stage) => (
-                            <div
-                              key={stage._id}
-                              className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {stage.action?.toUpperCase() ||
-                                        "STAGE_CHANGE"}
-                                    </Badge>
-                                    <p className="text-sm font-semibold capitalize text-gray-900 dark:text-gray-100">
+
+                {/* Stage History */}
+                {selectedCandidate.stage_history &&
+                  selectedCandidate.stage_history.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <CardTitle>Application Time-Line</CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setTimeLineCollapsed(!timeLineCollapsed)}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                          >
+                            <span className="text-sm font-medium">
+                              {timeLineCollapsed ? "Show" : "Hide"}
+                            </span>
+                            {timeLineCollapsed ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronUp className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {!timeLineCollapsed &&
+                            selectedCandidate.stage_history.map((stage) => (
+                              <div
+                                key={stage._id}
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 hover:shadow transition"
+                              >
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                      <Badge variant="outline" className="text-xs">
+                                        {stage.action?.toUpperCase() || "STAGE_CHANGE"}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm font-semibold capitalize text-gray-900 dark:text-gray-100 break-words">
                                       {stage.from_stage
                                         ? `${stage.from_stage} → ${stage.to_stage}`
                                         : stage.to_stage}
                                     </p>
+                                    {stage.changed_by ? (
+                                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                                        Changed by{" "}
+                                        <span className="font-medium break-words">
+                                          {stage.changed_by.name}
+                                        </span>
+                                        <span className="ml-1 text-gray-500 dark:text-gray-500">
+                                          ({stage.changed_by.role})
+                                        </span>
+                                      </p>
+                                    ) : (
+                                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                                        System generated
+                                      </p>
+                                    )}
                                   </div>
-
-                                  {stage.changed_by ? (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                      Changed by:{" "}
-                                      <span className="font-medium">
-                                        {stage.changed_by.name}
-                                      </span>
-                                      <span className="ml-1 text-gray-500 dark:text-gray-500">
-                                        • {stage.changed_by.role}
-                                      </span>
-                                    </p>
-                                  ) : (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                      System generated
-                                    </p>
-                                  )}
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {formatDate(stage.changed_at)}
+                                  </span>
                                 </div>
-
-                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
-                                  {formatDate(stage.changed_at)}
-                                </span>
+                                {stage.remarks && (
+                                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 italic break-words">
+                                      {stage.remarks}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                              {stage.remarks && (
-                                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 italic">
-                                    "{stage.remarks}"
-                                  </p>
-                                </div>
-                              )}
                             </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-            </div>
-          )}
+                          )}
         </DialogContent>
       </Dialog>
 

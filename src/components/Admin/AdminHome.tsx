@@ -51,7 +51,7 @@ import {
   Check,
 } from "lucide-react";
 import api from "@/lib/api";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import GloryDisplay from "../GloryDisplay";
 import { differenceInYears } from "date-fns";
@@ -194,6 +194,7 @@ const AdminHome = () => {
     return isCompact;
   }
   const isCompact = useIsCompact(1220);
+  const isMobile = useIsCompact(430)
   const [personalCollapsed, setPersonalInfoCollapsed] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [documentCollapsed, setDocumentCollapsed] = useState(false);
@@ -363,7 +364,6 @@ const AdminHome = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <Toaster position="bottom-right" containerStyle={{ zIndex: 9999 }} />
 
       {/* Page Header */}
       <div>
@@ -484,7 +484,7 @@ const AdminHome = () => {
           </div>
 
           {/* Candidates Table */}
-          <div className="border rounded-lg">
+          {!isMobile && <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -587,7 +587,50 @@ const AdminHome = () => {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </div>}
+          {/* Mobile Table - Only Candidate Column */}
+          {isMobile && (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCandidates.map((candidate) => (
+                    <TableRow
+                      key={candidate._id}
+                      onClick={() => fetchCandidateDetails(candidate._id)}
+                      className="cursor-pointer hover:bg-muted transition-colors"
+                    >
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar>
+                            <AvatarImage src={candidate.profile_photo_url?.url} />
+                            <AvatarFallback>
+                              {candidate.first_name?.[0]}
+                              {candidate.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">
+                              {candidate.first_name} {candidate.last_name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {candidate.gender} •{" "}
+                              {formatDate(candidate.date_of_birth)}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
 
           {filteredCandidates.length === 0 && (
             <div className="text-center py-8">

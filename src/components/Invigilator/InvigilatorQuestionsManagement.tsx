@@ -21,7 +21,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Edit, Trash, Search, X, Loader2 } from 'lucide-react';
 import api from '@/lib/api';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 // Updated schema with correct_answer (singular) and proper required fields
 const singleQuestionSchema = z.object({
@@ -220,6 +220,7 @@ const InvigilatorQuestionsManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [selectedQuestionForAction, setSelectedQuestionForAction] = useState<Question | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
@@ -241,6 +242,7 @@ const InvigilatorQuestionsManagement = () => {
     return isCompact;
   }
   const isCompact = useIsCompact(1220);
+  const isMobile = useIsCompact(430);
   // Tag mode states
   const [useSameTagsForAll, setUseSameTagsForAll] = useState(false);
   const [globalTags, setGlobalTags] = useState('');
@@ -456,7 +458,6 @@ const InvigilatorQuestionsManagement = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <Toaster position="bottom-right" toastOptions={{ style: { zIndex: 9999 } }} />
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -551,7 +552,7 @@ const InvigilatorQuestionsManagement = () => {
       </Card>
 
       {/* Questions Table */}
-      <Card className='flex flex-col overflow-y-auto mb-7'>
+      <Card className="flex flex-col overflow-y-auto mb-7">
         <CardHeader>
           <CardTitle>Questions ({filteredQuestions.length})</CardTitle>
         </CardHeader>
@@ -561,130 +562,282 @@ const InvigilatorQuestionsManagement = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Question</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Difficulty</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Must Ask</TableHead>
-                    <TableHead>Tags</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuestions.map(question => (
-                    <TableRow key={question._id}>
-                      <TableCell className={`min-w-0 ${
-                          isCompact ? "max-w-[100px]" : "max-w-[300px]"
-                        }`}>
-                        {question.text.length > 50 ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="truncate text-sm cursor-help">
+            <>
+              {/* Desktop Table */}
+              {!isMobile && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Question</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Difficulty</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Must Ask</TableHead>
+                        <TableHead>Tags</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredQuestions.map((question) => (
+                        <TableRow key={question._id}>
+                          <TableCell className={`min-w-0 ${isCompact ? 'max-w-[100px]' : 'max-w-[300px]'}`}>
+                            {question.text.length > 50 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="truncate text-sm cursor-help">
+                                    {question.text}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs break-words">
+                                    {question.text}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <div className="text-sm">
                                 {question.text}
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs break-words">
-                                {question.text}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <div className="text-sm">
-                            {question.text}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getTypeColor(question.type)}>
-                          {question.type.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {question.difficulty ? (
-                          <Badge className={getDifficultyColor(question.difficulty)}>
-                            {question.difficulty.toUpperCase()}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{question.max_score}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          <Badge
-                            variant={question.is_must_ask ? "destructive" : "secondary"}
-                            className="text-xs"
-                            title={question.is_must_ask ? "Required" : "Optional"} // full text on hover
-                          >
-                            {isCompact
-                              ? truncateTag(question.is_must_ask ? "Required" : "Optional", true, 3)
-                              : question.is_must_ask ? "Required" : "Optional"}
-                          </Badge>
-                        </div>
-                      </TableCell>
-
-
-                      <TableCell>
-                      {question.tags && question.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {question.tags.map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className="text-xs"
-                              title={tag} // full text on hover
-                            >
-                              {isCompact ? truncateTag(tag, false, 12) : tag}
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getTypeColor(question.type)}>
+                              {question.type.toUpperCase()}
                             </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No tags</span>
-                      )}
-                    </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => openEditDialog(question,e)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={(e) => handleDelete(question._id,e)}
-                            disabled={deleteLoadingId === question._id}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell>
+                            {question.difficulty ? (
+                              <Badge className={getDifficultyColor(question.difficulty)}>
+                                {question.difficulty.toUpperCase()}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{question.max_score}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              <Badge 
+                                variant={question.is_must_ask ? "destructive" : "secondary"} 
+                                className="text-xs" 
+                                title={question.is_must_ask ? "Required" : "Optional"}
+                              >
+                                {isCompact ? truncateTag(question.is_must_ask ? "Required" : "Optional", true, 3) : (question.is_must_ask ? "Required" : "Optional")}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {question.tags && question.tags.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {question.tags.map((tag, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="outline"
+                                    className="text-xs"
+                                    title={tag}
+                                  >
+                                    {isCompact ? truncateTag(tag, false, 12) : tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">No tags</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => openEditDialog(question, e)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={(e) => handleDelete(question._id, e)}
+                                disabled={deleteLoadingId === question._id}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {/* Mobile Table */}
+              {isMobile && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-full">Question</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredQuestions.map((question) => (
+                        <TableRow
+                          key={question._id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => setSelectedQuestionForAction(question)}
+                        >
+                          <TableCell className="w-full pr-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate text-sm mb-1">
+                                {question.text.length > 20 
+                                  ? `${question.text.substring(0, 20)}...` 
+                                  : question.text}
+                              </div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge className={getTypeColor(question.type)} variant="outline">
+                                  {question.type.toUpperCase()}
+                                </Badge>
+                                {question.difficulty && (
+                                  <Badge className={getDifficultyColor(question.difficulty)} variant="outline">
+                                    {question.difficulty.toUpperCase()}
+                                  </Badge>
+                                )}
+                                <Badge variant={question.is_must_ask ? "destructive" : "secondary"} className="text-xs">
+                                  {question.is_must_ask ? "Required" : "Optional"}
+                                </Badge>
+                              </div>
+                              {question.tags && question.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {question.tags.slice(0, 3).map((tag, index) => (
+                                    <Badge
+                                      key={index}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {truncateTag(tag, false, 10)}
+                                    </Badge>
+                                  ))}
+                                  {question.tags.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{question.tags.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
               {filteredQuestions.length === 0 && !loading && (
                 <div className="text-center py-10">
                   <p className="text-muted-foreground">
-                    {searchTerm || typeFilter !== 'all' || difficultyFilter !== 'all'
+                    {searchTerm || typeFilter !== 'all' || difficultyFilter !== 'all' 
                       ? 'No questions match your filters.' 
                       : 'No questions found. Create your first question!'
                     }
                   </p>
                 </div>
               )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile Actions Dialog */}
+      <Dialog open={!!selectedQuestionForAction} onOpenChange={(open) => !open && setSelectedQuestionForAction(null)}>
+        <DialogContent className="w-[95vw] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Question Actions</DialogTitle>
+            <DialogDescription>
+              Choose an action for this technical question
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedQuestionForAction && (
+            <div className="space-y-4">
+              {/* Question Preview */}
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="font-medium text-sm mb-2">
+                  {selectedQuestionForAction.text.length > 100 
+                    ? `${selectedQuestionForAction.text.substring(0, 100)}...` 
+                    : selectedQuestionForAction.text}
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className={getTypeColor(selectedQuestionForAction.type)} variant="outline">
+                      {selectedQuestionForAction.type.toUpperCase()}
+                    </Badge>
+                    {selectedQuestionForAction.difficulty && (
+                      <Badge className={getDifficultyColor(selectedQuestionForAction.difficulty)} variant="outline">
+                        {selectedQuestionForAction.difficulty.toUpperCase()}
+                      </Badge>
+                    )}
+                    <Badge variant={selectedQuestionForAction.is_must_ask ? "destructive" : "secondary"} className="text-xs">
+                      {selectedQuestionForAction.is_must_ask ? "Required" : "Optional"}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <div>Max Score: {selectedQuestionForAction.max_score}</div>
+                    {selectedQuestionForAction.tags && selectedQuestionForAction.tags.length > 0 && (
+                      <div>Tags: {selectedQuestionForAction.tags.length}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    const question = selectedQuestionForAction;
+                    setSelectedQuestionForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    openEditDialog(question, mockEvent);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Question
+                </Button>
+                
+                <Button
+                  className="w-full justify-start text-red-600 hover:text-red-700"
+                  variant="outline"
+                  onClick={() => {
+                    const question = selectedQuestionForAction;
+                    setSelectedQuestionForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    handleDelete(question._id, mockEvent);
+                  }}
+                  disabled={deleteLoadingId === selectedQuestionForAction._id}
+                >
+                  {deleteLoadingId === selectedQuestionForAction._id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash className="w-4 h-4 mr-2" />
+                  )}
+                  Delete Question
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedQuestionForAction(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

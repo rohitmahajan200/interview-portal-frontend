@@ -112,7 +112,6 @@ const OrgSetupPasswordForm: React.FC = () => {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-12">
-      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-sm">
         <Card className="shadow-lg rounded-2xl border">
           <CardHeader className="space-y-3 text-center">

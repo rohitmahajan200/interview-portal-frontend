@@ -37,7 +37,6 @@ export const EmailVerification = () => {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 sm:px-6 md:px-10 py-12">
-      <Toaster position="top-center" reverseOrder={false} />
       <div className="w-full max-w-lg">
         <Card className="shadow-lg rounded-2xl border p-8 space-y-6">
           

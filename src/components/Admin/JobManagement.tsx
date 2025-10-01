@@ -55,7 +55,7 @@ import {
   Award,
 } from "lucide-react";
 import api from "@/lib/api";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 // Updated interface based on new schema
 export interface IJob {
@@ -278,16 +278,14 @@ const JobManagement = () => {
       
       return matches;
     };
-
   const handleCreateJob = async () => {
     if (!formData.title.trim() || !formData.category.trim() || !formData.description.length) {
-      toast.error("Title, category, and description are required");
+      toast.error('Title, category, and description are required');
       return;
     }
 
     try {
       setIsCreating(true);
-      
       // Format description and requirements as HTML
       const formattedData = {
         ...formData,
@@ -295,20 +293,39 @@ const JobManagement = () => {
         requirements: formatRequirementsToHTML(formData.requirements),
       };
 
-      const response = await api.post("/org/jobs", formattedData);
+      const response = await api.post('/org/jobs/', formattedData);
 
       if (response.data.success) {
-        toast.success("Job created successfully");
+        toast.success('Job created successfully');
         setShowCreateDialog(false);
         resetForm();
         await fetchJobs();
         await fetchAutocompleteData(); // Refresh autocomplete data
       } else {
-        toast.error(response.data.message || "Failed to create job");
+        toast.error(response.data.message || 'Failed to create job');
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || "Failed to create job";
-      toast.error(errorMessage);
+      // Enhanced error handling for validation errors - ONLY FIRST ERROR
+      if (error?.response?.data?.errors && typeof error.response.data.errors === 'object') {
+        // Handle structured validation errors
+        const validationErrors = error.response.data.errors;
+        
+        // Display only the first validation error
+        for (const [field, messages] of Object.entries(validationErrors)) {
+          if (Array.isArray(messages) && messages.length > 0) {
+            // Show only the first message of the first field
+            toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${messages[0]}`);
+            break; // Exit after showing first error
+          } else if (typeof messages === 'string') {
+            toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${messages}`);
+            break; // Exit after showing first error
+          }
+        }
+      } else {
+        // Fallback for other error types
+        const errorMessage = error?.response?.data?.message || 'Failed to create job';
+        toast.error(errorMessage);
+      }
     } finally {
       setIsCreating(false);
     }
@@ -319,7 +336,6 @@ const JobManagement = () => {
 
     try {
       setIsEditing(true);
-      
       // Format description and requirements as HTML
       const formattedData = {
         ...formData,
@@ -330,22 +346,43 @@ const JobManagement = () => {
       const response = await api.put(`/org/jobs/${editingJob._id}`, formattedData);
 
       if (response.data.success) {
-        toast.success("Job updated successfully");
+        toast.success('Job updated successfully');
         setShowEditDialog(false);
         setEditingJob(null);
         resetForm();
         await fetchJobs();
         await fetchAutocompleteData(); // Refresh autocomplete data
       } else {
-        toast.error(response.data.message || "Failed to update job");
+        toast.error(response.data.message || 'Failed to update job');
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || "Failed to update job";
-      toast.error(errorMessage);
+      // Enhanced error handling for validation errors - ONLY FIRST ERROR
+      if (error?.response?.data?.errors && typeof error.response.data.errors === 'object') {
+        // Handle structured validation errors
+        const validationErrors = error.response.data.errors;
+        
+        // Display only the first validation error
+        for (const [field, messages] of Object.entries(validationErrors)) {
+          if (Array.isArray(messages) && messages.length > 0) {
+            // Show only the first message of the first field
+            toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${messages[0]}`);
+            break; // Exit after showing first error
+          } else if (typeof messages === 'string') {
+            toast.error(`${field.charAt(0).toUpperCase() + field.slice(1)}: ${messages}`);
+            break; // Exit after showing first error
+          }
+        }
+      } else {
+        // Fallback for other error types
+        const errorMessage = error?.response?.data?.message || 'Failed to update job';
+        toast.error(errorMessage);
+      }
     } finally {
       setIsEditing(false);
     }
   };
+
+
 
   const handleDeleteJob = async (jobId: string) => {
     try {
@@ -792,7 +829,6 @@ const JobManagement = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
-      <Toaster position="bottom-right" />
       
       <div className="max-w-7xl mx-auto">
         {/* Header */}
