@@ -242,25 +242,25 @@ export default function Assessments() {
   /* ------------------------------- Rendering ------------------------------ */
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header / search ----------------------------------------------------- */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
           Assigned Assessments
         </h2>
-        <div className="relative w-full md:w-64">
+        <div className="relative w-full sm:w-48 md:w-64">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search assessments…"
-            className="pl-9"
+            className="pl-9 text-sm"
           />
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         </div>
       </div>
 
       {/* Filter buttons ------------------------------------------------------ */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
         {([
           ["all", counts.all, "All"],
           ["pending", counts.pending, "Pending"],
@@ -271,19 +271,19 @@ export default function Assessments() {
           <Button
             key={key}
             variant={filter === key ? "default" : "outline"}
-            className="justify-between"
+            className="justify-between text-xs sm:text-sm h-8 sm:h-10"
             onClick={() => setFilter(key as any)}
           >
-            <span>{label}</span>
-            <Badge variant={filter === key ? "secondary" : "outline"}>
+            <span className="truncate">{label}</span>
+            <Badge variant={filter === key ? "secondary" : "outline"} className="ml-1 text-xs">
               {val}
             </Badge>
           </Button>
         ))}
       </div>
 
-      {/* Summary cards ------------------------------------------------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Summary cards - Hide on small screens */}
+      <div className="hidden sm:grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Technical</CardTitle>
@@ -324,50 +324,50 @@ export default function Assessments() {
         </Card>
       </div>
 
-      <Separator />
+      <Separator className="hidden sm:block" />
 
       {/* Error / loading / empty states -------------------------------------- */}
       {error && (
         <Alert className="border-red-200 bg-red-50 dark:bg-red-950/30">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-sm">{error}</AlertDescription>
         </Alert>
       )}
 
       {loading ? (
         <Card className="overflow-hidden">
           <CardContent className="p-0">
-            <div className="animate-pulse p-6 space-y-4">
-              <div className="h-4 bg-muted rounded w-1/3" />
-              <div className="h-4 bg-muted rounded w-2/3" />
-              <div className="h-4 bg-muted rounded w-1/2" />
-              <div className="h-4 bg-muted rounded w-3/4" />
+            <div className="animate-pulse p-4 sm:p-6 space-y-3 sm:space-y-4">
+              <div className="h-3 sm:h-4 bg-muted rounded w-1/3" />
+              <div className="h-3 sm:h-4 bg-muted rounded w-2/3" />
+              <div className="h-3 sm:h-4 bg-muted rounded w-1/2" />
+              <div className="h-3 sm:h-4 bg-muted rounded w-3/4" />
             </div>
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
+          <CardContent className="py-8 sm:py-10 text-center text-muted-foreground text-sm sm:text-base">
             No assessments to show.
           </CardContent>
         </Card>
       ) : (
         /* ------------------------------------------------------------------ */
-        /*                             Data table                             */
+        /*                           Responsive table                         */
         /* ------------------------------------------------------------------ */
         <div className="overflow-x-auto rounded-lg shadow border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-          <Table className="min-w-[900px]">
-            <TableCaption className="text-sm text-gray-500 dark:text-gray-400 p-4">
+          <Table className="min-w-full">
+            <TableCaption className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 p-2 sm:p-4">
               HR & Technical assessments with actions.
             </TableCaption>
             <TableHeader className="bg-gray-100 dark:bg-gray-800">
               <TableRow>
-                <TableHead className="text-center">Type</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Assigned</TableHead>
-                <TableHead className="text-center">Due</TableHead>
-                <TableHead className="text-center">Details</TableHead>
-                <TableHead className="text-center">Action</TableHead>
+                <TableHead className="text-center text-xs sm:text-sm">Type</TableHead>
+                <TableHead className="text-center text-xs sm:text-sm hidden sm:table-cell">Status</TableHead>
+                <TableHead className="text-center text-xs sm:text-sm hidden md:table-cell">Assigned</TableHead>
+                <TableHead className="text-center text-xs sm:text-sm hidden md:table-cell">Due</TableHead>
+                <TableHead className="text-center text-xs sm:text-sm hidden md:table-cell">Details</TableHead>
+                <TableHead className="text-center text-xs sm:text-sm">Action</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -401,9 +401,9 @@ export default function Assessments() {
                   : "";
 
                 const btnIcon = isPending ? (
-                  <Play className="h-4 w-4" />
+                  <Play className="h-3 w-3 sm:h-4 sm:w-4" />
                 ) : (
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
                 );
 
                 /* Badge text / icons --------------------------------------------- */
@@ -412,14 +412,13 @@ export default function Assessments() {
 
                 if (isCompleted || isHrSubmitted) {
                   badgeLabel = isTech ? "Completed" : "Submitted";
-                  badgeIcon = <CheckCircle2 className="h-4 w-4" />;
+                  badgeIcon = <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />;
                 } else if (isExpired) {
                   badgeLabel = "Expired";
-                  badgeIcon = <Ban className="h-4 w-4" />;
+                  badgeIcon = <Ban className="h-3 w-3 sm:h-4 sm:w-4" />;
                 } else if (isStarted) {
-                  /* should never hit (started always button) */
                   badgeLabel = "In Progress";
-                  badgeIcon = <RotateCcw className="h-4 w-4" />;
+                  badgeIcon = <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />;
                 }
 
                 return (
@@ -427,43 +426,52 @@ export default function Assessments() {
                     key={(r as any)._id || (r as any).id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                   >
-                    {/* --------------------- Type -------------------------------- */}
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    {/* --------------------- Type (Always visible) -------------- */}
+                    <TableCell className="text-center p-2 sm:p-4">
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
                         {isTech ? (
-                          <ClipboardList className="h-4 w-4 text-blue-600" />
+                          <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                         ) : (
-                          <Users className="h-4 w-4 text-purple-600" />
+                          <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
                         )}
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="outline" className="capitalize text-xs">
                           {isTech ? r.assessment_type || "technical" : "hr"}
+                        </Badge>
+                        {/* Show status on mobile (since status column is hidden) */}
+                        <Badge
+                          variant={statusBadgeVariant(status)}
+                          className="capitalize text-xs sm:hidden mt-1"
+                        >
+                          {status}
                         </Badge>
                       </div>
                     </TableCell>
 
-                    {/* --------------------- Status ------------------------------ */}
-                    <TableCell className="text-center">
+                    {/* --------------------- Status (Hidden on mobile) ---------- */}
+                    <TableCell className="text-center p-2 sm:p-4 hidden sm:table-cell">
                       <Badge
                         variant={statusBadgeVariant(status)}
-                        className="capitalize"
+                        className="capitalize text-xs sm:text-sm"
                       >
                         {status}
                       </Badge>
                     </TableCell>
 
-                    {/* ------------------ Assigned / Due ------------------------ */}
-                    <TableCell className="text-center">
+                    {/* ------------------ Assigned (Hidden on medium and below) - */}
+                    <TableCell className="text-center p-2 sm:p-4 hidden md:table-cell text-xs sm:text-sm">
                       {fmtDateTime(r.assigned_at)}
                     </TableCell>
-                    <TableCell className="text-center">
+
+                    {/* ------------------ Due (Hidden on medium and below) ------ */}
+                    <TableCell className="text-center p-2 sm:p-4 hidden md:table-cell text-xs sm:text-sm">
                       {fmtDateTime(r.due_at)}
                     </TableCell>
 
-                    {/* ---------------------- Details ---------------------------- */}
-                    <TableCell className="text-center">
+                    {/* ---------------------- Details (Hidden on medium and below) */}
+                    <TableCell className="text-center p-2 sm:p-4 hidden md:table-cell">
                       {isTech ? (
                         <div className="space-y-1">
-                          <div className="text-xs text-muted-foreground flex items-center justify-center gap-2">
+                          <div className="text-xs text-muted-foreground flex items-center justify-center gap-1 sm:gap-2">
                             <Timer className="h-3 w-3" />
                             <span>
                               Duration:{" "}
@@ -474,7 +482,7 @@ export default function Assessments() {
                           {typeof r.time_remaining_ms === "number" &&
                             isStarted && (
                               <div className="space-y-1">
-                                <div className="text-[11px] text-muted-foreground flex items-center justify-center gap-2">
+                                <div className="text-[10px] sm:text-[11px] text-muted-foreground flex items-center justify-center gap-1 sm:gap-2">
                                   <CalendarClock className="h-3 w-3" />
                                   <span>
                                     Remaining:{" "}
@@ -493,23 +501,23 @@ export default function Assessments() {
                                         : 0
                                     )
                                   )}
-                                  className="h-2 w-48 mx-auto"
+                                  className="h-1 sm:h-2 w-32 sm:w-48 mx-auto"
                                 />
                               </div>
                             )}
 
                           {r.assigned_by?.name && (
-                            <div className="text-[11px] text-muted-foreground">
+                            <div className="text-[10px] sm:text-[11px] text-muted-foreground">
                               By {r.assigned_by.name}
                             </div>
                           )}
                           {typeof r.questions_count === "number" && (
-                            <div className="text-[11px] text-muted-foreground">
+                            <div className="text-[10px] sm:text-[11px] text-muted-foreground">
                               Questions: {r.questions_count}
                             </div>
                           )}
                           {r.is_seb && (
-                            <div className="text-[11px] text-blue-600">
+                            <div className="text-[10px] sm:text-[11px] text-blue-600">
                               SEB required
                             </div>
                           )}
@@ -521,21 +529,22 @@ export default function Assessments() {
                       )}
                     </TableCell>
 
-                    {/* ---------------------- Action ----------------------------- */}
-                    <TableCell className="text-center">
+                    {/* ---------------------- Action (Always visible) ----------- */}
+                    <TableCell className="text-center p-2 sm:p-4">
                       {showButton ? (
                         <Button
                           size="sm"
                           variant="default"
                           onClick={() => handleAction(r)}
+                          className="text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
                         >
                           {btnIcon}
-                          {btnLabel}
+                          <span className="ml-1">{btnLabel}</span>
                         </Button>
                       ) : (
                         <Badge
                           variant="outline"
-                          className="gap-1 px-2 py-1 capitalize"
+                          className="gap-1 px-2 py-1 capitalize text-xs"
                         >
                           {badgeIcon}
                           {badgeLabel}
@@ -550,27 +559,26 @@ export default function Assessments() {
         </div>
       )}
 
-      {/* Updated Dialog with conditional content */}
-        <Dialog
-          open={Boolean(showSebDialog)}
-          onOpenChange={(open) => {
-            if (!open) {
-              setShowSebDialog(null);
-              setIsDownloaded(false);
-              setCopySuccess(false); // ✅ Add this line
-            } else {
-              setIsDownloaded(false);
-              setCopySuccess(false); // ✅ Add this line
-            }
-          }}
-        >
-
-        <DialogContent className="max-w-md">
+      {/* Dialog remains the same but with responsive text */}
+      <Dialog
+        open={Boolean(showSebDialog)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowSebDialog(null);
+            setIsDownloaded(false);
+            setCopySuccess(false);
+          } else {
+            setIsDownloaded(false);
+            setCopySuccess(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm sm:max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-sm sm:text-base">
               {showSebDialog?.is_seb ? "Safe Exam Browser Required" : "Assessment Access Token"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               {showSebDialog?.is_seb ? (
                 <>
                   To begin this assessment, Safe Exam Browser (SEB) will be launched.
@@ -588,15 +596,15 @@ export default function Assessments() {
           </DialogHeader>
 
           {/* Access Token Display */}
-          <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-md">
-            <div className="text-sm text-muted-foreground mb-1">Access Token:</div>
-            <div className="font-mono text-sm break-all select-all bg-white dark:bg-gray-900 p-2 rounded border">
+          <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-800 rounded-md">
+            <div className="text-xs sm:text-sm text-muted-foreground mb-1">Access Token:</div>
+            <div className="font-mono text-xs sm:text-sm break-all select-all bg-white dark:bg-gray-900 p-2 rounded border">
               {showSebDialog?.access_token}
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className={`mt-2 w-full transition-all duration-200 ${
+              className={`mt-2 w-full transition-all duration-200 text-xs sm:text-sm ${
                 copySuccess 
                   ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
                   : ''
@@ -608,38 +616,39 @@ export default function Assessments() {
                     setCopySuccess(true);
                     setTimeout(() => setCopySuccess(false), 2000);
                   } catch (err) {
-                                      }
+                    // Handle clipboard error
+                  }
                 }
               }}
             >
               {copySuccess ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 mr-2 animate-pulse" />
+                  <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2 animate-pulse" />
                   Copied!
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4 mr-2" />
+                  <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Copy Token
                 </>
               )}
             </Button>
           </div>
 
-
           {/* SEB-specific content */}
           {showSebDialog?.is_seb && (
             <>
-              <p>
+              <p className="text-xs sm:text-sm">
                 <input
                   type="checkbox"
                   checked={isDownloaded}
                   onChange={(e) => setIsDownloaded(e.target.checked)}
+                  className="mr-2"
                 />{" "}
                 I have already downloaded Safe Exam Browser (SEB)
               </p>
 
-              <p className="mb-2 text-sm">
+              <p className="mb-2 text-xs sm:text-sm">
                 If you do not have SEB installed, download it from
                 <a
                   href="https://safeexambrowser.org/download_en.html"
@@ -655,7 +664,11 @@ export default function Assessments() {
           )}
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowSebDialog(null)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSebDialog(null)}
+              className="text-xs sm:text-sm h-8 sm:h-9 px-3"
+            >
               Cancel
             </Button>
 
@@ -666,17 +679,16 @@ export default function Assessments() {
                   if (!showSebDialog) return;
                   const row = showSebDialog;
 
-                  // Resolve API base and host safely
                   const apiBase =
                     (import.meta as any).env?.VITE_API_URL || window.location.origin;
                   const host = new URL(apiBase, window.location.origin).host;
 
-                  // Include token in SEB link (URL-encoded)
                   const sebUrl = `seb://${host}/api/candidates/seb/config?token=${row.access_token}`;
                   
                   window.location.href = sebUrl;
                   setShowSebDialog(null);
                 }}
+                className="text-xs sm:text-sm h-8 sm:h-9 px-3"
               >
                 Open Safe Exam Browser
               </Button>
@@ -685,12 +697,12 @@ export default function Assessments() {
                 onClick={() => {
                   if (!showSebDialog) return;
                   
-                  // For non-SEB assessments, redirect without token in query
                   const feBase =
                     ((import.meta as any).env?.VITE_FRONTEND_URL || "").replace(/\/$/, "");
                   window.location.href = `${feBase}/start-assessment`;
                   setShowSebDialog(null);
                 }}
+                className="text-xs sm:text-sm h-8 sm:h-9 px-3"
               >
                 Continue to Assessment
               </Button>

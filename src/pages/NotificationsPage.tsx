@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bell, Check, CheckCheck, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
@@ -37,7 +36,7 @@ const CandidateNotifications = () => {
         dispatch(setNotifications(res.data.data || []));
       }
     } catch (err) {
-            toast.error("Failed to load notifications");
+      toast.error("Failed to load notifications");
     } finally {
       setLocalLoading(false);
       dispatch(setLoading(false));
@@ -54,7 +53,7 @@ const CandidateNotifications = () => {
       dispatch(markAsRead(id));
       toast.success("Notification marked as read");
     } catch (err) {
-            toast.error("Failed to update notification");
+      toast.error("Failed to update notification");
     }
   };
 
@@ -64,24 +63,23 @@ const CandidateNotifications = () => {
       dispatch(markAllAsRead());
       toast.success("All notifications marked as read");
     } catch (err) {
-            toast.error("Failed to update notifications");
+      toast.error("Failed to update notifications");
     }
   };
 
-  const getTypeVariant = (type?: string) => {
-    if (!type) return "secondary";
-    const typeMap: Record<string, string> = {
-      error: "destructive",
-      warning: "outline",
-      success: "default",
-      info: "secondary",
-    };
-    
-    if (/error|expired|rejected/i.test(type)) return "destructive";
-    if (/warning|reminder/i.test(type)) return "outline";
-    if (/success|submitted|hired|assigned/i.test(type)) return "default";
-    
-    return typeMap[type.toLowerCase()] || "secondary";
+  const getTypeColor = (type?: string) => {
+    if (!type)
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+    switch (true) {
+      case /expired|rejected|error/i.test(type):
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case /reminder|warning/i.test(type):
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case /submitted|hired|success|assigned/i.test(type):
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      default:
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+    }
   };
 
   const filteredNotifications = notifications.filter((n) => {
@@ -91,131 +89,151 @@ const CandidateNotifications = () => {
   });
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 bg-background text-foreground">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Bell className="w-6 h-6" />
-          <div>
-            <h1 className="text-2xl font-semibold">Notifications</h1>
-            <p className="text-sm text-muted-foreground">
-              {unreadCount} unread notifications
+          <Bell className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground dark:text-foreground">
+              Notifications
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground dark:text-muted-foreground">
+              View the latest updates across assessments, interviews, and more
             </p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3 flex-wrap">
-          <Badge variant="outline" className="text-sm px-3 py-1">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Badge variant="outline" className="text-xs sm:text-sm w-fit">
             {unreadCount} unread
           </Badge>
-          <Button
-            onClick={fetchNotifications}
-            variant="outline"
-            size="default"
-            disabled={localLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${localLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          {unreadCount > 0 && (
-            <Button onClick={handleMarkAllAsRead}>
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Mark All Read
+          <div className="flex gap-2">
+            <Button
+              onClick={fetchNotifications}
+              variant="outline"
+              disabled={localLoading}
+              size="sm"
+              className="flex-1 sm:flex-none"
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${localLoading ? "animate-spin" : ""}`}
+              />
+              <span className="sm:hidden">Refresh</span>
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
-          )}
+            {unreadCount > 0 && (
+              <Button 
+                onClick={handleMarkAllAsRead} 
+                variant="default"
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
+                <CheckCheck className="h-4 w-4 mr-2" />
+                <span className="sm:hidden">Mark All</span>
+                <span className="hidden sm:inline">Mark All Read</span>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
-        <TabsList className="grid w-full grid-cols-3 mb-6 h-12">
-          <TabsTrigger value="all" className="text-sm font-medium">All</TabsTrigger>
-          <TabsTrigger value="unread" className="text-sm font-medium">
-            Unread {unreadCount > 0 && <Badge className="ml-2 text-xs">{unreadCount}</Badge>}
+        <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsTrigger value="all" className="text-xs sm:text-sm">
+            All
           </TabsTrigger>
-          <TabsTrigger value="read" className="text-sm font-medium">Read</TabsTrigger>
+          <TabsTrigger value="unread" className="text-xs sm:text-sm">
+            Unread{" "}
+            {unreadCount > 0 && <Badge className="ml-1 text-xs">{unreadCount}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="read" className="text-xs sm:text-sm">
+            Read
+          </TabsTrigger>
         </TabsList>
 
-        {/* Wide container with consistent width */}
-        <div 
-          className="w-full border rounded-lg relative overflow-hidden bg-background"
-          style={{
-            minHeight: '500px',
-            height: '75vh',
-            maxHeight: '700px',
-            scrollbarGutter: 'stable'
-          }}
-        >
-          <TabsContent value={activeTab} className="absolute inset-0 m-0">
-            <div className="h-full w-full overflow-y-auto">
+        <TabsContent value={activeTab}>
+          <Card className="border-border dark:border-border rounded-xl bg-muted/50 dark:bg-muted/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg text-foreground dark:text-foreground">
+                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Notifications
+              </CardTitle>
+            </CardHeader>
+            
+            <CardContent className="pt-0">
               {loading ? (
-                <div className="flex justify-center items-center h-full">
+                <div className="flex justify-center py-10">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                 </div>
               ) : filteredNotifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-8">
-                  <Bell className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No notifications</h3>
-                  <p className="text-muted-foreground">You're all caught up!</p>
+                <div className="text-center py-10">
+                  <Bell className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium text-foreground dark:text-foreground">
+                    No notifications
+                  </h3>
+                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                    You're all caught up!
+                  </p>
                 </div>
               ) : (
-                <div className="p-4">
-                  <div className="space-y-2">
-                    {filteredNotifications.map((n) => (
-                      <Card 
-                        key={n._id}
-                        className={`w-full transition-colors hover:shadow-sm ${
-                          !n.read ? "border-primary/30 bg-primary/5" : ""
-                        }`}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-medium text-sm truncate">
-                                  {n.title || "Notification"}
-                                </h4>
-                                {n.type && (
-                                  <Badge 
-                                    variant={getTypeVariant(n.type) as any}
-                                    className="text-xs px-1.5 py-0.5"
-                                  >
-                                    {n.type}
-                                  </Badge>
-                                )}
-                                {!n.read && (
-                                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                                    New
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground mb-1 line-clamp-1">
-                                {n.message}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(n.createdAt), "MMM d, h:mm a")}
-                              </p>
+                <div className="space-y-3 sm:space-y-4">
+                  {filteredNotifications.map((n) => (
+                    <div
+                      key={n._id}
+                      className={`p-3 sm:p-4 rounded-lg border border-border dark:border-border ${
+                        n.read
+                          ? "bg-gray-50 dark:bg-gray-800/50"
+                          : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              {n.title || "Notification"}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-1">
+                              {!!n.type && (
+                                <Badge className={`${getTypeColor(n.type)} text-xs h-5`}>
+                                  {n.type}
+                                </Badge>
+                              )}
+                              {!n.read && (
+                                <Badge variant="destructive" className="text-xs h-5">
+                                  New
+                                </Badge>
+                              )}
                             </div>
-                            
-                            {!n.read && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleMarkAsRead(n._id)}
-                                className="shrink-0"
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                            )}
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                            {n.message}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                            {format(new Date(n.createdAt), "PPpp")}
+                          </p>
+                        </div>
+
+                        {!n.read && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkAsRead(n._id)}
+                            className="flex-shrink-0 h-8 w-8 p-0"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
-          </TabsContent>
-        </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash, Search,Users, Clock, CheckCircle, X, } from 'lucide-react';
+import { Plus, Edit, Trash, Search,Users, Clock, CheckCircle, X, Eye, Loader2, } from 'lucide-react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import CandidateMultiSelect from '../CandidateMultiselect';
@@ -102,6 +102,7 @@ const AssessmentManagement = () => {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [filteredAssessments, setFilteredAssessments] = useState<Assessment[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedAssessmentForAction, setSelectedAssessmentForAction] = useState<Assessment | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteTargetName, setDeleteTargetName] = useState<string>('');
   const [selectedJobForAutoSelect, setSelectedJobForAutoSelect] = useState<string>('');
@@ -137,6 +138,7 @@ const AssessmentManagement = () => {
     return isCompact;
   }
   const isCompact = useIsCompact(1220);
+  const isMobile = useIsCompact(430);
   // Update createForm defaultValues
   const createForm = useForm<CreateFormData>({
     resolver: zodResolver(assessmentSchema),
@@ -638,87 +640,143 @@ const editTotalMarks = useMemo(() => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Candidate</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Assigned By</TableHead>
-                    {!isCompact && <TableHead>Created</TableHead>}
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAssessments.map((assessment) => (
-                     <TableRow
-                        key={assessment._id}
-                        onClick={(e) => openViewDialog(assessment,e)}
-                        className="cursor-pointer hover:bg-muted"
-                      >
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src={assessment.candidate.profile_photo_url?.url} />
-                            <AvatarFallback>
-                              {assessment.candidate.first_name[0]}{assessment.candidate.last_name[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">
-                              {assessment.candidate.first_name} {assessment.candidate.last_name}
+            <>
+              {/* Desktop Table */}
+              {!isMobile && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Candidate</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Assigned By</TableHead>
+                        {!isCompact && <TableHead>Created</TableHead>}
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAssessments.map((assessment) => (
+                        <TableRow
+                          key={assessment._id}
+                          onClick={(e) => openViewDialog(assessment, e)}
+                          className="cursor-pointer hover:bg-muted"
+                        >
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar>
+                                <AvatarImage src={assessment.candidate.profile_photo_url?.url} />
+                                <AvatarFallback>
+                                  {assessment.candidate.first_name[0]}{assessment.candidate.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">
+                                  {assessment.candidate.first_name} {assessment.candidate.last_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {assessment.candidate.email}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {assessment.candidate.email}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(assessment.status)}>
+                              {isCompact ? truncateTag(assessment.status.toUpperCase(), 3) : assessment.status.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {assessment.due_at ? formatDate(assessment.due_at) : 'No due date'}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div>
+                              <div className="font-medium">{assessment.assigned_by.name}</div>
+                              <div className="text-muted-foreground">{`(${assessment.assigned_by.role})`}</div>
                             </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(assessment.status)}>
-                          {isCompact ? truncateTag(assessment.status.toUpperCase(), 3) : assessment.status.toUpperCase()}
-                        </Badge>
-                      </TableCell>
+                          </TableCell>
+                          {!isCompact && <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(assessment.createdAt)}
+                          </TableCell>}
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => openEditDialog(assessment, e)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={(e) => openDeleteDialog(
+                                  assessment._id, 
+                                  `${assessment.candidate.first_name} ${assessment.candidate.last_name}`, e
+                                )}
+                                disabled={deleteLoadingId === assessment._id}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
-                      <TableCell className="text-sm">
-                        {assessment.due_at ? formatDate(assessment.due_at) : 'No due date'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        <div>
-                          <div className="font-medium">{assessment.assigned_by.name}</div>
-                          <div className="text-muted-foreground">{`(${assessment.assigned_by.role})`}</div>
-                        </div>
-                      </TableCell>
-                      {!isCompact && <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(assessment.createdAt)}
-                      </TableCell>}
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => openEditDialog(assessment,e)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={(e) => openDeleteDialog(
-                              assessment._id, 
-                              `${assessment.candidate.first_name} ${assessment.candidate.last_name}`,e
-                            )}
-                            disabled={deleteLoadingId === assessment._id}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              {/* Mobile Table */}
+              {isMobile && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-full">Candidate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAssessments.map((assessment) => (
+                        <TableRow
+                          key={assessment._id}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => setSelectedAssessmentForAction(assessment)}
+                        >
+                          <TableCell className="w-full pr-2">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarImage src={assessment.candidate.profile_photo_url?.url} />
+                                <AvatarFallback className="text-xs font-medium">
+                                  {assessment.candidate.first_name[0]}{assessment.candidate.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium truncate text-sm">
+                                  {assessment.candidate.first_name} {assessment.candidate.last_name}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {assessment.candidate.email}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge className={getStatusColor(assessment.status)} variant="outline">
+                                    {assessment.status.toUpperCase()}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {assessment.questions ? `${assessment.questions.length} questions` : 'No questions'}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Assigned by: {assessment.assigned_by.name}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
               {filteredAssessments.length === 0 && !loading && (
                 <div className="text-center py-10">
@@ -730,10 +788,129 @@ const editTotalMarks = useMemo(() => {
                   </p>
                 </div>
               )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile Actions Dialog */}
+      <Dialog open={!!selectedAssessmentForAction} onOpenChange={(open) => !open && setSelectedAssessmentForAction(null)}>
+        <DialogContent className="w-[95vw] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assessment Actions</DialogTitle>
+            <DialogDescription>
+              Choose an action for this assessment
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAssessmentForAction && (
+            <div className="space-y-4">
+              {/* Assessment Preview */}
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={selectedAssessmentForAction.candidate.profile_photo_url?.url} />
+                    <AvatarFallback className="text-sm">
+                      {selectedAssessmentForAction.candidate.first_name[0]}
+                      {selectedAssessmentForAction.candidate.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">
+                      {selectedAssessmentForAction.candidate.first_name} {selectedAssessmentForAction.candidate.last_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {selectedAssessmentForAction.candidate.email}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(selectedAssessmentForAction.status)} variant="outline">
+                      {selectedAssessmentForAction.status.toUpperCase()}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedAssessmentForAction.questions ? `${selectedAssessmentForAction.questions.length} questions` : 'No questions'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {selectedAssessmentForAction.due_at ? (
+                      <div>Due: {formatDate(selectedAssessmentForAction.due_at)}</div>
+                    ) : (
+                      <div>No due date set</div>
+                    )}
+                    <div>Duration: {selectedAssessmentForAction.exam_duration} minutes</div>
+                    <div>SEB Required: {selectedAssessmentForAction.is_seb ? 'Yes' : 'No'}</div>
+                    <div>Assigned by: {selectedAssessmentForAction.assigned_by.name} ({selectedAssessmentForAction.assigned_by.role})</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    const assessment = selectedAssessmentForAction;
+                    setSelectedAssessmentForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    openViewDialog(assessment, mockEvent);
+                  }}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </Button>
+
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  onClick={() => {
+                    const assessment = selectedAssessmentForAction;
+                    setSelectedAssessmentForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    openEditDialog(assessment, mockEvent);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Assessment
+                </Button>
+                
+                <Button
+                  className="w-full justify-start text-red-600 hover:text-red-700"
+                  variant="outline"
+                  onClick={() => {
+                    const assessment = selectedAssessmentForAction;
+                    setSelectedAssessmentForAction(null);
+                    const mockEvent = { stopPropagation: () => {} };
+                    openDeleteDialog(
+                      assessment._id,
+                      `${assessment.candidate.first_name} ${assessment.candidate.last_name}`,
+                      mockEvent
+                    );
+                  }}
+                  disabled={deleteLoadingId === selectedAssessmentForAction._id}
+                >
+                  {deleteLoadingId === selectedAssessmentForAction._id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash className="w-4 h-4 mr-2" />
+                  )}
+                  Delete Assessment
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedAssessmentForAction(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={closeDialog}>

@@ -133,7 +133,6 @@ export default function Invigilator() {
 
   return (
     <div className="h-full flex overflow-hidden">
-      <Toaster position="bottom-right" />
 
       <SidebarProvider>
         <InvigilatorSidebar className="w-64 h-full flex-shrink-0" />

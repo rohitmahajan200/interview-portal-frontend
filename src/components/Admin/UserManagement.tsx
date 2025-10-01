@@ -109,7 +109,7 @@ interface UpdateFormData {
   role: Role;
 }
 
-const AdminHome = () => {
+const UserManagement = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +146,7 @@ const AdminHome = () => {
   }
   
   const isCompact = useIsCompact(1220);
-
+  const isMobile = useIsCompact(430);
   // UTILITY: Get profile photo URL from user object
   const getProfilePhotoUrl = (user: AdminUser): string => {
     // Handle profile_photo_url field  
@@ -393,7 +393,6 @@ const AdminHome = () => {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <Toaster position="top-center" />
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -522,118 +521,191 @@ const AdminHome = () => {
           </div>
 
           {/* Users Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  {!isCompact && <TableHead>Joined</TableHead>}
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user._id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage 
-                            src={getProfilePhotoUrl(user)} 
-                            alt={user.name || user.email}
-                          />
-                          <AvatarFallback className="text-sm font-medium">
-                            {getUserInitials(user)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">
-                            {user.name || "No name set"}
+          {!isMobile && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">User</TableHead>
+                      {!isCompact && <TableHead className="min-w-[150px]">Email</TableHead>}
+                      <TableHead className="min-w-[100px]">Role</TableHead>
+                      {!isCompact && <TableHead className="min-w-[80px]">Status</TableHead>}
+                      {!isCompact && <TableHead className="min-w-[120px]">Joined</TableHead>}
+                      <TableHead className="min-w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user._id}>
+                        <TableCell className="min-w-[200px]">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10 flex-shrink-0">
+                              <AvatarImage 
+                                src={getProfilePhotoUrl(user)} 
+                                alt={user.name || user.email}
+                              />
+                              <AvatarFallback className="text-sm font-medium">
+                                {getUserInitials(user)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">
+                                {user.name || "No name set"}
+                              </div>
+                              <div className="text-sm text-muted-foreground truncate">
+                                ID: {user._id.slice(-8)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground truncate">
-                            ID: {user._id.slice(-8)}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="min-w-0">
-                        <div className="text-sm truncate">{user.email}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {user.email_verified ? (
-                            <span className="text-green-600">✓ Verified</span>
-                          ) : (
-                            <span className="text-orange-600">⚠ Unverified</span>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getRoleColor(user.role)}>
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            user.email_verified ? "bg-green-500" : "bg-orange-500"
-                          }`}
-                        ></div>
+                        </TableCell>
                         {!isCompact && (
-                          <span className="text-sm">
-                            {user.email_verified ? "Active" : "Pending"}
-                          </span>
+                          <TableCell className="min-w-[150px]">
+                            <div className="min-w-0">
+                              <div className="text-sm truncate">{user.email}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {user.email_verified ? (
+                                  <span className="text-green-600">✓ Verified</span>
+                                ) : (
+                                  <span className="text-orange-600">⚠ Unverified</span>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
                         )}
-                      </div>
-                    </TableCell>
-                    {!isCompact && (
-                      <TableCell>
-                        <div className="text-sm text-muted-foreground">
-                          <Calendar className="inline h-3 w-3 mr-1" />
-                          {formatDate(user.createdAt)}
-                        </div>
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => openUpdateDialog(user)}
-                          >
-                            <Edit3 className="mr-2 h-4 w-4" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => openPasswordUpdateDialog(user)}
-                          >
-                            <Shield className="mr-2 h-4 w-4" />
-                            Update Password
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => openDeleteDialog(user)}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                        <TableCell className="min-w-[100px]">
+                          <Badge className={getRoleColor(user.role)}>
+                            {user.role}
+                          </Badge>
+                        </TableCell>
+                        {!isCompact && (
+                          <TableCell className="min-w-[80px]">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                  user.email_verified ? "bg-green-500" : "bg-orange-500"
+                                }`}
+                              ></div>
+                              <span className="text-sm truncate">
+                                {user.email_verified ? "Active" : "Pending"}
+                              </span>
+                            </div>
+                          </TableCell>
+                        )}
+                        {!isCompact && (
+                          <TableCell className="min-w-[120px]">
+                            <div className="text-sm text-muted-foreground">
+                              <Calendar className="inline h-3 w-3 mr-1 flex-shrink-0" />
+                              <span className="truncate">{formatDate(user.createdAt)}</span>
+                            </div>
+                          </TableCell>
+                        )}
+                        <TableCell className="min-w-[80px]">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => openUpdateDialog(user)}
+                              >
+                                <Edit3 className="mr-2 h-4 w-4" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => openPasswordUpdateDialog(user)}
+                              >
+                                <Shield className="mr-2 h-4 w-4" />
+                                Update Password
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => openDeleteDialog(user)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Table - Strict overflow hidden */}
+          {isMobile && (
+            <div className="border rounded-lg overflow-hidden">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-full">User</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <DropdownMenu key={user._id}>
+                      <DropdownMenuTrigger asChild>
+                        <TableRow className="cursor-pointer hover:bg-muted/50">
+                          <TableCell className="w-full pr-2">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarImage 
+                                  src={getProfilePhotoUrl(user)} 
+                                  alt={user.name || user.email}
+                                />
+                                <AvatarFallback className="text-xs font-medium">
+                                  {getUserInitials(user)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium truncate text-sm">
+                                  {user.name || "No name set"}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {user._id.slice(-8)}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => openUpdateDialog(user)}
+                        >
+                          <Edit3 className="mr-2 h-4 w-4" />
+                          Edit User
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openPasswordUpdateDialog(user)}
+                        >
+                          <Shield className="mr-2 h-4 w-4" />
+                          Update Password
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => openDeleteDialog(user)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete User
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {/* Empty State */}
           {filteredUsers.length === 0 && !loading && (
@@ -991,4 +1063,4 @@ const AdminHome = () => {
   );
 };
 
-export default AdminHome;
+export default UserManagement;

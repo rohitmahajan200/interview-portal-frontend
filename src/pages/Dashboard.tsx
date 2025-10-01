@@ -22,6 +22,7 @@ import NotificationsPage from "./NotificationsPage";
 import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle, FileText, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CandidateHeader } from "@/components/CandidateHeader";
 
 interface CandidateData {
   _id: string;
@@ -128,24 +129,7 @@ export default function Page() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:bg-gray-900">
-          <div className="flex items-center gap-2 px-4 justify-between w-full">
-            <div className="flex items-center gap-2 px-4">
-              <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <header className="px-1 rounded-xl">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                        Welcome To CHANGE Networks!
-                      </span>
-                    </div>
-                  </header>
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-          </div>
-        </header>
+        <CandidateHeader />
 
         <div className="flex items-start p-2">
           {/* Document banners */}

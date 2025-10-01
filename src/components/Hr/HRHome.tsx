@@ -349,6 +349,7 @@ const HRHome = () => {
 
     return isCompact;
   }
+  const isMobile = useIsCompact(430);
   function getAge(dob: string | Date): number {
     const birth = new Date(dob);
     const today = new Date();
@@ -1550,7 +1551,7 @@ const HRHome = () => {
           </div>
 
           {/* Candidates Table - Responsive Version */}
-          <div className="border rounded-lg">
+          {!isMobile && <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1637,7 +1638,57 @@ const HRHome = () => {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </div>}
+          {/* Mobile Candidates Table */}
+          {isMobile && (
+            <div className="border rounded-lg overflow-hidden">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-full">Candidate</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCandidates.map((candidate) => (
+                    <TableRow
+                      key={candidate._id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => fetchCandidateDetails(candidate._id)}
+                    >
+                      <TableCell className="w-full pr-2">
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarImage src={candidate.profile_photo_url.url} />
+                            <AvatarFallback className="text-xs font-medium">
+                              {candidate.first_name[0]}
+                              {candidate.last_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate text-sm">
+                              {candidate.first_name} {candidate.last_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {candidate.gender} • {getAge(candidate.date_of_birth)} yrs
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className={getStageColor(candidate.current_stage)} variant="outline">
+                                {candidate.current_stage.replace("_", " ").toUpperCase()}
+                              </Badge>
+                              <Badge className={getStatusColor(candidate.status)} variant="outline">
+                                {candidate.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
 
           {filteredCandidates.length === 0 && (
             <div className="text-center py-8">

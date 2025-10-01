@@ -126,7 +126,6 @@ export default function Manager() {
 
   return (
     <div className="h-full flex overflow-hidden">
-      <Toaster position="bottom-right" />
 
       <SidebarProvider>
         <ManagerSidebar className="w-64 h-full flex-shrink-0" />
