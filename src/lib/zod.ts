@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 export const registerCandidateSchema = z.object({
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
+  first_name: z.string().min(1, "First name is required").max(10,"Frist Name should be short"),
+  last_name: z.string().min(1, "Last name is required").max(10,"Last Name should be short"),
   email: z.string().email("Invalid email"),
   phone: z.string().regex(/^\+?[1-9]\d{7,14}$/, "Invalid international phone number"),
   date_of_birth: z.string().min(1, "Date of birth is required"),
   gender: z.enum(["male", "female"]),
-  address: z.string().min(1, "Address is required"),
+  address: z.string().min(1, "Address is required").max(100,"Address should be short"),
   portfolio_url: z.union([
     z.string().min(1).url("Invalid portfolio URL"), // Valid URLs only
     z.literal(""),    // Empty string from form
@@ -47,10 +47,9 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-
 export const candidateUpdateSchema = z.object({
-  first_name: z.string().trim().min(1, "First name is required").max(50),
-  last_name: z.string().trim().min(1, "Last name is required").max(50),
+  first_name: z.string().trim().min(1, "First name is required").max(10,"First Name should be short"),
+  last_name: z.string().trim().min(1, "Last name is required").max(10,"Last Name should be short"),
   phone: z
     .string()
     .regex(/^\+?[1-9]\d{7,14}$/, "Invalid international phone number")
@@ -63,7 +62,7 @@ export const candidateUpdateSchema = z.object({
       { message: "Date of birth must be in YYYY-MM-DD format" }
     ),
   gender: z.enum(["male", "female", "other"]).optional(),
-  address: z.string().max(250).optional(),
+  address: z.string().max(100,"Address should be short").optional(),
   profile_photo_url: z.object({ url: z.url("Invalid profile photo URL"), publicId: z.string() }).optional(),
   portfolio_url: z.url("Invalid portfolio URL").optional().or(z.literal("")),
 }).strict();

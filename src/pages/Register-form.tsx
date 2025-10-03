@@ -57,6 +57,7 @@ import { registerCandidateSchema } from '@/lib/zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import uploadFileToBackend, { uploadFileToBackendForRegister } from "@/lib/fileUpload";
 import ReCAPTCHA from "react-google-recaptcha";
+import { sha256Hash } from "@/lib/hashPassword";
 
 // CAPTCHA configuration
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
@@ -715,7 +716,7 @@ export default function RegisterForm({
                     response: uploadResult.url
                   };
                 } catch (uploadError) {
-                                    throw new Error(`Failed to upload audio for question ${index + 1}`);
+                    throw new Error(`Failed to upload audio for question ${index + 1}`);
                 }
               }
             }
@@ -747,6 +748,8 @@ export default function RegisterForm({
       // Remove the resume property
       delete (payload as any).resume;
 
+      const hashPass=await sha256Hash(payload.password);
+      payload.password=hashPass;
       // Submit to backend
       await api.post("/candidates/register", payload);
 

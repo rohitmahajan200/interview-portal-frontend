@@ -57,8 +57,9 @@ const OTPLoginForm: React.FC = () => {
       } else {
         setError("Verification failed.");
       }
-    } catch (e: unknown) {
+    } catch (e: any) {
       setError("Invalid OTP. Please try again.");
+      toast.error(e.response.data.message)
           } finally {
       setLoading(false);
     }

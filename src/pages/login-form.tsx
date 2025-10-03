@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import Spinner from "../components/ui/spinner";
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
+import { sha256Hash } from "@/lib/hashPassword";
 
 // Define login form input types
 type LoginFormInputs = {
@@ -36,7 +37,7 @@ export function LoginForm({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormInputs>({resolver: zodResolver(loginSchema)});
+  } = useForm<LoginFormInputs>({ resolver: zodResolver(loginSchema) });
 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,10 @@ export function LoginForm({
   const onSubmit = async (data: LoginFormInputs) => {
     setLoading(true);
     try {
+      const hashPass = await sha256Hash(data.password);
+      data.password = hashPass;
+      console.log("MY data",data);
+      
       const res = await api.post("/candidates/login", data);
       if (res.data && res.data.success && res.data.user) {
         dispatch(setUser(res.data.user)); // Redux state update
@@ -54,6 +59,8 @@ export function LoginForm({
         setTimeout(() => navigate("/"), 1000);
       } else {
         toast.error("Login failed, please try again.");
+        
+        
       }
     } catch (err: any) {
       toast.error(
@@ -107,7 +114,7 @@ export function LoginForm({
                       Password
                     </Label>
                     <span
-                      onClick={()=>navigate("/forget-password")}
+                      onClick={() => navigate("/forget-password")}
                       className="text-xs text-primary hover:underline cursor-pointer"
                     >
                       Forgot password?
@@ -148,7 +155,11 @@ export function LoginForm({
 
                 {/* Submit and Google login buttons */}
                 <div className="space-y-3 pt-2">
-                  <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full text-sm py-2"
+                    disabled={loading}
+                  >
                     Login
                   </Button>
                   {/* <Button

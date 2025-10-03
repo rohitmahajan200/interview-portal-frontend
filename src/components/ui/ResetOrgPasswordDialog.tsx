@@ -18,6 +18,7 @@ import {
 import { Shield } from "lucide-react";
 import api from "@/lib/api";
 import toast from "react-hot-toast";
+import { sha256Hash } from "@/lib/hashPassword";
 
 // Types
 type Role = "ADMIN" | "HR" | "INVIGILATOR" | "MANAGER";
@@ -91,6 +92,8 @@ const ResetOrgPasswordDialog: React.FC<ResetPasswordDialogProps> = ({
     try {
       setIsUpdatingPassword(true);
       let response;
+      data.newPassword=await sha256Hash(data.newPassword);
+      data.confirmPassword=await sha256Hash(data.confirmPassword);
       if (selectedUser) {
         response = await api.patch(`${apiEndpoint}/${selectedUser._id}`, {
           newPassword: data.newPassword,

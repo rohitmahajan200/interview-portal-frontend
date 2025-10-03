@@ -20,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import Spinner from "@/components/ui/spinner";
 import { useState } from "react";
 import { EyeIcon, EyeOffIcon, Building } from "lucide-react";
+import { sha256Hash } from "@/lib/hashPassword";
 
 // Define login form input types
 type OrgLoginFormInputs = {
@@ -27,10 +28,7 @@ type OrgLoginFormInputs = {
   password: string;
 };
 
-const OrgLoginForm = ({
-  className,
-  ...props
-}: React.ComponentProps<"div">) => {
+const OrgLoginForm = ({ className, ...props }: React.ComponentProps<"div">) => {
   // Setup form with React Hook Form
   const {
     register,
@@ -45,25 +43,19 @@ const OrgLoginForm = ({
 
   // Handle login form submission
   const onSubmit = async (data: OrgLoginFormInputs) => {
-    console.log("Form submitted with data:", data); // Debug log
     setLoading(true);
     try {
+      const hashPass = await sha256Hash(data.password);
+      data.password = hashPass;
       const res = await api.post("/org/login", data);
-      console.log("API Response:", res); // Debug log
       if (res.data && res.data.success && res.data.user) {
         dispatch(setUser(res.data.user)); // Redux state update for org user
         toast.success("Login successful!");
         setTimeout(() => navigate("/org"), 1000);
       } else {
-        console.log("Login failed - invalid response format:", res.data); // Debug log
         toast.error("Login failed, please try again.");
       }
     } catch (err: any) {
-      console.log("Full error object:", err); // Debug the full error
-      console.log("Error response:", err.response); // Debug the response
-      console.log("Error response data:", err.response?.data); // Debug the data
-      
-      
       // Original error handling
       toast.error(
         err.response?.data?.message || "Login failed, please try again."
@@ -72,7 +64,6 @@ const OrgLoginForm = ({
       setLoading(false);
     }
   };
-
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background px-4 sm:px-6 md:px-10 py-12">
@@ -161,9 +152,9 @@ const OrgLoginForm = ({
 
                 {/* Submit button */}
                 <div className="pt-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full text-sm font-medium" 
+                  <Button
+                    type="submit"
+                    className="w-full text-sm font-medium"
                     disabled={loading}
                   >
                     {loading ? "Signing in..." : "Sign In"}

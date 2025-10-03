@@ -20,7 +20,6 @@ import { Clipboard, ClipboardCheck, Eye } from "lucide-react";
 
 
 const DocumentRow = ({ doc }: { doc: { documenttype: string; documenturl: string } }) => {
-  console.log("docu=>",doc)
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {

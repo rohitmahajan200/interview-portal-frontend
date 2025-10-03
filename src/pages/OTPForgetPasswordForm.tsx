@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -9,7 +15,8 @@ import { useDispatch } from "react-redux";
 import { setUser } from "@/features/Candidate/auth/authSlice";
 import api from "@/lib/api";
 import { useAppSelector } from "@/hooks/useAuth";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import { sha256Hash } from "@/lib/hashPassword";
 
 type Step = "enteremail" | "verifyOtp" | "resetPassword";
 
@@ -29,7 +36,7 @@ const OTPForgetPasswordForm: React.FC = () => {
     if (state == null) {
       return;
     }
-    setStep('resetPassword');
+    setStep("resetPassword");
   }, []);
 
   // Send OTP
@@ -42,8 +49,8 @@ const OTPForgetPasswordForm: React.FC = () => {
     } catch (e: any) {
       setError(
         e?.response?.data?.message ||
-        e?.message ||
-        "Failed to send OTP. Please try again."
+          e?.message ||
+          "Failed to send OTP. Please try again."
       );
     } finally {
       setLoading(false);
@@ -69,8 +76,8 @@ const OTPForgetPasswordForm: React.FC = () => {
     } catch (e: any) {
       setError(
         e?.response?.data?.message ||
-        e?.message ||
-        "Invalid OTP. Please try again."
+          e?.message ||
+          "Invalid OTP. Please try again."
       );
     } finally {
       setLoading(false);
@@ -88,7 +95,13 @@ const OTPForgetPasswordForm: React.FC = () => {
     }
     try {
       // You may need to send { email, password: newPassword } or just password, depending on backend
-      const res = await api.put("/candidates/new-password", { newPassword: newPassword, confirmPassword: confirmPassword });
+
+      const newHashedPassword = await sha256Hash(newPassword);
+      const confirmHashedPassword = await sha256Hash(confirmPassword);
+      const res = await api.put("/candidates/new-password", {
+        newPassword: newHashedPassword,
+        confirmPassword: confirmHashedPassword,
+      });
       if (res.data.success == true) {
         toast.success("Password reset successfully! Logged in.");
         navigate("/");
@@ -97,9 +110,7 @@ const OTPForgetPasswordForm: React.FC = () => {
       }
     } catch (e: any) {
       setError(
-        e?.response?.data?.message ||
-        e?.message ||
-        "Failed to reset password."
+        e?.response?.data?.message || e?.message || "Failed to reset password."
       );
     } finally {
       setLoading(false);
@@ -124,7 +135,7 @@ const OTPForgetPasswordForm: React.FC = () => {
             {step === "enteremail" && (
               <form
                 className="space-y-6"
-                onSubmit={e => {
+                onSubmit={(e) => {
                   e.preventDefault();
                   sendOtp();
                 }}
@@ -138,13 +149,17 @@ const OTPForgetPasswordForm: React.FC = () => {
                     type="email"
                     placeholder="Enter your email"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
-                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full text-sm py-2"
+                  disabled={loading}
+                >
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </Button>
                 <div className="text-center text-sm text-muted-foreground">
@@ -161,21 +176,24 @@ const OTPForgetPasswordForm: React.FC = () => {
             {step === "verifyOtp" && (
               <form
                 className="space-y-6"
-                onSubmit={e => {
+                onSubmit={(e) => {
                   e.preventDefault();
                   verifyOtp();
                 }}
               >
                 <div className="space-y-2">
                   <Label htmlFor="otp" className="font-medium">
-                    Enter OTP sent to <span className="font-semibold text-foreground">{email}</span>
+                    Enter OTP sent to{" "}
+                    <span className="font-semibold text-foreground">
+                      {email}
+                    </span>
                   </Label>
                   <Input
                     id="otp"
                     type="text"
                     placeholder="Enter OTP"
                     value={otp}
-                    onChange={e => setOtp(e.target.value)}
+                    onChange={(e) => setOtp(e.target.value)}
                     required
                     maxLength={6}
                     inputMode="numeric"
@@ -184,7 +202,11 @@ const OTPForgetPasswordForm: React.FC = () => {
                 </div>
                 {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
-                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full text-sm py-2"
+                  disabled={loading}
+                >
                   {loading ? "Verifying..." : "Verify OTP"}
                 </Button>
                 <Button
@@ -222,7 +244,7 @@ const OTPForgetPasswordForm: React.FC = () => {
             {step === "resetPassword" && (
               <form
                 className="space-y-6"
-                onSubmit={e => {
+                onSubmit={(e) => {
                   e.preventDefault();
                   handleNewPassword();
                 }}
@@ -236,7 +258,7 @@ const OTPForgetPasswordForm: React.FC = () => {
                     type="password"
                     placeholder="New Password"
                     value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     required
                   />
                 </div>
@@ -249,13 +271,17 @@ const OTPForgetPasswordForm: React.FC = () => {
                     type="password"
                     placeholder="Confirm Password"
                     value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
                 </div>
                 {error && <p className="text-destructive text-sm">{error}</p>}
                 {loading && <Spinner />}
-                <Button type="submit" className="w-full text-sm py-2" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full text-sm py-2"
+                  disabled={loading}
+                >
                   {loading ? "Setting password..." : "Set New Password"}
                 </Button>
                 <div className="text-center text-sm text-muted-foreground">
