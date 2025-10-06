@@ -86,7 +86,7 @@ interface AdminUser {
 
 // Zod schemas
 const inviteSchema = z.object({
-  name: z.string().min(1, "Name is required").max(20,"Name should be short"),
+  name: z.string().min(1, "Name is required").max(25,"Name should be short"),
   email: z.string().email("Invalid email format"),
   role: z.enum(["ADMIN", "HR", "INVIGILATOR", "MANAGER"], {
     error: "Please select a valid role",

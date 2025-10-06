@@ -10,7 +10,8 @@ import { setUser } from "@/features/Org/Auth/orgAuthSlice";
 import api from "@/lib/api";
 import { useAppSelector } from "@/hooks/useAuth";
 import { Building, EyeIcon, EyeOffIcon } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import { sha256Hash } from "@/lib/hashPassword";
 
 type Step = "otpLogin" | "setupPassword";
 
@@ -89,9 +90,11 @@ const OrgSetupPasswordForm: React.FC = () => {
       return;
     }
     try {
+      const hashPass = await sha256Hash(password);
+      const hashPass2 = await sha256Hash(confirmPassword);
       const res = await api.post("/org/setup-password", { 
-        password: password, 
-        confirmPassword: confirmPassword 
+        password: hashPass, 
+        confirmPassword: hashPass2 
       });
       if (res.data.success === true) {
         toast.success("Password set successfully!");

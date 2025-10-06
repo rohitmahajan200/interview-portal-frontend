@@ -325,9 +325,6 @@ const HRQuestionnaireResponse: React.FC = () => {
         .then(() => {
           setPlayingStates((prev) => ({ ...prev, [questionIndex]: true }));
         })
-        .catch((error) => {
-                    toast.error("Error playing audio");
-        });
     }
   };
 
