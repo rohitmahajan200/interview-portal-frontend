@@ -123,7 +123,9 @@ const UnifiedAssignmentDashboard = () => {
   // Loading States
   const [isAssigningToManager, setIsAssigningToManager] = useState(false);
   const [isAssigningToInvigilator, setIsAssigningToInvigilator] = useState(false);
-
+  const stripHtmlTags = (html: string): string => {
+    return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
+  };
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -953,14 +955,6 @@ const UnifiedAssignmentDashboard = () => {
                       />
                     </div>
 
-                    {/* No Jobs Message - moved to top */}
-                    {(selectedJobs || []).length > 0 && (jobCandidates || []).length === 0 && (
-                      <div className="text-center py-4 mb-4 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          No candidates found for the selected job(s).
-                        </p>
-                      </div>
-                    )}
 
                     {/* Jobs List */}
                     <div className="space-y-2 border rounded-lg p-3 sm:p-4">
@@ -989,7 +983,7 @@ const UnifiedAssignmentDashboard = () => {
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm sm:text-base truncate">{job.title || job.name}</p>
                               {job.description && (
-                                <p className="text-xs text-muted-foreground truncate">{job.description}</p>
+                                <p className="text-xs text-muted-foreground truncate">{stripHtmlTags(job.description)}</p>
                               )}
                             </div>
                           </div>
