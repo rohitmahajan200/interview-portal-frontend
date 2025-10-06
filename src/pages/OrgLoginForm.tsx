@@ -49,7 +49,7 @@ const OrgLoginForm = ({ className, ...props }: React.ComponentProps<"div">) => {
       data.password = hashPass;
       const res = await api.post("/org/login", data);
       if (res.data && res.data.success && res.data.user) {
-        dispatch(setUser(res.data.user)); // Redux state update for org user
+        dispatch(setUser(res.data.user)); // Redux state update for org user..
         toast.success("Login successful!");
         setTimeout(() => navigate("/org"), 1000);
       } else {
