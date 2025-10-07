@@ -12,6 +12,7 @@ const SHOT_H = 480;
 type Props = { 
   active: boolean;
   candidateId?: string; // 🆕 ADDED: Optional candidate ID for API calls
+  assessmentId: string;
 };
 
 // 🆕 UPDATED: Improved file conversion with better error handling
@@ -36,7 +37,7 @@ function dataURLtoFile(dataURL: string, filename: string): File {
 }
 
 // 🆕 ADDED: Upload snapshot to your backend using FormData
-const uploadSnapshotToBackend = async (file: File, candidateId?: string): Promise<string> => {
+const uploadSnapshotToBackend = async (file: File, assessmentId: string, candidateId?: string): Promise<string> => {
   try {
     const formData = new FormData();
     formData.append('snapshot', file); // Field name for the file
@@ -48,11 +49,13 @@ const uploadSnapshotToBackend = async (file: File, candidateId?: string): Promis
     
     // Add timestamp for tracking
     formData.append('timestamp', Date.now().toString());
-    formData.append('type', 'proctor_snapshot');
+    formData.append('type', 'snapshots');
+    formData.append('folder', 'snapshots');
+
 
         
     // 🆕 UPDATED: Use your API endpoint for snapshot upload
-    const response = await api.post('/candidates/snapshots', formData);
+    const response = await api.post(`/candidates/snapshots/${assessmentId}`, formData);
 
     if (response.data?.success && response.data?.data?.url) {
       return response.data.data.url;
@@ -75,7 +78,7 @@ const uploadSnapshotToBackend = async (file: File, candidateId?: string): Promis
   }
 };
 
-const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
+const ProctorSnapshots: React.FC<Props> = ({ active, candidateId, assessmentId }) => {
   const webcamRef = useRef<Webcam | null>(null);
   const [ready, setReady] = useState(false);
   const [uploading, setUploading] = useState(false); // 🆕 ADDED: Track upload state
@@ -85,9 +88,10 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
     if (!active) return;
         
     // 🆕 ADDED: Show initial status
-    if (candidateId) {
+    if (assessmentId) {
+      console.log(assessmentId)
           }
-  }, [active, candidateId]);
+  }, [active, candidateId, assessmentId]);
 
   useEffect(() => {
     if (!active || !ready) return;
@@ -116,7 +120,7 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
         console.log("[SNAP] File created:", file.name, `(${(file.size / 1024).toFixed(1)} KB)`);
 
         // 🆕 UPDATED: Upload to your backend instead of Cloudinary
-        const snapshotUrl = await uploadSnapshotToBackend(file, candidateId);
+        const snapshotUrl = await uploadSnapshotToBackend(file, assessmentId);
         
         // Store the snapshot URL in local storage/store
         await addSnapshotUrl(snapshotUrl);
@@ -129,7 +133,7 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
           id: toastId, 
           duration: 4000 
         });
-        
+        console.log(assessmentId)
         // 🆕 ADDED: Could implement retry logic here
                 
       } finally {
@@ -149,7 +153,7 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId }) => {
       }
       setUploading(false);
     };
-  }, [active, ready, candidateId, uploading]);
+  }, [active, ready, candidateId, uploading, assessmentId]);
 
   // 🆕 ADDED: Cleanup on unmount
   useEffect(() => {
