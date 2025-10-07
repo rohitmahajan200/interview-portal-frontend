@@ -33,7 +33,7 @@ const singleQuestionSchema = z.object({
   correct_answer: z.string().min(1, "Correct answer is required"), // Changed to singular
   explanation: z.string().trim().max(1000, "Explanation too long").optional(),
   is_must_ask: z.boolean(),
-  max_score: z.number().positive("Max score must be positive"),
+  max_score: z.number().max(100, "Max 100 score").positive("Max score must be positive"),
   difficulty: z.enum(["easy", "medium", "hard"], {
     message: "Difficulty must be easy, medium, or hard"
   }).optional(),
