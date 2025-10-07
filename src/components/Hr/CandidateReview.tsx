@@ -1345,7 +1345,6 @@ const CandidateReview = () => {
                                     onClick={() => handleEditingResponse(
                                       editingResponse === response._id ? null : response._id
                                     )}
-                                    disabled={response.question.input_type === "audio"}
                                     className={cn(
                                       "text-xs h-6 sm:h-8 px-2 sm:px-3 border-border dark:border-border hover:bg-accent dark:hover:bg-accent",
                                       editingResponse === response._id && "bg-blue-100 dark:bg-blue-900/20 border-blue-500"

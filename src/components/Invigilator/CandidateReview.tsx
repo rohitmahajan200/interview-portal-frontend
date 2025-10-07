@@ -1042,7 +1042,7 @@ const AssessmentReview = () => {
                               </Badge>
                               {item.ai_score !== undefined && (
                                 <span className="text-xs font-medium text-foreground dark:text-foreground">
-                                  Score: {item.ai_score}
+                                  Score: {item.ai_score}/{item.total_score}
                                 </span>
                               )}
                             </div>
@@ -1211,20 +1211,11 @@ const AssessmentReview = () => {
                     {/* Overall Score */}
                     {selectedAssessment.ai_score !== undefined && (
                       <Card className="bg-card dark:bg-card border-border dark:border-border">
-                        <CardHeader className="p-3 pb-2">
-                          <CardTitle className="text-sm sm:text-base text-foreground dark:text-foreground">
-                            AI Assessment Score
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3 pt-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className={cn("text-xl sm:text-2xl font-bold", getScoreColor(selectedAssessment.ai_score, 100))}>
-                              {selectedAssessment.ai_score}/100
+                        <CardContent className="p-3 pt-0 flex items-center text-xl gap-2">
+                            <span>Assessment Score:</span>
+                            <div className={cn("text-lg sm:text-xl font-bold", getScoreColor(selectedAssessment.ai_score, 100))}>
+                               {selectedAssessment.ai_score}/{selectedAssessment.total_score}
                             </div>
-                            <Badge variant="outline" className="text-sm sm:text-lg border-border dark:border-border">
-                              AI Evaluated
-                            </Badge>
-                          </div>
                         </CardContent>
                       </Card>
                     )}
