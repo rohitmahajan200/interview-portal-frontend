@@ -40,7 +40,7 @@ function dataURLtoFile(dataURL: string, filename: string): File {
 const uploadSnapshotToBackend = async (file: File, assessmentId: string, candidateId?: string): Promise<string> => {
   try {
     const formData = new FormData();
-    formData.append('snapshot', file); // Field name for the file
+    formData.append('snapshots', file); // Field name for the file
     
     // Add candidate ID if provided
     if (candidateId) {
@@ -55,6 +55,8 @@ const uploadSnapshotToBackend = async (file: File, assessmentId: string, candida
 
         
     // 🆕 UPDATED: Use your API endpoint for snapshot upload
+    console.log("assessid=>",assessmentId);
+    
     const response = await api.post(`/candidates/snapshots/${assessmentId}`, formData);
 
     if (response.data?.success && response.data?.data?.url) {
