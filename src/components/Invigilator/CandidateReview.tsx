@@ -1061,10 +1061,10 @@ const AssessmentReview = () => {
                           {item.status}
                         </Badge>
                       </TableCell>
-                                            <TableCell className="py-2 sm:py-3 hidden md:table-cell">
+                        <TableCell className="py-2 sm:py-3 hidden md:table-cell">
                         {item.ai_score !== undefined ? (
                           <Badge variant="outline" className="text-xs border-border dark:border-border">
-                            {item.ai_score}/10
+                            {item.ai_score}/{item.total_score}
                           </Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">Not evaluated</span>

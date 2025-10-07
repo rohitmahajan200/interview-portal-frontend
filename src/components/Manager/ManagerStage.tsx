@@ -1693,50 +1693,11 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
             <DialogTitle className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
               🔄 Update Candidate Stage
             </DialogTitle>
-            <DialogDescription>
-              Move this candidate to a different stage in the hiring process.
-            </DialogDescription>
           </DialogHeader>
 
           {candidateToUpdateStage && (
-            <div className="space-y-4">
-              {/* Candidate Info */}
-              <div className="flex flex-col lg:flex-row lg:items-start gap-4">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 border-2 border-gray-200 dark:border-gray-700 sm:p-4 rounded-xl w-full lg:w-auto">
-                  <Avatar className="w-40 h-35 ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden rounded-md flex-shrink-0">
-                    <AvatarImage
-                      src={candidateToUpdateStage.profile_photo_url?.url}
-                    />
-                    <AvatarFallback>
-                      {candidateToUpdateStage.first_name[0]}
-                      {candidateToUpdateStage.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {candidateToUpdateStage.first_name}{" "}
-                      {candidateToUpdateStage.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {candidateToUpdateStage.email}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        Current:
-                      </span>
-                      <Badge
-                        className={getStageColor(
-                          candidateToUpdateStage.current_stage
-                        )}
-                        variant="outline"
-                      >
-                        {candidateToUpdateStage.current_stage?.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+            <div className="space-y-2">
+            
               {/* New Stage Selection */}
               <div className="space-y-2">
                 <Label htmlFor="new-stage">
@@ -1785,9 +1746,6 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   className="min-h-[100px]"
                   disabled={isUpdatingStage}
                 />
-                <p className="text-xs text-muted-foreground">
-                  This reason will be recorded in the candidate's stage history.
-                </p>
               </div>
 
               {/* Internal Feedback (compulsory) */}
@@ -1803,10 +1761,7 @@ const ManagerStage: React.FC<ManagerStageProps> = ({
                   className="min-h-[100px]"
                   disabled={isUpdatingStage}
                 />
-                <p className="text-xs text-muted-foreground">
-                  This feedback will be attached to the candidate's profile and
-                  visible internally.
-                </p>
+               
               </div>
             </div>
           )}
