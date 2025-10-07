@@ -50,7 +50,6 @@ const uploadSnapshotToBackend = async (file: File, assessmentId: string, candida
     // Add timestamp for tracking
     formData.append('timestamp', Date.now().toString());
     formData.append('type', 'snapshots');
-    formData.append('folder', 'snapshots');
 
 
         
@@ -187,10 +186,6 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId, assessmentId }
         }}
         onUserMedia={() => {
           setReady(true);
-                    toast.success("📸 Proctor monitoring active", { 
-            id: "snap-active", 
-            duration: 2000 
-          });
         }}
         onUserMediaError={(e: unknown) => {
           const msg = e instanceof Error ? e.message : String(e);
