@@ -403,7 +403,7 @@ const HRQuestionnaireResponse: React.FC = () => {
                   attachment: audioUrl,
                 };
               } catch (uploadError) {
-                                throw new Error(`Failed to upload audio for question ${index + 1}`);
+                    throw new Error(`audio recording is ${uploadError.message}`);
               }
             }
           }
@@ -448,7 +448,7 @@ const HRQuestionnaireResponse: React.FC = () => {
       toast.success("Questionnaire submitted successfully!");
       navigate("/");
     } catch (error) {
-            if (error instanceof Error) {
+        if (error instanceof Error) {
         toast.error(error.message);
       } else {
         toast.error("Failed to submit questionnaire. Please try again.");

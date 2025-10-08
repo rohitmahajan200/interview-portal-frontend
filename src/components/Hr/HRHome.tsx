@@ -3107,7 +3107,7 @@ const HRHome = () => {
                           {targetCandidateForHR.email}
                         </div>
                         <div className="text-xs text-muted-foreground dark:text-muted-foreground truncate">
-                          {targetCandidateForHR.applied_job.title}
+                          {targetCandidateForHR?.applied_job?.title}
                         </div>
                       </div>
                     </div>
@@ -3783,44 +3783,7 @@ const HRHome = () => {
           </DialogHeader>
 
           {selectedCandidate && (
-            <div className="space-y-4">
-              {/* Candidate Info */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage
-                      src={selectedCandidate.profile_photo_url?.url}
-                    />
-                    <AvatarFallback>
-                      {selectedCandidate.first_name[0]}
-                      {selectedCandidate.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      {selectedCandidate.first_name}{" "}
-                      {selectedCandidate.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedCandidate.email}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        Current:
-                      </span>
-                      <Badge
-                        className={getStageColor(
-                          selectedCandidate.current_stage
-                        )}
-                        variant="outline"
-                      >
-                        {selectedCandidate.current_stage?.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+            <div className="space-y-2">
               {/* New Stage Selection */}
               <div className="space-y-2">
                 <Label htmlFor="new-stage">
@@ -3871,9 +3834,6 @@ const HRHome = () => {
                   className="min-h-[100px]"
                   disabled={isUpdatingStage}
                 />
-                <p className="text-xs text-muted-foreground">
-                  This reason will be recorded in the candidate's stage history.
-                </p>
               </div>
 
               {/* Internal Feedback (compulsory) */}
@@ -3889,10 +3849,6 @@ const HRHome = () => {
                   className="min-h-[100px]"
                   disabled={isUpdatingStage}
                 />
-                <p className="text-xs text-muted-foreground">
-                  This feedback will be attached to the candidate's profile and
-                  visible internally.
-                </p>
               </div>
             </div>
           )}

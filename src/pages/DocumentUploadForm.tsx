@@ -78,14 +78,14 @@ interface Organization {
 const EDUCATIONAL_DOCUMENTS: DocumentType[] = [
   {
     key: "ssc_certificate",
-    label: "Scholling Certificate 1",
+    label: "Schooling Certificate 1",
     required: true,
     description: "Secondary School Certificate (10th standard)",
     hasTemplate: false,
   },
   {
     key: "hsc_certificate",
-    label: "Scholling Certificate 2",
+    label: "Schooling Certificate 2",
     required: true,
     description: "Higher Secondary Certificate (12th standard)",
     hasTemplate: false,
