@@ -1,10 +1,3 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
-# create readme.md file for my frontend need detail file for entire project
-
-Based on the comprehensive frontend file structure analysis, I'll create a detailed README.md file for your React TypeScript interview portal frontend application:
-
-```markdown
 # Interview Portal Frontend
 
 A comprehensive React-TypeScript interview management system for candidates and organization users (HR, Managers, Invigilators, Admins) built with modern web technologies.
@@ -312,9 +305,3 @@ For support and questions:
 ```
 
 This README provides a comprehensive overview of your frontend application, covering all the major features, technologies, and architectural decisions evident from the codebase. It serves as both documentation for developers and a guide for deployment and maintenance.
-<span style="display:none">[^1]</span>
-
-<div align="center">⁂</div>
-
-[^1]: feMD.txt
-
