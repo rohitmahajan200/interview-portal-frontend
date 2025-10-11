@@ -417,7 +417,6 @@ const DocumentUploadForm: React.FC<DocumentUploadFormProps> = ({
 
       toast.success(`${file.name} uploaded successfully`);
     } catch (error: any) {
-      console.error("Upload error:", error);
       toast.error(error.response.data.message || "Upload failed");
 
       setUploadedFiles((prev) => {

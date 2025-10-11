@@ -97,7 +97,7 @@ const ProctorGhost: React.FC = () => {
     onSpeechRealStart: () => {
             incSpeechStarted();               // ← count speech starts (per-minute bucket)
     },
-    onSpeechEnd: () => console.log("Audio: speech ended"),
+   
   });
 
   useEffect(() => {
@@ -151,7 +151,7 @@ const ProctorGhost: React.FC = () => {
                         incNoFace();
           } else if (faceStateNow === "one") {
                       } else {
-            console.log(`Face: multiple (${count})`);
+        
             incMultiFace(); 
           }
           lastFaceState.current = faceStateNow;
@@ -225,7 +225,6 @@ const ProctorGhost: React.FC = () => {
               for (const cls of unique) {
                 // don’t block the loop, but do catch errors
                 void incForbiddenObject(cls).catch((e) =>
-                  console.warn("incForbiddenObject failed:", e)
                 );
               }
 

@@ -72,7 +72,7 @@ export default function AdminDashboard() {
   const handleEnableNotifications = async () => {
     try {
       await pushNotificationService.subscribe(); // triggers permission prompt + backend registration
-      console.log(Notification.permission)
+   
       if (Notification.permission === "granted") {
         toast.success("Notifications enabled!", { duration: 2000});
       } else if (Notification.permission === "denied") {

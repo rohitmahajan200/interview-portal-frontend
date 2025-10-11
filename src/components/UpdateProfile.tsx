@@ -106,7 +106,7 @@ export default function UpdateProfile({
     }
 
     try {
-      console.log(`[UPLOAD] Starting profile photo upload: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+   
       
       // ✅ Use new backend upload system
       const result = await uploadProfilePhoto(file);

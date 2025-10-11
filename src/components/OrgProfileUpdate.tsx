@@ -133,7 +133,7 @@ export const OrgProfileUpdate = ({ className }: OrgProfileUpdateProps) => {
 
       // Debug FormData contents
             for (const [key, value] of formData.entries()) {
-        console.log(`  ${key}:`, value instanceof File ? `File(${value.name})` : value);
+   
       }
 
       const response = await api.patch('/org/profile', formData);

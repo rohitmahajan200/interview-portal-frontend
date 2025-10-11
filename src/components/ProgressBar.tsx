@@ -106,7 +106,7 @@ const StageHistoryViewer: React.FC<StageHistoryViewerProps> = ({ stages }) => {
     const previousOrder = STAGE_CONFIG[previousStage.stage]?.order;
 
     // Debug logging - remove after testing
-    console.log(`Stage ${currentIndex}: ${currentStage.stage} (order: ${currentOrder}) from ${previousStage.stage} (order: ${previousOrder})`);
+
 
     if (currentOrder === undefined || previousOrder === undefined) {
       return "maintain";

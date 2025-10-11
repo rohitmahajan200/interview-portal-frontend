@@ -115,7 +115,7 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
       }
     }
     setup().catch((e) => {
-      console.log("Well that didn't work")
+   
     })
     return function cleanUp() {
       myvad?.destroy()

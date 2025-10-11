@@ -2,7 +2,6 @@ import { useAppSelector } from "@/hooks/useAuth"
 
 const JobList = () => {
   const role = useAppSelector((state) => state.auth.user?.applied_job)
-  console.log(role)
   return (
     <div className="w-full bg-muted/50 rounded-xl px-4 py-6">
       <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">

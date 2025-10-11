@@ -412,7 +412,6 @@ const InvigilatorQuestionsManagement = () => {
       setDialogOpen(false);
       fetchQuestions();
     } catch (error: unknown) {
-      console.error('Failed to save question(s):', error);
       const errorMessage = error && typeof error === 'object' && 'response' in error 
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
         : 'Failed to save question(s)';

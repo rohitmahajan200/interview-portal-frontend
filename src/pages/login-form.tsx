@@ -50,7 +50,7 @@ export function LoginForm({
     try {
       const hashPass = await sha256Hash(data.password);
       data.password = hashPass;
-      console.log("MY data",data);
+   
       
       const res = await api.post("/candidates/login", data);
       if (res.data && res.data.success && res.data.user) {

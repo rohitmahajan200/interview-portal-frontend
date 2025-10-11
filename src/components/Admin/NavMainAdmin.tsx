@@ -33,7 +33,7 @@ export function NavMainAdmin({
         {items.map((item) => {
           const viewKey = item.title.toLowerCase().replace(/\s+/g, "-");
           const isActive = currentView === viewKey;
-          console.log(currentView)
+    
           return (
             <SidebarMenuItem key={viewKey}>
               <SidebarMenuButton

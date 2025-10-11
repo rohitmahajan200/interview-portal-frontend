@@ -13,7 +13,6 @@ self.addEventListener('activate', (event) => {
 
 // Push event handler
 self.addEventListener('push', (event) => {
-  console.log('🔔 Push notification received:', event.data?.text());
   
   let notificationData;
   try {

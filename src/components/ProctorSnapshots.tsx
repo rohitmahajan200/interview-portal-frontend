@@ -54,7 +54,7 @@ const uploadSnapshotToBackend = async (file: File, assessmentId: string, candida
 
         
     // 🆕 UPDATED: Use your API endpoint for snapshot upload
-    console.log("assessid=>",assessmentId);
+  
     
     const response = await api.post(`/candidates/snapshots/${assessmentId}`, formData);
 
@@ -90,7 +90,6 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId, assessmentId }
         
     // 🆕 ADDED: Show initial status
     if (assessmentId) {
-      console.log(assessmentId)
           }
   }, [active, candidateId, assessmentId]);
 
@@ -111,14 +110,13 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId, assessmentId }
         
         const shot = webcamRef.current?.getScreenshot();
         if (!shot) {
-          console.warn("[SNAP] getScreenshot() returned null");
           toast.error("Snapshot failed: camera not ready", { id: toastId });
           return;
         }
 
         // Convert screenshot to file
         const file = dataURLtoFile(shot, `proctor_snapshot_${ts}.jpg`);
-        console.log("[SNAP] File created:", file.name, `(${(file.size / 1024).toFixed(1)} KB)`);
+      
 
         // 🆕 UPDATED: Upload to your backend instead of Cloudinary
         const snapshotUrl = await uploadSnapshotToBackend(file, assessmentId);
@@ -134,7 +132,7 @@ const ProctorSnapshots: React.FC<Props> = ({ active, candidateId, assessmentId }
           id: toastId, 
           duration: 4000 
         });
-        console.log(assessmentId)
+   
         // 🆕 ADDED: Could implement retry logic here
                 
       } finally {

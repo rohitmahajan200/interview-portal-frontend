@@ -120,7 +120,7 @@ const handleEntry = async () => {
       <div className="w-full max-w-6xl mx-auto space-y-6">
         
         {/* Header */}
-        <Card onClick={() => console.log(assessmentId)}>
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-center justify-center">
               <Shield className="h-6 w-6 text-blue-600" />

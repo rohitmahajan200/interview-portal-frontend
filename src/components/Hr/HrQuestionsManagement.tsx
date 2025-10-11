@@ -282,7 +282,6 @@ const HrQuestionsManagement = () => {
       setDialogOpen(false);
       fetchQuestions();
     } catch (error: any) {
-      console.error('Failed to save question(s):', error);
       toast.error(error?.response?.data?.message || 'Failed to save question(s)');
     } finally {
       setIsSubmitting(false);

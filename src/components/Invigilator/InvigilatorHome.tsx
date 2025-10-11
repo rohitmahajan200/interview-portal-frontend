@@ -693,9 +693,6 @@ const InvigilatorHome = () => {
         );
 
         setQuestions(filteredQuestions);
-        console.log(
-          `Loaded ${filteredQuestions.length} questions of allowed types (MCQ, Coding, Essay)`
-        );
       } catch (error) {
                 toast.error("Failed to load questions");
       }
