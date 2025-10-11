@@ -54,12 +54,21 @@ const OTPLoginForm: React.FC = () => {
       } else if (res.data && res.data.success) {
         // If backend just returns success, move to reset password
         setStep("enteremail");
-      } else {
+      } 
+      else {
+        if(res.data.erros.otp){
+          setError(res.data.errors.otp[0]);
+        }
+
         setError("Verification failed.");
       }
     } catch (e: any) {
       setError("Invalid OTP. Please try again.");
-      toast.error(e.response.data.message)
+      toast.error(e.response.data.message);
+      // if(e.response.data.errors.otp){
+      //   toast.error(e.response.data.errors.otp[0]);
+      // }
+      
           } finally {
       setLoading(false);
     }

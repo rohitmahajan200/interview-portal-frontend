@@ -6,7 +6,7 @@ export interface User {
   email: string;
   phone?: string;
   date_of_birth?: string; // ISO date string
-  gender: "male" | "female" | "other";
+  gender: "male" | "female";
   address?: string;
   portfolio_url?: string;
   profile_photo_url: {
