@@ -1764,7 +1764,7 @@ const editTotalMarks = useMemo(() => {
                   <CardContent>
                     <div className="space-y-4">
                       {selectedAssessment.questions.map((question, index) => (
-                        <div key={question._id} className="border rounded-lg p-4" onClick={() => {console.log(question)}}>
+                        <div key={question._id} className="border rounded-lg p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <p className="font-medium mb-2">
