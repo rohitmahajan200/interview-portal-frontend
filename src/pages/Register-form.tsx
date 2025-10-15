@@ -331,10 +331,6 @@ export default function RegisterForm({
     if (!audioRefs.current[questionIndex]) {
       const audio = new Audio(audioUrl);
       audio.onended = () => setPlayingStates((prev) => ({ ...prev, [questionIndex]: false }));
-      audio.onerror = () => {
-        toast.error("Error playing audio");
-        setPlayingStates((prev) => ({ ...prev, [questionIndex]: false }));
-      };
       audioRefs.current[questionIndex] = audio;
     }
 
@@ -342,7 +338,6 @@ export default function RegisterForm({
     if (audio) {
       audio.play()
         .then(() => setPlayingStates((prev) => ({ ...prev, [questionIndex]: true })))
-        .catch(() => toast.error("Error playing audio"));
     }
   };
 

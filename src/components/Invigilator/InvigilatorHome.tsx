@@ -90,6 +90,7 @@ const assessmentCreateSchema = z.object({
           .max(30, "Cannot exceed 30 days")
           .optional(),
         is_seb: z.boolean(),
+        is_aiproctored: z.boolean(),
         exam_duration: z
           .number()
           .min(1, "Must be at least 1 minute")
@@ -495,6 +496,7 @@ const InvigilatorHome = () => {
           questions: [],
           days_to_complete: 7,
           is_seb: false,
+          is_aiproctored: true,
           exam_duration: 60,
         },
       ],
@@ -760,6 +762,7 @@ const InvigilatorHome = () => {
           questions: [],
           days_to_complete: 7,
           is_seb: false,
+          is_aiproctored: true,
           exam_duration: 60,
         },
       ],
@@ -778,6 +781,7 @@ const InvigilatorHome = () => {
           questions: [],
           days_to_complete: 7,
           is_seb: false,
+          is_aiproctored: true,
           exam_duration: 60,
         },
       ],
@@ -1477,10 +1481,12 @@ const InvigilatorHome = () => {
                 </div>
 
                 {/* Assessment Configuration - Fixed at bottom */}
-                <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* SEB Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="is_seb" className="text-sm font-medium">Safe Exam Browser (SEB)</Label>
+                    <Label htmlFor="is_seb" className="text-sm font-medium">
+                      Safe Exam Browser (SEB)
+                    </Label>
                     <Controller
                       name="assessments.0.is_seb"
                       control={assignmentForm.control}
@@ -1499,6 +1505,32 @@ const InvigilatorHome = () => {
                     />
                     <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       Secure browser requirement
+                    </p>
+                  </div>
+
+                  {/* AI Proctoring Field - NEW */}
+                  <div className="space-y-2">
+                    <Label htmlFor="is_aiproctored" className="text-sm font-medium">
+                      AI Proctoring
+                    </Label>
+                    <Controller
+                      name="assessments.0.is_aiproctored"
+                      control={assignmentForm.control}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2 p-2 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="is_aiproctored"
+                          />
+                          <Label htmlFor="is_aiproctored" className="text-sm font-normal">
+                            Enabled
+                          </Label>
+                        </div>
+                      )}
+                    />
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                      AI-based monitoring
                     </p>
                   </div>
 
@@ -1528,24 +1560,11 @@ const InvigilatorHome = () => {
                     )}
                   </div>
 
-                  {/* Total Marks Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="total_marks" className="text-sm font-medium">Total Marks</Label>
-                    <Input
-                      id="total_marks"
-                      type="number"
-                      value={totalMarks}
-                      readOnly
-                      className="w-full h-8 bg-gray-50 dark:bg-gray-800"
-                    />
-                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                      Sum of selected questions
-                    </p>
-                  </div>
-
                   {/* Days to Complete Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="days_to_complete" className="text-sm font-medium">Days to Complete</Label>
+                    <Label htmlFor="days_to_complete" className="text-sm font-medium">
+                      Days to Complete
+                    </Label>
                     <Input
                       type="number"
                       {...assignmentForm.register("assessments.0.days_to_complete", { valueAsNumber: true })}
@@ -1566,6 +1585,7 @@ const InvigilatorHome = () => {
                     </p>
                   </div>
                 </div>
+
               </form>
             </div>
           </div>

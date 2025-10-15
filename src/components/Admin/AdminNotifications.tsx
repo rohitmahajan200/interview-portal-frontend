@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Bell,
   BellOff,
@@ -38,7 +38,19 @@ const AdminNotifications = () => {
   const dispatch = useDispatch();
   const { notificationsByRole, roleBreakdown, loading, selectedRole } =
     useAppSelector((state) => state.adminNotifications);
-
+      function useIsCompact(breakpoint = 1220) {
+      const [isCompact, setIsCompact] = useState(false);
+  
+      useEffect(() => {
+        const checkWidth = () => setIsCompact(window.innerWidth < breakpoint);
+        checkWidth(); // run on mount
+        window.addEventListener("resize", checkWidth);
+        return () => window.removeEventListener("resize", checkWidth);
+      }, [breakpoint]);
+  
+      return isCompact;
+    }
+    const isCompact = useIsCompact(1220);
   const fetchAdminNotifications = async () => {
     try {
       dispatch(setLoading(true));
@@ -335,11 +347,11 @@ const AdminNotifications = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent dark:border-gray-700">
-                        <TableHead className="w-[80px] text-foreground">Role</TableHead>
+                        {!isCompact && <TableHead className="w-[80px] text-foreground">Role</TableHead>}
                         <TableHead className="w-[200px] text-foreground">Recipient</TableHead>
-                        <TableHead className="text-foreground">Message</TableHead>
+                        {!isCompact && <TableHead className="text-foreground">Message</TableHead>}
                         <TableHead className="w-[120px] text-foreground">Type</TableHead>
-                        <TableHead className="w-[140px] text-foreground">Created</TableHead>
+                        {!isCompact && <TableHead className="w-[140px] text-foreground">Created</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -352,14 +364,14 @@ const AdminNotifications = () => {
                               : "dark:border-gray-700"
                           } hover:bg-muted/50 dark:hover:bg-gray-800/50`}
                         >
-                          <TableCell>
+                          {!isCompact && <TableCell>
                             <div className="flex items-center gap-1">
                               {getRoleIcon(notification.recipient.role)}
                               <span className="text-xs font-medium text-foreground">
                                 {notification.recipient.role}
                               </span>
                             </div>
-                          </TableCell>
+                          </TableCell>}
                           <TableCell>
                             <div className="text-sm">
                               <div className="font-medium text-foreground">
@@ -370,22 +382,19 @@ const AdminNotifications = () => {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="text-sm max-w-md">
-                              <p className="text-foreground" title={notification.message}>
+                          {!isCompact && <TableCell>
+                            <div className="text-sm min-w-0"> {/* min-w-0 allows flex shrinking */}
+                              <p className="text-foreground break-words leading-relaxed whitespace-normal">
                                 {notification.message}
                               </p>
                               {notification.visible_at && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Visible:{" "}
-                                  {format(
-                                    new Date(notification.visible_at),
-                                    "MMM dd, HH:mm"
-                                  )}
+                                <p className="text-xs text-muted-foreground mt-1 break-words">
+                                  Visible: {format(new Date(notification.visible_at), "MMM dd, HH:mm")}
                                 </p>
                               )}
                             </div>
-                          </TableCell>
+                          </TableCell>}
+
                           <TableCell>
                             <Badge
                               className={`${getNotificationTypeColor(
@@ -395,12 +404,12 @@ const AdminNotifications = () => {
                               {notification.type}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          {!isCompact && <TableCell className="text-xs text-muted-foreground">
                             {format(
                               new Date(notification.createdAt),
                               "MMM dd, HH:mm"
                             )}
-                          </TableCell>
+                          </TableCell>}
                         </TableRow>
                       ))}
                     </TableBody>

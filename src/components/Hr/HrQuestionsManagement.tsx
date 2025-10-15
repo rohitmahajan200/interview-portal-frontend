@@ -746,7 +746,7 @@ const HrQuestionsManagement = () => {
                         <Input
                           id="global-tags"
                           value={globalTags}
-                          onChange={(e) => setGlobalTags(e.target.value)}
+                          onChange={(e) => setGlobalTags(e.target.value.toLowerCase())} // Enforce lowercase
                           placeholder="e.g. behavioral, technical, cultural-fit"
                           className="mt-1"
                         />
@@ -843,11 +843,17 @@ const HrQuestionsManagement = () => {
                               <Input
                                 value={Array.isArray(field.value) ? field.value.join(', ') : ''}
                                 onChange={(e) => {
-                                  const tagsArray = e.target.value
+                                  const inputValue = e.target.value.toLowerCase(); // Enforce lowercase
+                                  const tagsArray = inputValue
                                     .split(',')
-                                    .map(tag => tag.trim())
-                                    .filter(Boolean);
-                                  field.onChange(tagsArray);
+                                    .map(tag => tag.trim());
+                                  
+                                  // Only filter empty strings if the input doesn't end with comma
+                                  const finalTags = inputValue.endsWith(',') 
+                                    ? tagsArray 
+                                    : tagsArray.filter(Boolean);
+                                  
+                                  field.onChange(finalTags);
                                 }}
                                 placeholder="e.g. behavioral, technical, cultural-fit"
                               />

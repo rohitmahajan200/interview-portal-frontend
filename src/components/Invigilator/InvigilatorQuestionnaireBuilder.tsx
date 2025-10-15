@@ -24,6 +24,7 @@ const assessmentSchema = z.object({
   assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
   days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional(),
   is_seb: z.boolean(),
+  is_aiproctored: z.boolean(),
   exam_duration: z.number().min(1, "Must be at least 1 minute").max(600, "Cannot exceed 10 hours")
 });
 
@@ -31,6 +32,7 @@ const assessmentUpdateSchema = z.object({
   assigned_questions: z.array(z.string().length(24, 'Invalid question ID')).min(1, 'Select at least one question'),
   days_to_complete: z.number().min(1, "Must be at least 1 day").max(30, "Cannot exceed 30 days").optional(),
   is_seb: z.boolean().optional(),
+  is_aiproctored: z.boolean().optional(),
   exam_duration: z.number().min(1, "Must be at least 1 minute").max(600, "Cannot exceed 10 hours").optional(),
 });
 
@@ -92,6 +94,7 @@ interface Assessment {
   completed_at?: string;
   status: 'pending' | 'started' | 'completed' | 'expired';
   is_seb: boolean;
+  is_aiproctored: boolean;
   exam_duration: number;
   createdAt: string;
   updatedAt: string;
@@ -147,6 +150,7 @@ const AssessmentManagement = () => {
       assigned_questions: [],
       days_to_complete: 7,
       is_seb: false,
+      is_aiproctored: true,
       exam_duration: 60, // Default 1 hour
     }
   });
@@ -177,6 +181,7 @@ const createTotalMarks = useMemo(() => {
       assigned_questions: [],
       days_to_complete: 7,
       is_seb: false,
+      is_aiproctored: true,
       exam_duration: 60, // Default 1 hour
     }
   });
@@ -202,6 +207,20 @@ const editTotalMarks = useMemo(() => {
 }, [editSelectedQuestionIds, questions]);
 
   const isEditing = !!editingAssessment;
+  // Helper function to select all required (must-ask) questions
+  const selectRequiredQuestions = (field: { onChange: (value: string[]) => void }) => {
+    const requiredQuestionIds = questions
+      .filter((question) => question.is_must_ask === true)
+      .map((question) => question._id);
+    
+    field.onChange(requiredQuestionIds);
+    
+    if (requiredQuestionIds.length > 0) {
+      toast.success(`Selected ${requiredQuestionIds.length} required questions`);
+    } else {
+      toast.error("No required questions available");
+    }
+  };
 
   // Helper functions - Following HR questionnaire pattern
   const getUniqueJobs = () => {
@@ -293,6 +312,7 @@ const editTotalMarks = useMemo(() => {
     fetchAllData();
   }, []);
 
+
   // Filter assessments
   useEffect(() => {
     let filtered = assessments;
@@ -321,6 +341,7 @@ const editTotalMarks = useMemo(() => {
       assigned_questions: [],
       days_to_complete: 7,
       is_seb: false,
+      is_aiproctored: true,
       exam_duration: 60
     });
     setDialogOpen(true);
@@ -339,6 +360,7 @@ const editTotalMarks = useMemo(() => {
       assigned_questions: assessment.questions.map(q => q._id),
       days_to_complete: Math.max(1, daysToComplete),
       is_seb: assessment.is_seb || false,
+      is_aiproctored: assessment.is_aiproctored || true,
       exam_duration: assessment.exam_duration || 60,
     });
     setDialogOpen(true);
@@ -362,6 +384,7 @@ const editTotalMarks = useMemo(() => {
       assigned_questions: [], 
       days_to_complete: 7,
       is_seb: false,
+      is_aiproctored: true,
       exam_duration: 60,
     });
     editForm.reset();
@@ -419,6 +442,7 @@ const editTotalMarks = useMemo(() => {
         questions: data.assigned_questions,
         days_to_complete: data.days_to_complete || undefined,
         is_seb: data.is_seb,
+        is_aiproctored: data.is_aiproctored,
         exam_duration: data.exam_duration
       }));
 
@@ -447,6 +471,7 @@ const editTotalMarks = useMemo(() => {
         questions: data.assigned_questions,
         days_to_complete: data.days_to_complete || undefined,
         is_seb: data.is_seb,
+        is_aiproctored: data.is_aiproctored,
         exam_duration: data.exam_duration,
       };
       
@@ -512,7 +537,44 @@ const editTotalMarks = useMemo(() => {
     completed: assessments.filter(a => a.status === 'completed').length,
     expired: assessments.filter(a => a.status === 'expired').length,
   };
+    // Sync job selection when candidates change in CREATE form
+  useEffect(() => {
+    const selectedCandidatesArray = createForm.watch("candidates") || [];
+    
+    if (selectedCandidatesArray.length === 0) {
+      setSelectedJobForAutoSelect("");
+      return;
+    }
 
+    // Get jobs of selected candidates
+    const candidateJobs = getAvailableCandidates()
+      .filter((c) => selectedCandidatesArray.includes(c._id))
+      .map((c) => c.applied_job?._id)
+      .filter((jobId): jobId is string => !!jobId);
+
+    const uniqueJobs = [...new Set(candidateJobs)];
+
+    if (uniqueJobs.length === 1) {
+      // All selected candidates belong to the same job
+      const jobId = uniqueJobs[0];
+      const allCandidatesForJob = getAvailableCandidates()
+        .filter((c) => c.applied_job?._id === jobId)
+        .map((c) => c._id);
+
+      // Check if ALL candidates for this job are selected
+      const allSelected = allCandidatesForJob.every((id) =>
+        selectedCandidatesArray.includes(id)
+      );
+
+      if (allSelected) {
+        setSelectedJobForAutoSelect(jobId);
+      } else {
+        setSelectedJobForAutoSelect("");
+      }
+    } else {
+      setSelectedJobForAutoSelect("");
+    }
+  }, [createForm.watch("candidates"), getAvailableCandidates]);
   return (
     <div className="container mx-auto p-6 space-y-6">      
         {/* Header */}
@@ -1049,7 +1111,6 @@ const editTotalMarks = useMemo(() => {
                         control={createForm.control}
                         render={({ field }) => (
                           <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
-                            
                             {/* Header with Integrated Count - Fixed */}
                             <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
                               <div className="flex items-center gap-2">
@@ -1070,7 +1131,7 @@ const editTotalMarks = useMemo(() => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    field.onChange(questions.map(q => q._id));
+                                    field.onChange(questions.map((q) => q._id));
                                     setSelectedTags(new Set(getUniqueTags()));
                                   }}
                                   className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
@@ -1078,6 +1139,18 @@ const editTotalMarks = useMemo(() => {
                                   <span className="sm:hidden">All</span>
                                   <span className="hidden sm:inline">Select All</span>
                                 </Button>
+                                
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => selectRequiredQuestions(field)}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  <span className="sm:hidden">Req</span>
+                                  <span className="hidden sm:inline">Required</span>
+                                </Button>
+                                
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -1092,6 +1165,7 @@ const editTotalMarks = useMemo(() => {
                                 </Button>
                               </div>
                             </div>
+
 
                             {/* EXPANDED SCROLLABLE AREA - No Footer Taking Space! */}
                             <div className="flex-1 min-h-0 overflow-y-auto">
@@ -1125,6 +1199,9 @@ const editTotalMarks = useMemo(() => {
                                               {question.max_score} pts
                                             </Badge>
                                           )}
+                                          {question.is_must_ask && <Badge variant='destructive'>
+                                            {"Must ask"}
+                                          </Badge>}
                                           {question.tags?.slice(0, 2).map((tag) => (
                                             <Badge key={tag} variant="secondary" className="text-xs h-4">
                                               {tag}
@@ -1152,10 +1229,8 @@ const editTotalMarks = useMemo(() => {
                         <p className="text-red-600 text-sm">{createForm.formState.errors.assigned_questions.message}</p>
                       )}
                     </div>
-
-
                     {/* Assessment Configuration - Fixed at bottom */}
-                    <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                       {/* SEB Field */}
                       <div className="">
                         <Label htmlFor="is_seb" className="text-sm font-medium">Safe Exam Browser (SEB)</Label>
@@ -1177,6 +1252,30 @@ const editTotalMarks = useMemo(() => {
                         />
                         <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                           Secure browser requirement
+                        </p>
+                      </div>
+
+                      {/* AI Proctoring Field - NEW */}
+                      <div className="">
+                        <Label htmlFor="is_aiproctored" className="text-sm font-medium">AI Proctoring</Label>
+                        <Controller
+                          name="is_aiproctored"
+                          control={createForm.control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2 p-2 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                id="is_aiproctored"
+                              />
+                              <Label htmlFor="is_aiproctored" className="text-sm font-normal">
+                                Enabled
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          AI-based monitoring
                         </p>
                       </div>
 
@@ -1219,7 +1318,6 @@ const editTotalMarks = useMemo(() => {
                         </p>
                       </div>
 
-
                       {/* Days to Complete Field */}
                       <div className="space-y-2">
                         <Label htmlFor="days_to_complete" className="text-sm font-medium">Days to Complete</Label>
@@ -1246,7 +1344,6 @@ const editTotalMarks = useMemo(() => {
                         )}
                       </div>
                     </div>
-
                   </form>
                 )}
 
@@ -1323,7 +1420,6 @@ const editTotalMarks = useMemo(() => {
                         control={editForm.control}
                         render={({ field }) => (
                           <div className="flex-1 min-h-0 border border-border dark:border-border rounded-lg flex flex-col overflow-hidden">
-                            
                             {/* Header with Integrated Count and Selected Tags - Fixed */}
                             <div className="flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 sm:p-3 border-b border-border dark:border-border bg-gray-50 dark:bg-gray-800 gap-2 sm:gap-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -1359,7 +1455,7 @@ const editTotalMarks = useMemo(() => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    field.onChange(questions.map(q => q._id));
+                                    field.onChange(questions.map((q) => q._id));
                                     setSelectedTags(new Set(getUniqueTags()));
                                   }}
                                   className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
@@ -1367,6 +1463,18 @@ const editTotalMarks = useMemo(() => {
                                   <span className="sm:hidden">All</span>
                                   <span className="hidden sm:inline">Select All</span>
                                 </Button>
+                                
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => selectRequiredQuestions(field)}
+                                  className="text-xs h-6 px-2 sm:h-7 flex-1 sm:flex-none"
+                                >
+                                  <span className="sm:hidden">Req</span>
+                                  <span className="hidden sm:inline">Required</span>
+                                </Button>
+                                
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -1381,6 +1489,7 @@ const editTotalMarks = useMemo(() => {
                                 </Button>
                               </div>
                             </div>
+
 
                             {/* EXPANDED SCROLLABLE AREA - No Footer Taking Space! */}
                             <div className="flex-1 min-h-0 overflow-y-auto">
@@ -1461,7 +1570,7 @@ const editTotalMarks = useMemo(() => {
                     </div>
 
                     {/* Assessment Configuration - Fixed at bottom */}
-                    <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                       {/* SEB Field */}
                       <div className="">
                         <Label htmlFor="edit_is_seb" className="text-sm font-medium">Safe Exam Browser (SEB)</Label>
@@ -1483,6 +1592,30 @@ const editTotalMarks = useMemo(() => {
                         />
                         <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                           Secure browser requirement
+                        </p>
+                      </div>
+
+                      {/* AI Proctoring Field - NEW */}
+                      <div className="">
+                        <Label htmlFor="edit_is_aiproctored" className="text-sm font-medium">AI Proctoring</Label>
+                        <Controller
+                          name="is_aiproctored"
+                          control={editForm.control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2 p-2 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                id="edit_is_aiproctored"
+                              />
+                              <Label htmlFor="edit_is_aiproctored" className="text-sm font-normal">
+                                Enabled
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                          AI-based monitoring
                         </p>
                       </div>
 
@@ -1525,7 +1658,6 @@ const editTotalMarks = useMemo(() => {
                         </p>
                       </div>
 
-
                       {/* Days to Complete Field */}
                       <div className="space-y-2">
                         <Label htmlFor="edit_days_to_complete" className="text-sm font-medium">Days to Complete</Label>
@@ -1552,7 +1684,6 @@ const editTotalMarks = useMemo(() => {
                         )}
                       </div>
                     </div>
-
                   </form>
                 )}
               </div>
@@ -1633,7 +1764,7 @@ const editTotalMarks = useMemo(() => {
                   <CardContent>
                     <div className="space-y-4">
                       {selectedAssessment.questions.map((question, index) => (
-                        <div key={question._id} className="border rounded-lg p-4">
+                        <div key={question._id} className="border rounded-lg p-4" onClick={() => {console.log(question)}}>
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <p className="font-medium mb-2">

@@ -106,6 +106,7 @@ const assessmentCreateSchema = z.object({
           .max(30, "Cannot exceed 30 days")
           .optional(),
         is_seb: z.boolean(),
+        is_aiproctored: z.boolean(),
         exam_duration: z
           .number()
           .min(1, "Must be at least 1 minute")
@@ -942,6 +943,7 @@ const HRHome = () => {
           questions: [],
           days_to_complete: 7,
           is_seb: false,
+          is_aiproctored: true,
           exam_duration: 60,
         },
       ],
@@ -3516,9 +3518,8 @@ const HRHome = () => {
                     }}
                   />
                 </div>
-
                 {/* Assessment Configuration - Fixed at bottom */}
-                <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
+                <div className="flex-shrink-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {/* SEB Field */}
                   <div className="space-y-2">
                     <Label htmlFor="is_seb" className="text-sm font-medium">
@@ -3544,6 +3545,34 @@ const HRHome = () => {
                     <p className="text-xs text-muted-foreground dark:text-muted-foreground">
                       <span className="hidden sm:inline">Secure browser requirement</span>
                       <span className="sm:hidden">Secure browser</span>
+                    </p>
+                  </div>
+
+                  {/* AI Proctoring Field - NEW */}
+                  <div className="space-y-2">
+                    <Label htmlFor="is_aiproctored" className="text-sm font-medium">
+                      <span className="hidden sm:inline">AI Proctoring</span>
+                      <span className="sm:hidden">AI Proctored</span>
+                    </Label>
+                    <Controller
+                      name="assessments.0.is_aiproctored"
+                      control={assessmentForm.control}
+                      render={({ field }) => (
+                        <div className="flex items-center space-x-2 p-3 border border-border dark:border-border rounded-lg bg-gray-50 dark:bg-gray-800">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="is_aiproctored"
+                          />
+                          <Label htmlFor="is_aiproctored" className="text-sm font-normal">
+                            Enabled
+                          </Label>
+                        </div>
+                      )}
+                    />
+                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                      <span className="hidden sm:inline">AI-based monitoring</span>
+                      <span className="sm:hidden">AI monitoring</span>
                     </p>
                   </div>
 
@@ -3575,24 +3604,6 @@ const HRHome = () => {
                         {assessmentForm.formState.errors.assessments[0].exam_duration.message}
                       </p>
                     )}
-                  </div>
-
-                  {/* Total Marks Field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="total_marks" className="text-sm font-medium">
-                      Total Marks
-                    </Label>
-                    <Input
-                      id="total_marks"
-                      type="number"
-                      value={totalMarks}
-                      readOnly
-                      className="w-full h-8 bg-gray-50 dark:bg-gray-800"
-                    />
-                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                      <span className="hidden sm:inline">Sum of selected questions</span>
-                      <span className="sm:hidden">Sum of selected</span>
-                    </p>
                   </div>
 
                   {/* Days to Complete Field */}
@@ -3633,6 +3644,7 @@ const HRHome = () => {
                     </p>
                   </div>
                 </div>
+
               </form>
             </div>
           </div>

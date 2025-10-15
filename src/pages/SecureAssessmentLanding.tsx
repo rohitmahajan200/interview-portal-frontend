@@ -34,6 +34,7 @@ const SecureAssessmentLanding = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isSeb, setIsSeb] = useState(false);
+  const [is_aiproctored, setIsProctored] = useState(false);
 
 
   // Step 1 → Entry
@@ -89,6 +90,7 @@ const handleEntry = async () => {
 
       setAssessment(data.data.assessment);
       setIsSeb(data.data.assessment.is_seb); 
+      setIsProctored(data.data.assessment.is_aiproctored); 
       setStarted(true);
       setMessage("");
       toast.success("Assessment started successfully!");
@@ -289,7 +291,11 @@ const handleEntry = async () => {
             onSubmissionComplete={handleSubmissionComplete}
           />
         )}
-        <ProctorGhost />
+        {is_aiproctored && (
+          <>
+            <ProctorGhost />
+          </>
+        )}
         <ProctorSnapshots active={started} assessmentId={assessmentId}/>
 
         {/* Success Dialog */}

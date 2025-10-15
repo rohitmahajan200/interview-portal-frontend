@@ -38,6 +38,8 @@ import {
   AlertCircle,
   Save,
   EyeClosed,
+  AlertTriangle,
+  Users,
 } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/api";
@@ -51,6 +53,7 @@ import GloryDialog from "../GloryDialog";
 import GloryButton from "../GloryButton";
 import { useGlory } from "@/hooks/useGlory";
 import GloryDisplay from "../GloryDisplay";
+import { Alert, AlertDescription } from "../ui/alert";
 
 interface GloryData {
   [parameter: string]: string;
@@ -795,12 +798,12 @@ const AssessmentReview = () => {
           return { ...prev, responses: updatedResponses };
         });
 
-        // Don't automatically close editing - let user decide
-        // setEditingResponse(null);
+        if (selectedAssessment?._id) {
+        await fetchAssessmentDetail(selectedAssessment._id);
+        await fetchAssessmentsList(); // Update the list with new scores
       }
-    } catch (error: any) {
-            throw error; // Re-throw so the component can handle it
-    } finally {
+      }
+    }finally {
       setLoadingActions((prev) => ({
         ...prev,
         [`review_${questionId}`]: false,
@@ -814,86 +817,286 @@ const AssessmentReview = () => {
     if (percentage >= 60) return "text-yellow-600";
     return "text-red-600";
   };
+  const aggregateProctoringData = (logs: any[]) => {
+    const perMinuteData: { minute: number; away: number; speech: number }[] = [];
+    let multiFaceTotal = 0;
+    let noFaceTotal = 0;
+    let totalLookingAway = 0;
+    let totalSpeech = 0;
+    let minuteCount = 0;
 
-  const renderProctoringLogs = () => {
+    logs.forEach((log) => {
+      const event = log.event;
+      
+      if (event.startsWith('looking_away_per_minute:')) {
+        const count = parseInt(event.split(':')[1]) || 0;
+        totalLookingAway += count;
+        minuteCount++;
+      } else if (event.startsWith('speech_started_per_minute:')) {
+        const count = parseInt(event.split(':')[1]) || 0;
+        totalSpeech += count;
+      } else if (event.startsWith('multi_face_total:')) {
+        multiFaceTotal = parseInt(event.split(':')[1]) || 0;
+      } else if (event.startsWith('no_face_total:')) {
+        noFaceTotal = parseInt(event.split(':')[1]) || 0;
+      }
+
+      // Extract per-minute data
+      const lookingAwayMatch = event.match(/looking_away_per_minute:(\d+)/);
+      const speechMatch = event.match(/speech_started_per_minute:(\d+)/);
+      
+      if (lookingAwayMatch || speechMatch) {
+        const timestamp = new Date(log.timestamp);
+        const minute = timestamp.getMinutes();
+        
+        const existingMinute = perMinuteData.find((d) => d.minute === minute);
+        if (existingMinute) {
+          if (lookingAwayMatch) existingMinute.away = parseInt(lookingAwayMatch[1]);
+          if (speechMatch) existingMinute.speech = parseInt(speechMatch[1]);
+        } else {
+          perMinuteData.push({
+            minute,
+            away: lookingAwayMatch ? parseInt(lookingAwayMatch[1]) : 0,
+            speech: speechMatch ? parseInt(speechMatch[1]) : 0,
+          });
+        }
+      }
+    });
+
+    const avgLookingAway = minuteCount > 0 ? (totalLookingAway / minuteCount).toFixed(1) : '0';
+    const avgSpeech = minuteCount > 0 ? (totalSpeech / minuteCount).toFixed(1) : '0';
+
+    return {
+      perMinuteData: perMinuteData.sort((a, b) => a.minute - b.minute),
+      totals: {
+        multiFaceTotal,
+        noFaceTotal,
+        totalLookingAway,
+        totalSpeech,
+        avgLookingAway,
+        avgSpeech,
+        minuteCount,
+      },
+    };
+  };
+const renderProctoringLogs = () => {
     if (
       !selectedAssessment?.proctoring_logs ||
       selectedAssessment.proctoring_logs.length === 0
     ) {
       return (
-        <p className="text-sm text-muted-foreground italic">
-          No proctoring logs captured
-        </p>
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">No proctoring data available</p>
+        </div>
       );
     }
+
+    const proctoringData = aggregateProctoringData(selectedAssessment.proctoring_logs);
+    const { totals } = proctoringData;
+
+    // Calculate severity level
+    const getSeverityLevel = () => {
+      const issues = totals.multiFaceTotal + totals.noFaceTotal;
+      const avgAway = parseFloat(totals.avgLookingAway);
+      
+      if (issues > 5 || avgAway > 10) return 'high';
+      if (issues > 2 || avgAway > 5) return 'medium';
+      return 'low';
+    };
+
+    const severityLevel = getSeverityLevel();
+
     return (
-      <ScrollArea className="h-40 sm:h-56 rounded-lg border border-gray-200 bg-muted/30 px-0 py-0">
-        <Table className="text-sm">
-          <TableHeader>
-            <TableRow className="bg-gray-50 dark:bg-gray-800">
-              <TableHead className="font-semibold text-gray-700 dark:text-gray-300 px-3 py-2">
-                Event
-              </TableHead>
-              <TableHead className="font-semibold text-gray-700 dark:text-gray-300 px-3 py-2 hidden sm:table-cell">
-                Severity
-              </TableHead>
-              <TableHead className="font-semibold text-gray-700 dark:text-gray-300 px-3 py-2 text-right">
-                Time
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {selectedAssessment.proctoring_logs.map((log, idx) => (
-              <TableRow
-                key={idx}
-                className={log.severity === "warn" ? "bg-red-50 dark:bg-red-900/20" : ""}
+      <div className="space-y-4">
+        {/* Overall Risk Assessment */}
+        <Card className={cn(
+          "border-2",
+          severityLevel === 'high' && "border-red-500 bg-red-50 dark:bg-red-950/20",
+          severityLevel === 'medium' && "border-orange-500 bg-orange-50 dark:bg-orange-950/20",
+          severityLevel === 'low' && "border-green-500 bg-green-50 dark:bg-green-950/20"
+        )}>
+          <CardContent className="pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {severityLevel === 'high' && <AlertTriangle className="h-5 w-5 text-red-600" />}
+                {severityLevel === 'medium' && <AlertCircle className="h-5 w-5 text-orange-600" />}
+                {severityLevel === 'low' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+                <span className="font-semibold text-sm">
+                  Proctoring Risk Level: {severityLevel.toUpperCase()}
+                </span>
+              </div>
+              <Badge 
+                variant={severityLevel === 'high' ? 'destructive' : severityLevel === 'medium' ? 'default' : 'secondary'}
+                className="text-xs"
               >
-                <TableCell className="whitespace-pre-wrap px-3 py-2 text-xs sm:text-sm">
-                  {log.event}
-                  {/* Mobile: Show severity inline */}
-                  <div className="sm:hidden mt-1">
-                    <Badge
-                      variant={
-                        log.severity === "warn"
-                          ? "destructive"
-                          : log.severity === "error"
-                          ? "outline"
-                          : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {log.severity.toUpperCase()}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="px-3 py-2 hidden sm:table-cell">
-                  <Badge
-                    variant={
-                      log.severity === "warn"
-                        ? "destructive"
-                        : log.severity === "error"
-                        ? "outline"
-                        : "secondary"
-                    }
-                    className={
-                      log.severity === "warn"
-                        ? "bg-red-200 text-red-700 dark:bg-red-900 dark:text-red-300"
-                        : log.severity === "error"
-                        ? "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                    }
-                  >
-                    {log.severity.toUpperCase()}
+                {totals.minuteCount} minutes monitored
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {severityLevel === 'high' && 'Multiple violations detected. Manual review recommended.'}
+              {severityLevel === 'medium' && 'Some concerns detected. Review flagged incidents.'}
+              {severityLevel === 'low' && 'Assessment conducted within acceptable parameters.'}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Looking Away Card */}
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Eye className="h-4 w-4 text-blue-600" />
+                  <Badge variant="outline" className="text-xs">
+                    {totals.avgLookingAway}/min
                   </Badge>
-                </TableCell>
-                <TableCell className="text-right px-3 py-2 font-mono text-xs text-gray-600 dark:text-gray-400">
-                  {formatDateTime(log.timestamp)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </ScrollArea>
+                </div>
+                <div className="mt-2">
+                  <p className="text-2xl font-bold">{totals.totalLookingAway}</p>
+                  <p className="text-xs text-muted-foreground">Looking Away</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Speech Detection Card */}
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Brain className="h-4 w-4 text-purple-600" />
+                  <Badge variant="outline" className="text-xs">
+                    {totals.avgSpeech}/min
+                  </Badge>
+                </div>
+                <div className="mt-2">
+                  <p className="text-2xl font-bold">{totals.totalSpeech}</p>
+                  <p className="text-xs text-muted-foreground">Speech Events</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Multiple Faces Card */}
+          <Card className={totals.multiFaceTotal > 0 ? "border-orange-500" : ""}>
+            <CardContent className="pt-4 pb-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Users className="h-4 w-4 text-orange-600" />
+                  {totals.multiFaceTotal > 0 && (
+                    <AlertTriangle className="h-3 w-3 text-orange-600" />
+                  )}
+                </div>
+                <div className="mt-2">
+                  <p className="text-2xl font-bold">{totals.multiFaceTotal}</p>
+                  <p className="text-xs text-muted-foreground">Multiple Faces</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* No Face Detected Card */}
+          <Card className={totals.noFaceTotal > 0 ? "border-red-500" : ""}>
+            <CardContent className="pt-4 pb-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <EyeClosed className="h-4 w-4 text-red-600" />
+                  {totals.noFaceTotal > 0 && (
+                    <AlertTriangle className="h-3 w-3 text-red-600" />
+                  )}
+                </div>
+                <div className="mt-2">
+                  <p className="text-2xl font-bold">{totals.noFaceTotal}</p>
+                  <p className="text-xs text-muted-foreground">No Face</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Per-Minute Timeline (Collapsible) */}
+        {proctoringData.perMinuteData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold">
+                  Minute-by-Minute Activity
+                </CardTitle>
+                <Badge variant="secondary" className="text-xs">
+                  {proctoringData.perMinuteData.length} data points
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-48 pr-4">
+                <div className="space-y-2">
+                  {proctoringData.perMinuteData.map((data, idx) => {
+                    const hasIssues = data.away > 5 || data.speech > 3;
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "flex items-center justify-between p-2 rounded-lg border",
+                          hasIssues
+                            ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200"
+                            : "bg-muted/30"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                            <span className="text-xs font-mono font-semibold">
+                              {data.minute}m
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-3 w-3 text-blue-600" />
+                              <span className="text-xs">
+                                Looking away: <span className="font-semibold">{data.away}x</span>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Brain className="h-3 w-3 text-purple-600" />
+                              <span className="text-xs">
+                                Speech: <span className="font-semibold">{data.speech}x</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        {hasIssues && (
+                          <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Critical Incidents Summary */}
+        {(totals.multiFaceTotal > 0 || totals.noFaceTotal > 0) && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <span className="font-semibold">Critical Incidents Detected:</span>
+              {totals.multiFaceTotal > 0 && (
+                <span className="ml-2">
+                  Multiple faces detected {totals.multiFaceTotal} time(s).
+                </span>
+              )}
+              {totals.noFaceTotal > 0 && (
+                <span className="ml-2">
+                  No face detected {totals.noFaceTotal} time(s).
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     );
   };
 

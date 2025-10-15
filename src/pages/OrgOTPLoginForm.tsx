@@ -60,7 +60,7 @@ const OrgOTPLoginForm: React.FC = () => {
         setError("Verification failed.");
       }
     } catch (e: any) {
-      setError("Invalid OTP. Please try again.");\
+      setError("Invalid OTP. Please try again.");
       toast.error(e.response.data.message)
           } finally {
       setLoading(false);

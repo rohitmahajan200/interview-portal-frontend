@@ -225,6 +225,7 @@ const ProctorGhost: React.FC = () => {
               for (const cls of unique) {
                 // don’t block the loop, but do catch errors
                 void incForbiddenObject(cls).catch((e) =>
+                  console.log()
                 );
               }
 

@@ -328,6 +328,46 @@ const HRQuestionnaireBuilder = () => {
   useEffect(() => {
     fetchAllData();
   }, []);
+  // Add a useEffect to sync the job selection when candidates change
+  useEffect(() => {
+    const selectedCandidatesArray = createForm.watch("candidates") || [];
+    
+    if (selectedCandidatesArray.length === 0) {
+      // If no candidates selected, clear job selection
+      setSelectedJobForAutoSelect("");
+      return;
+    }
+
+    // Check if all selected candidates belong to the same job
+    const candidateJobs = getAvailableCandidates()
+      .filter((c) => selectedCandidatesArray.includes(c._id))
+      .map((c) => c.applied_job?._id)
+      .filter((jobId): jobId is string => !!jobId);
+
+    const uniqueJobs = [...new Set(candidateJobs)];
+
+    if (uniqueJobs.length === 1) {
+      // All selected candidates belong to the same job
+      const jobId = uniqueJobs[0];
+      const allCandidatesForJob = getAvailableCandidates()
+        .filter((c) => c.applied_job?._id === jobId)
+        .map((c) => c._id);
+
+      // Check if ALL candidates for this job are selected
+      const allSelected = allCandidatesForJob.every((id) =>
+        selectedCandidatesArray.includes(id)
+      );
+
+      if (allSelected) {
+        setSelectedJobForAutoSelect(jobId);
+      } else {
+        setSelectedJobForAutoSelect("");
+      }
+    } else {
+      // Candidates from multiple jobs or no job, clear selection
+      setSelectedJobForAutoSelect("");
+    }
+  }, [createForm.watch("candidates")]);
 
   // Filter questionnaires
   useEffect(() => {
@@ -532,11 +572,12 @@ const HRQuestionnaireBuilder = () => {
 
   // Get available candidates (those without questionnaires)
   const getAvailableCandidates = () => {
-    return candidates.filter(
-      (candidate) =>
-        !candidate.hrQuestionnaire || candidate.hrQuestionnaire.length === 0
-    );
-  };
+  return candidates.filter(
+    (candidate) =>
+      candidate.current_stage === "hr" && // ← Add this check
+      (!candidate.hrQuestionnaire || candidate.hrQuestionnaire.length === 0)
+  );
+};
 
   // Statistics
   const stats = {

@@ -46,6 +46,7 @@ type TechnicalAssessment = {
   status: "pending" | "started" | "completed" | "expired";
   exam_duration?: number;
   is_seb?: boolean;
+  is_aiproctored?: boolean;
   access_token?: string;
   time_remaining_ms?: number;
   assessment_type?: string;
